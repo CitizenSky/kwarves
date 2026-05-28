@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Astro Dashboard - Farbenbaum</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script src="dashboard-data.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f8;
+        --surface: #ffffff;
+        --soft: #edf4f2;
+        --ink: #14211f;
+        --muted: #66736f;
+        --line: #d9e1de;
+        --green: #16846f;
+        --yellow: #bd7417;
+        --red: #bf3e36;
+        --violet: #6956c5;
+        --blue: #315dba;
+        --shadow: 0 16px 38px rgba(19, 34, 31, 0.08);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 244px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        height: 100vh;
+        padding: 20px 16px;
+        background: #10201e;
+        color: #f2fbf8;
+      }
+
+      .brand,
+      .nav button,
+      .sidebar-button,
+      .metric-line,
+      .chip,
+      .pill,
+      .small-button,
+      .legend-item {
+        display: flex;
+        align-items: center;
+      }
+
+      .brand {
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: #173b36;
+        color: #6fd6ca;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .brand span {
+        color: #afbfbb;
+        font-size: 12px;
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+      }
+
+      .nav button,
+      .sidebar-button {
+        gap: 10px;
+        width: 100%;
+        min-height: 38px;
+        padding: 9px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #dce9e6;
+        text-align: left;
+      }
+
+      .nav button.active,
+      .nav button:hover,
+      .sidebar-button:hover {
+        background: rgba(255, 255, 255, 0.09);
+        color: #ffffff;
+      }
+
+      svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        stroke-width: 2.2;
+      }
+
+      .sidebar-note {
+        margin-top: auto;
+        padding: 13px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .sidebar-note strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+
+      .sidebar-note span {
+        color: #b8c6c2;
+        font-size: 12px;
+      }
+
+      .content {
+        min-width: 0;
+      }
+
+      .topbar {
+        position: sticky;
+        z-index: 10;
+        top: 0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 72px;
+        padding: 16px 28px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(244, 246, 248, 0.88);
+        backdrop-filter: blur(14px);
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex: 1;
+        max-width: 560px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      .search input {
+        width: 100%;
+        height: 40px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--ink);
+      }
+
+      .date {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .button,
+      .icon-button,
+      .small-button {
+        justify-content: center;
+        gap: 8px;
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 760;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 13px;
+      }
+
+      .button.primary,
+      .small-button.active {
+        border-color: #10201e;
+        background: #10201e;
+        color: #ffffff;
+      }
+
+      .icon-button {
+        display: inline-grid;
+        place-items: center;
+        width: 40px;
+        padding: 0;
+      }
+
+      .small-button {
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 13px;
+      }
+
+      .page {
+        display: grid;
+        gap: 20px;
+        padding: 24px 28px 34px;
+      }
+
+      .title-row {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 6px;
+        font-size: clamp(30px, 4vw, 46px);
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 4px;
+        font-size: 18px;
+      }
+
+      h3 {
+        margin-bottom: 6px;
+        font-size: 15px;
+      }
+
+      .eyebrow {
+        margin-bottom: 8px;
+        color: #0b5f5a;
+        font-size: 12px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .lede,
+      .panel-subtitle,
+      .muted {
+        color: var(--muted);
+      }
+
+      .lede {
+        margin-bottom: 0;
+        max-width: 820px;
+        font-size: 15px;
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card,
+      .panel,
+      .tree-node,
+      .candidate-row,
+      .curve-item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .card {
+        display: grid;
+        gap: 12px;
+        min-height: 122px;
+        padding: 16px;
+      }
+
+      .card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .card-top span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 780;
+      }
+
+      .icon-box {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--soft);
+        color: var(--green);
+      }
+
+      .big-number {
+        margin: 0;
+        font-size: 34px;
+        font-weight: 860;
+        line-height: 1;
+      }
+
+      .metric-line {
+        gap: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      .panel {
+        overflow: hidden;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-header p {
+        margin-bottom: 0;
+        font-size: 13px;
+      }
+
+      .panel-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .panel-body {
+        padding: 16px 18px 18px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.7fr);
+        align-items: start;
+        gap: 18px;
+      }
+
+      .tree {
+        display: grid;
+        gap: 14px;
+      }
+
+      .tree-node {
+        box-shadow: none;
+      }
+
+      .tree-node-main {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 12px;
+        padding: 13px;
+      }
+
+      .tree-icon {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        background: var(--soft);
+        color: var(--green);
+      }
+
+      .tree-children {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 13px 13px 63px;
+      }
+
+      .tree-child {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .tree-child strong {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .tree-child span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .selected-card {
+        display: grid;
+        gap: 12px;
+      }
+
+      .selected-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .selected-title strong {
+        font-size: 20px;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip,
+      .pill {
+        justify-content: center;
+        gap: 6px;
+        min-height: 28px;
+        padding: 0 9px;
+        border-radius: 999px;
+        background: #e6f3f0;
+        color: #0b5f5a;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .chip.yellow,
+      .pill.yellow {
+        background: #fff0d9;
+        color: #89510c;
+      }
+
+      .chip.red,
+      .pill.red {
+        background: #fde7e4;
+        color: #982820;
+      }
+
+      .chip.violet,
+      .pill.violet {
+        background: #ece9ff;
+        color: #4736a2;
+      }
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .detail {
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .detail span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .detail strong {
+        font-size: 15px;
+      }
+
+      .map-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 14px;
+      }
+
+      .map-frame {
+        position: relative;
+        overflow: hidden;
+        height: 520px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 28% 20%, rgba(105, 86, 197, 0.18), transparent 24%),
+          radial-gradient(circle at 74% 76%, rgba(22, 132, 111, 0.14), transparent 26%),
+          #0e1719;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #map3d {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease;
+      }
+
+      .map-frame.mode-3d #map3d {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .map-frame.mode-3d #starMap2d {
+        opacity: 0;
+      }
+
+      .map-note {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .legend-item {
+        gap: 6px;
+        min-height: 28px;
+        padding: 0 9px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #edf7f4;
+        font-size: 12px;
+        font-weight: 780;
+        backdrop-filter: blur(10px);
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      .dot.yellow {
+        background: var(--yellow);
+      }
+
+      .dot.red {
+        background: var(--red);
+      }
+
+      .dot.violet {
+        background: var(--violet);
+      }
+
+      .map-side {
+        display: grid;
+        gap: 10px;
+        align-content: start;
+      }
+
+      .map-stat {
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .map-stat strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      .map-stat span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 900px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      td {
+        font-size: 14px;
+      }
+
+      tr {
+        cursor: pointer;
+      }
+
+      tr:hover td {
+        background: #f8fbfa;
+      }
+
+      tr.active-row td {
+        background: #eef5f3;
+      }
+
+      .score {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        align-items: center;
+        gap: 9px;
+        min-width: 150px;
+      }
+
+      .score-bar {
+        overflow: hidden;
+        height: 7px;
+        border-radius: 999px;
+        background: #e8eeec;
+      }
+
+      .score-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--green), var(--blue));
+      }
+
+      .curve-layout {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      .curve-list {
+        display: grid;
+        gap: 8px;
+        max-height: 560px;
+        overflow: auto;
+        padding-right: 4px;
+      }
+
+      .curve-item {
+        display: grid;
+        gap: 5px;
+        padding: 10px;
+        box-shadow: none;
+        text-align: left;
+      }
+
+      .curve-item.active {
+        border-color: #10201e;
+        box-shadow: inset 0 0 0 1px #10201e;
+      }
+
+      .curve-item strong {
+        font-size: 13px;
+      }
+
+      .curve-item span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .curve-viewer {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .curve-viewer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .curve-img-wrap {
+        display: grid;
+        min-height: 420px;
+        place-items: center;
+        padding: 12px;
+      }
+
+      .curve-img-wrap img {
+        display: block;
+        width: 100%;
+        max-height: 620px;
+        object-fit: contain;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      .notice {
+        padding: 12px 14px;
+        border: 1px solid #e6d4a5;
+        border-radius: 8px;
+        background: #fff8e8;
+        color: #69440f;
+        font-size: 13px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .toast {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 20;
+        max-width: 320px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: #10201e;
+        color: #ffffff;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(12px);
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (max-width: 1240px) {
+        .kpis {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .grid-2,
+        .map-layout,
+        .curve-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .tree-children {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          grid-template-columns: 82px minmax(0, 1fr);
+        }
+
+        .brand div:last-child,
+        .nav span,
+        .sidebar-button span,
+        .sidebar-note {
+          display: none;
+        }
+
+        .sidebar {
+          align-items: center;
+          padding: 18px 12px;
+        }
+
+        .nav,
+        .sidebar-button {
+          width: 100%;
+        }
+
+        .nav button,
+        .sidebar-button {
+          justify-content: center;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .app {
+          display: block;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          gap: 0;
+          padding: 12px;
+        }
+
+        .brand {
+          display: none;
+        }
+
+        .nav {
+          display: grid;
+          grid-auto-flow: column;
+          grid-auto-columns: minmax(44px, 1fr);
+          overflow-x: auto;
+        }
+
+        .sidebar-button {
+          display: none;
+        }
+
+        .topbar {
+          flex-wrap: wrap;
+          padding: 14px;
+        }
+
+        .date {
+          width: 100%;
+          margin-left: 0;
+        }
+
+        .page {
+          padding: 18px 14px 28px;
+        }
+
+        .title-row,
+        .panel-header {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .kpis,
+        .tree-children,
+        .details-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .tree-children {
+          padding-left: 13px;
+        }
+
+        .map-frame {
+          height: 380px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        h1 {
+          font-size: 31px;
+        }
+
+        .search {
+          order: 3;
+          max-width: none;
+          width: 100%;
+        }
+
+        .topbar .button {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Navigation">
+        <div class="brand">
+          <div class="brand-mark"><i data-lucide="git-branch"></i></div>
+          <div>
+            <strong>Astro Dashboard</strong>
+            <span>Farbenbaum</span>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Dashboard Bereiche">
+          <button class="active" type="button" title="Baumstruktur">
+            <i data-lucide="network"></i>
+            <span>Baumstruktur</span>
+          </button>
+          <button type="button" title="Sternkarte">
+            <i data-lucide="orbit"></i>
+            <span>Sternkarte</span>
+          </button>
+          <button type="button" title="Lichtkurven">
+            <i data-lucide="activity"></i>
+            <span>Lichtkurven</span>
+          </button>
+          <button type="button" title="Kandidaten">
+            <i data-lucide="table-2"></i>
+            <span>Kandidaten</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <strong>Leseregel</strong>
+          <span>Violett ist ein Zusatzmarker fuer HZ/Top-Tier. Ein Kandidat kann also gruen und violett sein.</span>
+        </div>
+
+        <button class="sidebar-button" id="refreshData" type="button" title="Daten neu bauen">
+          <i data-lucide="refresh-cw"></i>
+          <span>Daten neu bauen</span>
+        </button>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <label class="search">
+            <i data-lucide="search"></i>
+            <input id="globalSearch" type="search" placeholder="Suche: TIC, Farbe, HZ, Status" />
+          </label>
+          <span class="date" id="dateLabel">Heute</span>
+          <button class="icon-button" type="button" title="Hinweise">
+            <i data-lucide="bell"></i>
+          </button>
+          <button class="button primary" id="focusHz" type="button">
+            <i data-lucide="target"></i>
+            HZ Fokus
+          </button>
+        </header>
+        <section class="page">
+          <div class="title-row">
+          <div>
+          <p class="eyebrow">Exoplanet Candidate Explorer</p>
+
+        <h1>Kwarves</h1>
+
+          <p class="lede">
+            Analyse echter TESS-Daten mit Farbklassifikation,
+            Lichtkurven-Vetting und interaktiver Sternkarte.
+          </p>
+            </div>
+            <div class="panel-actions">
+              <button class="small-button active" type="button" data-color-filter="all">Alle</button>
+              <button class="small-button" type="button" data-color-filter="green">Gruen</button>
+              <button class="small-button" type="button" data-color-filter="yellow">Gelb</button>
+              <button class="small-button" type="button" data-color-filter="red">Rot</button>
+              <button class="small-button" type="button" data-color-filter="violet">Violett</button>
+            </div>
+          </div>
+
+          <div class="kpis" aria-label="Kennzahlen">
+            <article class="card">
+              <div class="card-top">
+                <span>Alle Kandidaten</span>
+                <div class="icon-box"><i data-lucide="database"></i></div>
+              </div>
+              <p class="big-number" id="kpiTotal">0</p>
+              <span class="metric-line"><i data-lucide="folder-tree"></i> aus Manifest</span>
+            </article>
+            <article class="card">
+              <div class="card-top">
+                <span>Gruen</span>
+                <div class="icon-box"><i data-lucide="badge-check"></i></div>
+              </div>
+              <p class="big-number" id="kpiGreen">0</p>
+              <span class="metric-line"><i data-lucide="arrow-up-right"></i> SPC-Kandidaten</span>
+            </article>
+            <article class="card">
+              <div class="card-top">
+                <span>Gelb</span>
+                <div class="icon-box"><i data-lucide="clock-3"></i></div>
+              </div>
+              <p class="big-number" id="kpiYellow">0</p>
+              <span class="metric-line"><i data-lucide="hourglass"></i> mehr Daten</span>
+            </article>
+            <article class="card">
+              <div class="card-top">
+                <span>Rot</span>
+                <div class="icon-box"><i data-lucide="octagon-alert"></i></div>
+              </div>
+              <p class="big-number" id="kpiRed">0</p>
+              <span class="metric-line"><i data-lucide="ban"></i> FP/Systematik</span>
+            </article>
+            <article class="card">
+              <div class="card-top">
+                <span>Violett</span>
+                <div class="icon-box"><i data-lucide="sparkles"></i></div>
+              </div>
+              <p class="big-number" id="kpiViolet">0</p>
+              <span class="metric-line"><i data-lucide="sun-medium"></i> HZ/Top-Tier</span>
+            </article>
+          </div>
+
+          <div class="grid-2">
+            <section class="panel" id="treePanel">
+              <div class="panel-header">
+                <div>
+                  <h2>Baumstruktur der Entscheidung</h2>
+                  <p class="panel-subtitle">Von der ersten Farbe bis zur naechsten Aktion.</p>
+                </div>
+                <button class="icon-button" type="button" title="Baum aktualisieren">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+              </div>
+              <div class="panel-body tree" id="tree"></div>
+            </section>
+
+            <aside class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Ausgewaehlter Kandidat</h2>
+                  <p class="panel-subtitle">Hier steht die Begruendung in Klartext.</p>
+                </div>
+                <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
+                  <i data-lucide="activity"></i>
+                </button>
+              </div>
+              <div class="panel-body selected-card" id="selectedCard"></div>
+            </aside>
+          </div>
+
+          <section class="panel" id="mapPanel">
+            <div class="panel-header">
+              <div>
+                <h2>2D/3D Sternkarte</h2>
+                <p class="panel-subtitle">Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung/SNR. Klicken waehlt Kandidaten aus.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="small-button active" type="button" data-map-mode="2d">
+                  <i data-lucide="map"></i>
+                  2D
+                </button>
+                <button class="small-button" type="button" data-map-mode="3d">
+                  <i data-lucide="box"></i>
+                  3D
+                </button>
+              </div>
+            </div>
+            <div class="panel-body map-layout">
+              <div class="map-frame mode-2d" id="mapFrame">
+                <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
+                <div id="map3d" aria-label="3D Sternkarte"></div>
+                <div class="map-note">
+                  <span class="legend-item"><span class="dot"></span> Gruen</span>
+                  <span class="legend-item"><span class="dot yellow"></span> Gelb</span>
+                  <span class="legend-item"><span class="dot red"></span> Rot</span>
+                  <span class="legend-item"><span class="dot violet"></span> violetter Ring = HZ</span>
+                </div>
+              </div>
+              <div class="map-side">
+                <div class="notice">
+                  Lokaler Hinweis: echte RA/Dec stehen in dieser Datenquelle nicht zentral bereit.
+                  Die Karte nutzt deshalb stabile Projektpositionen aus TIC-ID, Entfernung und SNR.
+                </div>
+                <div class="map-stat">
+                  <strong id="visibleCount">0</strong>
+                  <span>sichtbare Punkte nach Filter</span>
+                </div>
+                <div class="map-stat">
+                  <strong id="lcCount">0</strong>
+                  <span>HZ/gruene Lichtkurven mit PNG</span>
+                </div>
+                <div class="map-stat">
+                  <strong id="generatedAt">-</strong>
+                  <span>Datenstand</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="curvesPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Lichtkurven: HZ und gruene Kandidaten</h2>
+                <p class="panel-subtitle">Alle passenden Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="small-button active" type="button" data-curve-filter="all">Alle</button>
+                <button class="small-button" type="button" data-curve-filter="violet">HZ/Violett</button>
+                <button class="small-button" type="button" data-curve-filter="green">Gruen</button>
+              </div>
+            </div>
+            <div class="panel-body curve-layout">
+              <div>
+                <label class="search" style="max-width: none; margin-bottom: 10px;">
+                  <i data-lucide="search"></i>
+                  <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
+                </label>
+                <div class="curve-list" id="curveList"></div>
+              </div>
+              <div class="curve-viewer">
+                <div class="curve-viewer-header">
+                  <div>
+                    <strong id="curveTitle">Keine Lichtkurve ausgewaehlt</strong>
+                    <div class="muted" id="curveMeta"></div>
+                  </div>
+                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
+                    <i data-lucide="crosshair"></i>
+                  </button>
+                </div>
+                <div class="curve-img-wrap" id="curveImageWrap"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="tablePanel">
+            <div class="panel-header">
+              <div>
+                <h2>Kandidatenliste mit Begruendung</h2>
+                <p class="panel-subtitle">Sortiert nach Entfernung; Auswahl synchronisiert Baum, Karte und Lichtkurve.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="small-button active" type="button" data-table-limit="80">Top 80</button>
+                <button class="small-button" type="button" data-table-limit="250">250</button>
+                <button class="small-button" type="button" data-table-limit="all">Alle</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>TIC</th>
+                    <th>Farbe</th>
+                    <th>Warum</th>
+                    <th>HZ</th>
+                    <th>Distanz</th>
+                    <th>Periode</th>
+                    <th>SNR</th>
+                    <th>Transits</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
+      const state = {
+        colorFilter: "all",
+        curveFilter: "all",
+        tableLimit: 80,
+        selected: null,
+        selectedCurve: null,
+        mapMode: "2d",
+        sceneReady: false
+      };
+
+      const colors = {
+        green: "#24a085",
+        yellow: "#d08a24",
+        red: "#d75047",
+        violet: "#806cf0",
+        gray: "#a9b4b0"
+      };
+
+      const els = {
+        globalSearch: document.getElementById("globalSearch"),
+        curveSearch: document.getElementById("curveSearch"),
+        tree: document.getElementById("tree"),
+        selectedCard: document.getElementById("selectedCard"),
+        rows: document.getElementById("candidateRows"),
+        curveList: document.getElementById("curveList"),
+        curveTitle: document.getElementById("curveTitle"),
+        curveMeta: document.getElementById("curveMeta"),
+        curveImageWrap: document.getElementById("curveImageWrap"),
+        mapCanvas: document.getElementById("starMap2d"),
+        mapFrame: document.getElementById("mapFrame"),
+        map3d: document.getElementById("map3d"),
+        toast: document.getElementById("toast")
+      };
+
+      let toastTimer;
+      let points2d = [];
+      let three = {};
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat("de-DE").format(value || 0);
+      }
+
+      function showToast(message) {
+        els.toast.textContent = message;
+        els.toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2400);
+      }
+
+      function colorClass(candidate) {
+        if (candidate.isViolet) return "violet";
+        return candidate.color;
+      }
+
+      function colorName(candidate) {
+        if (candidate.isViolet && candidate.baseColorLabel !== "Gruen") {
+          return `${candidate.baseColorLabel} + Violett`;
+        }
+        if (candidate.isViolet) return "Gruen + Violett";
+        return candidate.baseColorLabel;
+      }
+
+      function matchesCandidate(candidate, term) {
+        if (!term) return true;
+        return [
+          candidate.tic,
+          candidate.status,
+          candidate.reason,
+          candidate.hz,
+          candidate.baseColorLabel,
+          candidate.isViolet ? "violett" : ""
+        ].join(" ").toLowerCase().includes(term);
+      }
+
+      function filteredCandidates() {
+        const term = els.globalSearch.value.trim().toLowerCase();
+        return data.candidates.filter((candidate) => {
+          const matchesColor =
+            state.colorFilter === "all" ||
+            (state.colorFilter === "violet" ? candidate.isViolet : candidate.color === state.colorFilter);
+          return matchesColor && matchesCandidate(candidate, term);
+        });
+      }
+
+      function renderKpis() {
+        document.getElementById("kpiTotal").textContent = formatNumber(data.summary.total);
+        document.getElementById("kpiGreen").textContent = formatNumber(data.summary.green);
+        document.getElementById("kpiYellow").textContent = formatNumber(data.summary.yellow);
+        document.getElementById("kpiRed").textContent = formatNumber(data.summary.red);
+        document.getElementById("kpiViolet").textContent = formatNumber(data.summary.violet);
+        document.getElementById("lcCount").textContent = formatNumber(data.summary.lightcurves);
+        document.getElementById("generatedAt").textContent = new Date(data.generatedAt).toLocaleTimeString("de-DE", {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      function renderTree() {
+        els.tree.innerHTML = data.tree.map((node) => `
+          <article class="tree-node">
+            <div class="tree-node-main">
+              <div class="tree-icon"><i data-lucide="git-branch"></i></div>
+              <div>
+                <h3>${node.title}</h3>
+                <p class="muted">${node.description}</p>
+              </div>
+            </div>
+            <div class="tree-children">
+              ${node.children.map((child) => `
+                <div class="tree-child">
+                  <strong>${child.label}<span>${formatNumber(child.count)}</span></strong>
+                  <span>${child.meaning}</span>
+                </div>
+              `).join("")}
+            </div>
+          </article>
+        `).join("");
+        window.lucide?.createIcons();
+      }
+
+      function selectCandidate(candidate, source = "table") {
+        state.selected = candidate;
+        renderSelected();
+        renderTable();
+        draw2dMap();
+        update3dSelection();
+        const curve = data.lightcurveCandidates.find((item) => item.tic === candidate.tic);
+        if (curve && source !== "curve") {
+          state.selectedCurve = curve;
+          renderCurves(false);
+        }
+      }
+
+      function renderSelected() {
+        const candidate = state.selected || data.priorityCandidates[0] || data.candidates[0];
+        if (!candidate) return;
+        state.selected = candidate;
+        const chips = [
+          `<span class="chip ${candidate.color}">${candidate.baseColorLabel}</span>`,
+          candidate.isViolet ? `<span class="chip violet">Violett / HZ</span>` : "",
+          candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
+          candidate.lightcurveImg ? `<span class="chip">Lichtkurve vorhanden</span>` : ""
+        ].filter(Boolean).join("");
+        els.selectedCard.innerHTML = `
+          <div class="selected-title">
+            <strong>TIC ${candidate.tic}</strong>
+            <span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span>
+          </div>
+          <div class="chips">${chips}</div>
+          <p>${candidate.reason}</p>
+          <div class="details-grid">
+            <div class="detail"><span>Distanz</span><strong>${candidate.distance} ly</strong></div>
+            <div class="detail"><span>Periode</span><strong>${candidate.period} d</strong></div>
+            <div class="detail"><span>SNR</span><strong>${candidate.snr}</strong></div>
+            <div class="detail"><span>Transits sichtbar</span><strong>${candidate.visibleTransits}/${candidate.transits}</strong></div>
+            <div class="detail"><span>Radius</span><strong>${candidate.radius || "-"} R_E</strong></div>
+            <div class="detail"><span>Status</span><strong>${candidate.status || "-"}</strong></div>
+          </div>
+          <div class="notice">
+            Pfad: ${candidate.folder || "kein Level-0-Pfad gefunden"}
+          </div>
+        `;
+      }
+
+      function setupCanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = window.devicePixelRatio || 1;
+        canvas.width = Math.max(1, Math.floor(rect.width * scale));
+        canvas.height = Math.max(1, Math.floor(rect.height * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        return { ctx, width: rect.width, height: rect.height };
+      }
+
+      function draw2dMap() {
+        const { ctx, width, height } = setupCanvas(els.mapCanvas);
+        const candidates = filteredCandidates();
+        document.getElementById("visibleCount").textContent = formatNumber(candidates.length);
+        points2d = [];
+        ctx.clearRect(0, 0, width, height);
+        const gradient = ctx.createRadialGradient(width * 0.5, height * 0.5, 20, width * 0.5, height * 0.5, width * 0.7);
+        gradient.addColorStop(0, "#18282b");
+        gradient.addColorStop(1, "#0c1416");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.lineWidth = 1;
+        for (let r = 70; r < Math.min(width, height) * 0.52; r += 70) {
+          ctx.beginPath();
+          ctx.arc(width / 2, height / 2, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        candidates.forEach((candidate) => {
+          const x = width / 2 + candidate.map.x * width * 0.42;
+          const y = height / 2 + candidate.map.y * height * 0.42;
+          const size = Math.max(2.2, Math.min(7.5, 2.2 + candidate.snr / 22));
+          const fill = colors[candidate.color] || colors.gray;
+          if (candidate.isViolet) {
+            ctx.beginPath();
+            ctx.arc(x, y, size + 4, 0, Math.PI * 2);
+            ctx.strokeStyle = colors.violet;
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fillStyle = fill;
+          ctx.globalAlpha = candidate === state.selected ? 1 : 0.72;
+          ctx.fill();
+          if (candidate === state.selected) {
+            ctx.beginPath();
+            ctx.arc(x, y, size + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          points2d.push({ x, y, radius: size + 8, candidate });
+        });
+
+        ctx.fillStyle = "rgba(255,255,255,0.72)";
+        ctx.font = "700 12px Inter, system-ui, sans-serif";
+        ctx.fillText("innen = naeher, Punktgroesse = SNR", 14, 22);
+      }
+
+      function init3dMap() {
+        if (!window.THREE || state.sceneReady) return;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        els.map3d.innerHTML = "";
+        els.map3d.appendChild(renderer.domElement);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+        camera.position.set(0, 0, 4.8);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+
+        const groups = {};
+        ["green", "yellow", "red", "gray"].forEach((key) => {
+          const geometry = new THREE.BufferGeometry();
+          const material = new THREE.PointsMaterial({
+            color: colors[key],
+            size: 0.045,
+            sizeAttenuation: true,
+            transparent: true,
+            opacity: 0.86
+          });
+          const points = new THREE.Points(geometry, material);
+          groups[key] = { geometry, points };
+          scene.add(points);
+        });
+
+        const selectedGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+        const selectedMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+        const selectedMesh = new THREE.Mesh(selectedGeometry, selectedMaterial);
+        scene.add(selectedMesh);
+
+        three = { renderer, scene, camera, groups, selectedMesh, rotation: 0 };
+        state.sceneReady = true;
+        update3dData();
+        resize3d();
+        animate3d();
+      }
+
+      function update3dData() {
+        if (!state.sceneReady) return;
+        const candidates = filteredCandidates();
+        ["green", "yellow", "red", "gray"].forEach((key) => {
+          const subset = candidates.filter((candidate) => candidate.color === key);
+          const positions = new Float32Array(subset.length * 3);
+          subset.forEach((candidate, index) => {
+            positions[index * 3] = candidate.map.x * 1.85;
+            positions[index * 3 + 1] = candidate.map.y * 1.85;
+            positions[index * 3 + 2] = (candidate.map.z - 0.45) * 2.4;
+          });
+          three.groups[key].geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+          three.groups[key].geometry.computeBoundingSphere();
+        });
+        update3dSelection();
+      }
+
+      function update3dSelection() {
+        if (!state.sceneReady || !state.selected) return;
+        three.selectedMesh.position.set(
+          state.selected.map.x * 1.85,
+          state.selected.map.y * 1.85,
+          (state.selected.map.z - 0.45) * 2.4
+        );
+      }
+
+      function resize3d() {
+        if (!state.sceneReady) return;
+        const rect = els.map3d.getBoundingClientRect();
+        three.renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+        three.camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
+        three.camera.updateProjectionMatrix();
+      }
+
+      function animate3d() {
+        if (!state.sceneReady) return;
+        three.rotation += 0.003;
+        three.scene.rotation.y = three.rotation;
+        three.scene.rotation.x = -0.18;
+        three.renderer.render(three.scene, three.camera);
+        requestAnimationFrame(animate3d);
+      }
+
+      function renderTable() {
+        const rows = filteredCandidates();
+        const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
+        els.rows.innerHTML = limited.map((candidate) => `
+          <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
+            <td><strong>TIC ${candidate.tic}</strong></td>
+            <td><span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span></td>
+            <td>${candidate.reason}</td>
+            <td>${candidate.hz || "-"}</td>
+            <td>${candidate.distance} ly</td>
+            <td>${candidate.period} d</td>
+            <td>
+              <span class="score">
+                <strong>${candidate.snr}</strong>
+                <span class="score-bar"><span style="width: ${Math.min(100, candidate.snr)}%"></span></span>
+              </span>
+            </td>
+            <td>${candidate.visibleTransits}/${candidate.transits}</td>
+          </tr>
+        `).join("");
+      }
+
+      function filteredCurves() {
+        const term = els.curveSearch.value.trim().toLowerCase();
+        return data.lightcurveCandidates.filter((candidate) => {
+          const matchesFilter =
+            state.curveFilter === "all" ||
+            (state.curveFilter === "violet" ? candidate.isViolet : candidate.color === "green");
+          return matchesFilter && matchesCandidate(candidate, term);
+        });
+      }
+
+      function renderCurves(reset = true) {
+        const curves = filteredCurves();
+        if (reset || !state.selectedCurve || !curves.some((item) => item.tic === state.selectedCurve.tic)) {
+          state.selectedCurve = curves.find((item) => state.selected && item.tic === state.selected.tic) || curves[0] || null;
+        }
+        els.curveList.innerHTML = curves.slice(0, 260).map((candidate) => `
+          <button class="curve-item ${state.selectedCurve && state.selectedCurve.tic === candidate.tic ? "active" : ""}" type="button" data-curve-tic="${candidate.tic}">
+            <strong>TIC ${candidate.tic}</strong>
+            <span>${colorName(candidate)} · ${candidate.hz || "nicht HZ"} · SNR ${candidate.snr}</span>
+          </button>
+        `).join("");
+        if (curves.length > 260) {
+          els.curveList.insertAdjacentHTML("beforeend", `<div class="notice">Zeige 260 von ${formatNumber(curves.length)} Treffern. Suche nach TIC, um enger zu filtern.</div>`);
+        }
+        renderCurveViewer();
+      }
+
+      function renderCurveViewer() {
+        const candidate = state.selectedCurve;
+        if (!candidate) {
+          els.curveTitle.textContent = "Keine Lichtkurve gefunden";
+          els.curveMeta.textContent = "";
+          els.curveImageWrap.innerHTML = '<div class="notice">Keine passende HZ/gruene Lichtkurve im aktuellen Filter.</div>';
+          return;
+        }
+        els.curveTitle.textContent = `TIC ${candidate.tic}`;
+        els.curveMeta.textContent = `${colorName(candidate)} · ${candidate.hz || "nicht HZ"} · ${candidate.distance} ly · P ${candidate.period} d`;
+        els.curveImageWrap.innerHTML = `<img src="${candidate.lightcurveImg}" alt="Kombinierte Lichtkurve TIC ${candidate.tic}" loading="lazy" />`;
+      }
+
+      function renderAll() {
+        renderKpis();
+        renderTree();
+        renderSelected();
+        renderTable();
+        renderCurves(false);
+        draw2dMap();
+        update3dData();
+        window.lucide?.createIcons();
+      }
+
+      function updateDate() {
+        document.getElementById("dateLabel").textContent = new Intl.DateTimeFormat("de-DE", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(new Date());
+      }
+
+      document.querySelectorAll("[data-color-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.colorFilter = button.dataset.colorFilter;
+          document.querySelectorAll("[data-color-filter]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          draw2dMap();
+          update3dData();
+          renderTable();
+        });
+      });
+
+      document.querySelectorAll("[data-map-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.mapMode = button.dataset.mapMode;
+          document.querySelectorAll("[data-map-mode]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          els.mapFrame.classList.toggle("mode-3d", state.mapMode === "3d");
+          if (state.mapMode === "3d") {
+            init3dMap();
+            resize3d();
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-curve-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.curveFilter = button.dataset.curveFilter;
+          document.querySelectorAll("[data-curve-filter]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          renderCurves();
+        });
+      });
+
+      document.querySelectorAll("[data-table-limit]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.tableLimit = button.dataset.tableLimit === "all" ? "all" : Number(button.dataset.tableLimit);
+          document.querySelectorAll("[data-table-limit]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          renderTable();
+        });
+      });
+
+      els.globalSearch.addEventListener("input", () => {
+        renderTable();
+        draw2dMap();
+        update3dData();
+      });
+
+      els.curveSearch.addEventListener("input", () => renderCurves());
+
+      els.rows.addEventListener("click", (event) => {
+        const row = event.target.closest("tr[data-tic]");
+        if (!row) return;
+        const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.tic));
+        if (candidate) selectCandidate(candidate);
+      });
+
+      els.curveList.addEventListener("click", (event) => {
+        const item = event.target.closest("[data-curve-tic]");
+        if (!item) return;
+        const candidate = data.lightcurveCandidates.find((entry) => entry.tic === Number(item.dataset.curveTic));
+        if (!candidate) return;
+        state.selectedCurve = candidate;
+        selectCandidate(candidate, "curve");
+        renderCurves(false);
+      });
+
+      els.mapCanvas.addEventListener("click", (event) => {
+        const rect = els.mapCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        let best = null;
+        let bestDistance = Infinity;
+        points2d.forEach((point) => {
+          const distance = Math.hypot(point.x - x, point.y - y);
+          if (distance < bestDistance) {
+            best = point;
+            bestDistance = distance;
+          }
+        });
+        if (best && bestDistance <= Math.max(14, best.radius + 4)) {
+          selectCandidate(best.candidate, "map");
+        }
+      });
+
+      document.getElementById("showSelectedCurve").addEventListener("click", () => {
+        const curve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic);
+        if (curve) {
+          state.selectedCurve = curve;
+          renderCurves(false);
+          document.getElementById("curvesPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          showToast("Fuer diesen Kandidaten ist keine HZ/gruene Lichtkurve im Dashboard-Set.");
+        }
+      });
+
+      document.getElementById("openCurveCandidate").addEventListener("click", () => {
+        if (state.selectedCurve) selectCandidate(state.selectedCurve, "curve");
+      });
+
+      document.getElementById("focusHz").addEventListener("click", () => {
+        state.colorFilter = "violet";
+        document.querySelectorAll("[data-color-filter]").forEach((item) => item.classList.remove("active"));
+        document.querySelector('[data-color-filter="violet"]').classList.add("active");
+        renderTable();
+        draw2dMap();
+        update3dData();
+        showToast("HZ/Violett gefiltert.");
+      });
+
+      document.getElementById("refreshData").addEventListener("click", () => {
+        showToast("Datenbundle: dashboard/build_dashboard_data.py erneut ausfuehren.");
+      });
+
+      window.addEventListener("resize", () => {
+        window.requestAnimationFrame(() => {
+          draw2dMap();
+          resize3d();
+        });
+      });
+
+      updateDate();
+      state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
+      state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
+      renderAll();
+      setInterval(updateDate, 30000);
+    </script>
+  </body>
+</html>
