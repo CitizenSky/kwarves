@@ -60,4 +60,5 @@ jobs:
 
       - name: Skip Notice
         if: ${{ steps.pages.outputs.enabled != 'true' }}
-        run: echo "Skipped: Enable GitHub Pages in repository settings to publish the site."
+        run: |
+          echo "Skipped: Enable GitHub Pages in repository settings to publish the site."
