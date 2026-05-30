@@ -1697,6 +1697,7 @@
           renderMissingCurve(candidate, []);
           return;
         }
+        els.curveImageWrap.innerHTML = '<div class="notice">Lade kombinierte Lichtkurve ...</div>';
         const tried = [];
         const tryLoad = (index) => {
           if (index >= sources.length) {
@@ -1705,17 +1706,34 @@
           }
           const src = sources[index];
           tried.push(src);
-          const img = new Image();
+          const img = document.createElement("img");
           img.alt = `Kombinierte Lichtkurve TIC ${candidate.tic}`;
           img.loading = "lazy";
-          img.onerror = () => tryLoad(index + 1);
-          img.onload = () => {
-            els.curveImageWrap.innerHTML = "";
-            els.curveImageWrap.appendChild(img);
+          let settled = false;
+          const settle = (ok) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (!ok) {
+              tryLoad(index + 1);
+            }
           };
-          img.src = src;
+          img.onerror = () => settle(false);
+          img.onload = () => settle(true);
+          els.curveImageWrap.innerHTML = "";
+          els.curveImageWrap.appendChild(img);
+          const timer = setTimeout(() => settle(false), 4500);
+          try {
+            img.src = src;
+          } catch (_) {
+            tryLoad(index + 1);
+          }
         };
-        tryLoad(0);
+        try {
+          tryLoad(0);
+        } catch (_) {
+          renderMissingCurve(candidate, tried);
+        }
       }
 
       function renderAll() {
