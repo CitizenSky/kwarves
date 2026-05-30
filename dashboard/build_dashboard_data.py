@@ -43,15 +43,24 @@ def safe_int(value: Any) -> int:
         return 0
 
 
+def safe_int_or_none(value: Any) -> int | None:
+    try:
+        if value in (None, ""):
+            return None
+        return int(float(value))
+    except Exception:
+        return None
+
+
 def rel_from_dashboard(path: Path) -> str:
     return os.path.relpath(path, DASHBOARD_DIR)
 
 
-def load_db_rows() -> dict[int, dict[str, Any]]:
+def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=60)
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
+        candidate_rows = conn.execute(
             """
             SELECT TIC, status, spc_class, is_fp, hz_class, hz_status, distance_ly,
                    best_period, planet_radius_earth, transit_snr, transit_count,
@@ -60,9 +69,26 @@ def load_db_rows() -> dict[int, dict[str, Any]]:
               FROM candidates_v2
             """
         ).fetchall()
+        try:
+            matrix_rows = conn.execute(
+                """
+                SELECT tic_id, n_transits, n_sectors, depth_ppt, duration_hours,
+                       sap_pdcsap_match, odd_even_result, transit_shape, depth_stability,
+                       data_gap_risk, sector_edge_risk, secondary_eclipse, period_alias_risk,
+                       rotation_risk, status, status_color, extended_class, evidence_score,
+                       score_interpretation, decision_reason, next_step, visible_transits,
+                       clean_sector_count
+                  FROM candidate_matrix
+                """
+            ).fetchall()
+        except sqlite3.OperationalError:
+            matrix_rows = []
     finally:
         conn.close()
-    return {int(row["TIC"]): dict(row) for row in rows}
+    return (
+        {int(row["TIC"]): dict(row) for row in candidate_rows},
+        {int(row["tic_id"]): dict(row) for row in matrix_rows},
+    )
 
 
 def color_for(row: dict[str, Any]) -> str:
@@ -109,8 +135,14 @@ def stable_angle(tic: int) -> float:
     return ((tic * 137.508) % 360.0) * math.pi / 180.0
 
 
-def build_candidate(row: dict[str, Any], db_row: dict[str, Any] | None, max_distance: float) -> dict[str, Any]:
+def build_candidate(
+    row: dict[str, Any],
+    db_row: dict[str, Any] | None,
+    matrix_row: dict[str, Any] | None,
+    max_distance: float,
+) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
+    matrix = matrix_row or {}
     tic = safe_int(merged.get("TIC"))
     color = color_for(merged)
     is_violet = clean_text(merged.get("hz_markierung")).upper() == "VIOLETT"
@@ -129,6 +161,10 @@ def build_candidate(row: dict[str, Any], db_row: dict[str, Any] | None, max_dist
         path = PROJECT_ROOT / candidate_folder / "lichtkurven_png" / "LICHTKURVE_COMBINED.png"
         if path.exists():
             lightcurve_img = rel_from_dashboard(path)
+    matrix_status_color = clean_text(matrix.get("status_color")).upper()
+    evidence_score = safe_float(matrix.get("evidence_score"))
+    if evidence_score is not None:
+        evidence_score = round(evidence_score, 1)
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -148,6 +184,28 @@ def build_candidate(row: dict[str, Any], db_row: dict[str, Any] | None, max_dist
         "transits": safe_int(merged.get("transit_count")),
         "visibleTransits": safe_int(merged.get("visible_transits")),
         "cleanSectors": safe_int(merged.get("clean_sector_count")),
+        "matrixStatus": clean_text(matrix.get("status")),
+        "matrixColor": matrix_status_color,
+        "matrixClass": clean_text(matrix.get("extended_class")),
+        "matrixScoreBand": clean_text(matrix.get("score_interpretation")),
+        "evidenceScore": evidence_score,
+        "decisionReason": clean_text(matrix.get("decision_reason")),
+        "nextStep": clean_text(matrix.get("next_step")),
+        "matrixTransits": safe_int_or_none(matrix.get("n_transits")),
+        "matrixSectors": safe_int_or_none(matrix.get("n_sectors")),
+        "matrixVisibleTransits": safe_int_or_none(matrix.get("visible_transits")),
+        "matrixCleanSectors": safe_int_or_none(matrix.get("clean_sector_count")),
+        "depthPpt": safe_float(matrix.get("depth_ppt")),
+        "durationHours": safe_float(matrix.get("duration_hours")),
+        "sapPdcsapMatch": clean_text(matrix.get("sap_pdcsap_match")),
+        "oddEvenResult": clean_text(matrix.get("odd_even_result")),
+        "transitShape": clean_text(matrix.get("transit_shape")),
+        "depthStability": clean_text(matrix.get("depth_stability")),
+        "dataGapRisk": clean_text(matrix.get("data_gap_risk")),
+        "sectorEdgeRisk": clean_text(matrix.get("sector_edge_risk")),
+        "secondaryEclipse": clean_text(matrix.get("secondary_eclipse")),
+        "periodAliasRisk": clean_text(matrix.get("period_alias_risk")),
+        "rotationRisk": clean_text(matrix.get("rotation_risk")),
         "folder": candidate_folder,
         "lightcurveImg": lightcurve_img,
         "map": {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
@@ -200,13 +258,18 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
-    db_rows = load_db_rows()
+    db_rows, matrix_rows = load_db_rows()
     with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
         manifest_rows = list(csv.DictReader(handle))
 
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates = [
-        build_candidate(row, db_rows.get(safe_int(row.get("TIC"))), max_distance)
+        build_candidate(
+            row,
+            db_rows.get(safe_int(row.get("TIC"))),
+            matrix_rows.get(safe_int(row.get("TIC"))),
+            max_distance,
+        )
         for row in manifest_rows
     ]
     candidates.sort(key=lambda item: (item["distance"], -item["snr"], item["tic"]))

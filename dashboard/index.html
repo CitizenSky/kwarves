@@ -503,6 +503,12 @@
         color: #4736a2;
       }
 
+      .chip.gray,
+      .pill.gray {
+        background: #edf1f0;
+        color: #5e6c68;
+      }
+
       .details-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -524,6 +530,17 @@
 
       .detail strong {
         font-size: 15px;
+      }
+
+      .matrix-note {
+        display: grid;
+        gap: 6px;
+      }
+
+      .matrix-note strong {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0;
       }
 
       .map-layout {
@@ -639,7 +656,7 @@
 
       table {
         width: 100%;
-        min-width: 900px;
+        min-width: 1450px;
         border-collapse: collapse;
       }
 
@@ -660,6 +677,17 @@
 
       td {
         font-size: 14px;
+      }
+
+      .wrap-cell {
+        min-width: 260px;
+        white-space: normal;
+        line-height: 1.35;
+      }
+
+      .mini {
+        color: var(--muted);
+        font-size: 12px;
       }
 
       tr {
@@ -1171,7 +1199,11 @@
                   <tr>
                     <th>TIC</th>
                     <th>Farbe</th>
+                    <th>Status</th>
+                    <th>Matrix</th>
+                    <th>Evidence</th>
                     <th>Warum</th>
+                    <th>Naechster Schritt</th>
                     <th>HZ</th>
                     <th>Distanz</th>
                     <th>Periode</th>
@@ -1233,6 +1265,21 @@
         return new Intl.NumberFormat("de-DE").format(value || 0);
       }
 
+      function formatMaybe(value, fallback = "-") {
+        if (value === null || value === undefined) return fallback;
+        const text = String(value).trim();
+        return text ? text : fallback;
+      }
+
+      function formatFloat(value, digits = 2, fallback = "-") {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return fallback;
+        return number.toLocaleString("de-DE", {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        });
+      }
+
       function showToast(message) {
         els.toast.textContent = message;
         els.toast.classList.add("show");
@@ -1243,6 +1290,16 @@
       function colorClass(candidate) {
         if (candidate.isViolet) return "violet";
         return candidate.color;
+      }
+
+      function matrixColorClass(candidate) {
+        const raw = String(candidate.matrixColor || "").toLowerCase();
+        if (raw === "green") return "green";
+        if (raw === "yellow") return "yellow";
+        if (raw === "red") return "red";
+        if (raw === "purple" || raw === "violet") return "violet";
+        if (raw === "gray" || raw === "grey") return "gray";
+        return "gray";
       }
 
       function colorName(candidate) {
@@ -1258,6 +1315,10 @@
         return [
           candidate.tic,
           candidate.status,
+          candidate.matrixStatus,
+          candidate.matrixClass,
+          candidate.decisionReason,
+          candidate.nextStep,
           candidate.reason,
           candidate.hz,
           candidate.baseColorLabel,
@@ -1328,10 +1389,19 @@
         const candidate = state.selected || data.priorityCandidates[0] || data.candidates[0];
         if (!candidate) return;
         state.selected = candidate;
+        const matrixStatus = formatMaybe(candidate.matrixStatus);
+        const matrixClass = formatMaybe(candidate.matrixClass);
+        const evidence = formatMaybe(candidate.evidenceScore);
+        const matrixReason = formatMaybe(candidate.decisionReason, candidate.reason || "-");
+        const matrixNext = formatMaybe(candidate.nextStep);
+        const depthText = Number.isFinite(Number(candidate.depthPpt)) ? `${formatFloat(candidate.depthPpt, 2)} ppt` : "-";
+        const durationText = Number.isFinite(Number(candidate.durationHours)) ? `${formatFloat(candidate.durationHours, 2)} h` : "-";
         const chips = [
           `<span class="chip ${candidate.color}">${candidate.baseColorLabel}</span>`,
           candidate.isViolet ? `<span class="chip violet">Violett / HZ</span>` : "",
           candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
+          candidate.matrixStatus ? `<span class="chip ${matrixColorClass(candidate)}">Matrix ${candidate.matrixStatus}</span>` : "",
+          candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${matrixColorClass(candidate)}">Evidence ${candidate.evidenceScore}</span>` : "",
           candidate.lightcurveImg ? `<span class="chip">Lichtkurve vorhanden</span>` : ""
         ].filter(Boolean).join("");
         els.selectedCard.innerHTML = `
@@ -1342,12 +1412,35 @@
           <div class="chips">${chips}</div>
           <p>${candidate.reason}</p>
           <div class="details-grid">
+            <div class="detail"><span>Matrix Status</span><strong>${matrixStatus}</strong></div>
+            <div class="detail"><span>Matrix Klasse</span><strong>${matrixClass}</strong></div>
+            <div class="detail"><span>Evidence Score</span><strong>${evidence}</strong></div>
             <div class="detail"><span>Distanz</span><strong>${candidate.distance} ly</strong></div>
             <div class="detail"><span>Periode</span><strong>${candidate.period} d</strong></div>
             <div class="detail"><span>SNR</span><strong>${candidate.snr}</strong></div>
             <div class="detail"><span>Transits sichtbar</span><strong>${candidate.visibleTransits}/${candidate.transits}</strong></div>
+            <div class="detail"><span>Matrix Transits/Sektoren</span><strong>${formatMaybe(candidate.matrixVisibleTransits, "-")}/${formatMaybe(candidate.matrixTransits, "-")} · S ${formatMaybe(candidate.matrixSectors, "-")}</strong></div>
             <div class="detail"><span>Radius</span><strong>${candidate.radius || "-"} R_E</strong></div>
             <div class="detail"><span>Status</span><strong>${candidate.status || "-"}</strong></div>
+            <div class="detail"><span>Transitform</span><strong>${formatMaybe(candidate.transitShape)}</strong></div>
+            <div class="detail"><span>SAP vs PDCSAP</span><strong>${formatMaybe(candidate.sapPdcsapMatch)}</strong></div>
+            <div class="detail"><span>Odd/Even</span><strong>${formatMaybe(candidate.oddEvenResult)}</strong></div>
+            <div class="detail"><span>Secondary Eclipse</span><strong>${formatMaybe(candidate.secondaryEclipse)}</strong></div>
+            <div class="detail"><span>Tiefe</span><strong>${depthText}</strong></div>
+            <div class="detail"><span>Dauer</span><strong>${durationText}</strong></div>
+            <div class="detail"><span>Tiefe stabil?</span><strong>${formatMaybe(candidate.depthStability)}</strong></div>
+            <div class="detail"><span>Datenluecken-Risiko</span><strong>${formatMaybe(candidate.dataGapRisk)}</strong></div>
+            <div class="detail"><span>Sektorrand-Risiko</span><strong>${formatMaybe(candidate.sectorEdgeRisk)}</strong></div>
+            <div class="detail"><span>Period-Alias-Risiko</span><strong>${formatMaybe(candidate.periodAliasRisk)}</strong></div>
+            <div class="detail"><span>Aktivitaets-Risiko</span><strong>${formatMaybe(candidate.rotationRisk)}</strong></div>
+          </div>
+          <div class="notice matrix-note">
+            <strong>Matrix Begruendung</strong>
+            <span>${matrixReason}</span>
+          </div>
+          <div class="notice matrix-note">
+            <strong>Naechster Schritt</strong>
+            <span>${matrixNext}</span>
           </div>
           <div class="notice">
             Pfad: ${candidate.folder || "kein Level-0-Pfad gefunden"}
@@ -1506,7 +1599,14 @@
           <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
             <td><strong>TIC ${candidate.tic}</strong></td>
             <td><span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span></td>
-            <td>${candidate.reason}</td>
+            <td>
+              <div><strong>${formatMaybe(candidate.status)}</strong></div>
+              <div class="mini">${formatMaybe(candidate.markierungsKlasse)}</div>
+            </td>
+            <td><span class="pill ${matrixColorClass(candidate)}">${formatMaybe(candidate.matrixStatus)}</span></td>
+            <td>${formatMaybe(candidate.evidenceScore)}</td>
+            <td class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")}</td>
+            <td class="wrap-cell">${formatMaybe(candidate.nextStep)}</td>
             <td>${candidate.hz || "-"}</td>
             <td>${candidate.distance} ly</td>
             <td>${candidate.period} d</td>
