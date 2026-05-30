@@ -6,7 +6,7 @@
     <title>Astro Dashboard - Farbenbaum</title>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script src="dashboard-data.js"></script>
+    <script src="dashboard-data.js?v=20260531a"></script>
     <style>
       :root {
         color-scheme: light;
@@ -1222,6 +1222,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
+      const DASHBOARD_UI_VERSION = "2026-05-31-a";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1880,7 +1881,7 @@
       });
 
       document.getElementById("showHints").addEventListener("click", () => {
-        showToast("Tipps: Links zum Bereich springen, Karte klicken, Kurven-Icon fuer Lichtkurve, HZ-Fokus fuer violette Kandidaten.");
+        showToast(`Tipps: Links zum Bereich springen, Karte klicken, Kurven-Icon fuer Lichtkurve, HZ-Fokus fuer violette Kandidaten. UI ${DASHBOARD_UI_VERSION}`);
       });
 
       window.addEventListener("resize", () => {
