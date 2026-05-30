@@ -16,6 +16,7 @@ from typing import Any
 PROJECT_ROOT = Path(os.environ.get("ASTRO_PROJECT_ROOT", "/Users/koni/astro_projects"))
 SCRIPT_ROOT = PROJECT_ROOT / "scripts"
 DASHBOARD_DIR = SCRIPT_ROOT / "dashboard"
+LIGHTCURVE_WEB_DIR = DASHBOARD_DIR / "lightcurves"
 DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
 OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
@@ -157,10 +158,17 @@ def build_candidate(
     z = min(1.0, max(0.0, snr / 120.0))
     candidate_folder = clean_text(merged.get("candidate_folder"))
     lightcurve_img = ""
+    lightcurve_img_local = ""
+    lightcurve_img_deploy = ""
     if candidate_folder and (color == "green" or is_violet):
         path = PROJECT_ROOT / candidate_folder / "lichtkurven_png" / "LICHTKURVE_COMBINED.png"
         if path.exists():
-            lightcurve_img = rel_from_dashboard(path)
+            lightcurve_img_local = rel_from_dashboard(path)
+            lightcurve_img = lightcurve_img_local
+            deploy_path = LIGHTCURVE_WEB_DIR / f"TIC_{tic}.png"
+            if deploy_path.exists():
+                lightcurve_img_deploy = rel_from_dashboard(deploy_path)
+                lightcurve_img = lightcurve_img_deploy
     matrix_status_color = clean_text(matrix.get("status_color")).upper()
     evidence_score = safe_float(matrix.get("evidence_score"))
     if evidence_score is not None:
@@ -208,6 +216,8 @@ def build_candidate(
         "rotationRisk": clean_text(matrix.get("rotation_risk")),
         "folder": candidate_folder,
         "lightcurveImg": lightcurve_img,
+        "lightcurveImgLocal": lightcurve_img_local,
+        "lightcurveImgDeploy": lightcurve_img_deploy,
         "map": {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
     }
 

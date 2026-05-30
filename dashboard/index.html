@@ -1656,9 +1656,65 @@
           els.curveImageWrap.innerHTML = '<div class="notice">Keine passende HZ/gruene Lichtkurve im aktuellen Filter.</div>';
           return;
         }
+
+        function collectCurveSources(item) {
+          const sources = [];
+          const push = (src) => {
+            const value = String(src || "").trim();
+            if (!value) return;
+            if (!sources.includes(value)) sources.push(value);
+          };
+          push(item.lightcurveImgDeploy);
+          push(item.lightcurveImg);
+          push(item.lightcurveImgLocal);
+          const folder = String(item.folder || "").trim();
+          if (folder) {
+            push(`${folder}/lichtkurven_png/LICHTKURVE_COMBINED.png`);
+            push(`../${folder}/lichtkurven_png/LICHTKURVE_COMBINED.png`);
+            push(`../../${folder}/lichtkurven_png/LICHTKURVE_COMBINED.png`);
+          }
+          return sources;
+        }
+
+        function renderMissingCurve(item, triedSources) {
+          const triedList = triedSources
+            .map((src) => `<li><code>${src}</code></li>`)
+            .join("");
+          els.curveImageWrap.innerHTML = `
+            <div class="notice">
+              PNG konnte nicht geladen werden. Bitte Pfad/Deploy pruefen.<br />
+              TIC ${item.tic} · ${item.folder || "kein Kandidatenordner"}<br />
+              <ul style="margin:8px 0 0 18px; padding:0;">${triedList}</ul>
+            </div>
+          `;
+        }
+
         els.curveTitle.textContent = `TIC ${candidate.tic}`;
         els.curveMeta.textContent = `${colorName(candidate)} · ${candidate.hz || "nicht HZ"} · ${candidate.distance} ly · P ${candidate.period} d`;
-        els.curveImageWrap.innerHTML = `<img src="${candidate.lightcurveImg}" alt="Kombinierte Lichtkurve TIC ${candidate.tic}" loading="lazy" />`;
+        const sources = collectCurveSources(candidate);
+        if (!sources.length) {
+          renderMissingCurve(candidate, []);
+          return;
+        }
+        const tried = [];
+        const tryLoad = (index) => {
+          if (index >= sources.length) {
+            renderMissingCurve(candidate, tried);
+            return;
+          }
+          const src = sources[index];
+          tried.push(src);
+          const img = new Image();
+          img.alt = `Kombinierte Lichtkurve TIC ${candidate.tic}`;
+          img.loading = "lazy";
+          img.onerror = () => tryLoad(index + 1);
+          img.onload = () => {
+            els.curveImageWrap.innerHTML = "";
+            els.curveImageWrap.appendChild(img);
+          };
+          img.src = src;
+        };
+        tryLoad(0);
       }
 
       function renderAll() {
