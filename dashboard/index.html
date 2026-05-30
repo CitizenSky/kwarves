@@ -961,19 +961,19 @@
         </div>
 
         <nav class="nav" aria-label="Dashboard Bereiche">
-          <button class="active" type="button" title="Baumstruktur">
+          <button class="active" type="button" title="Baumstruktur" data-nav-target="treePanel">
             <i data-lucide="network"></i>
             <span>Baumstruktur</span>
           </button>
-          <button type="button" title="Sternkarte">
+          <button type="button" title="Sternkarte" data-nav-target="mapPanel">
             <i data-lucide="orbit"></i>
             <span>Sternkarte</span>
           </button>
-          <button type="button" title="Lichtkurven">
+          <button type="button" title="Lichtkurven" data-nav-target="curvesPanel">
             <i data-lucide="activity"></i>
             <span>Lichtkurven</span>
           </button>
-          <button type="button" title="Kandidaten">
+          <button type="button" title="Kandidaten" data-nav-target="tablePanel">
             <i data-lucide="table-2"></i>
             <span>Kandidaten</span>
           </button>
@@ -997,7 +997,7 @@
             <input id="globalSearch" type="search" placeholder="Suche: TIC, Farbe, HZ, Status" />
           </label>
           <span class="date" id="dateLabel">Heute</span>
-          <button class="icon-button" type="button" title="Hinweise">
+          <button class="icon-button" type="button" title="Hinweise" id="showHints">
             <i data-lucide="bell"></i>
           </button>
           <button class="button primary" id="focusHz" type="button">
@@ -1076,7 +1076,7 @@
                   <h2>Baumstruktur der Entscheidung</h2>
                   <p class="panel-subtitle">Von der ersten Farbe bis zur naechsten Aktion.</p>
                 </div>
-                <button class="icon-button" type="button" title="Baum aktualisieren">
+                <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
                   <i data-lucide="refresh-cw"></i>
                 </button>
               </div>
@@ -1682,6 +1682,26 @@
         }).format(new Date());
       }
 
+      function scrollToPanel(panelId) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function setNavButtonActive(panelId) {
+        document.querySelectorAll("[data-nav-target]").forEach((button) => {
+          button.classList.toggle("active", button.dataset.navTarget === panelId);
+        });
+      }
+
+      document.querySelectorAll("[data-nav-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.navTarget;
+          setNavButtonActive(target);
+          scrollToPanel(target);
+        });
+      });
+
       document.querySelectorAll("[data-color-filter]").forEach((button) => {
         button.addEventListener("click", () => {
           state.colorFilter = button.dataset.colorFilter;
@@ -1772,6 +1792,7 @@
         if (curve) {
           state.selectedCurve = curve;
           renderCurves(false);
+          setNavButtonActive("curvesPanel");
           document.getElementById("curvesPanel").scrollIntoView({ behavior: "smooth", block: "start" });
         } else {
           showToast("Fuer diesen Kandidaten ist keine HZ/gruene Lichtkurve im Dashboard-Set.");
@@ -1794,6 +1815,16 @@
 
       document.getElementById("refreshData").addEventListener("click", () => {
         showToast("Datenbundle: dashboard/build_dashboard_data.py erneut ausfuehren.");
+      });
+
+      document.getElementById("refreshTree").addEventListener("click", () => {
+        renderTree();
+        window.lucide?.createIcons();
+        showToast("Entscheidungsbaum aktualisiert.");
+      });
+
+      document.getElementById("showHints").addEventListener("click", () => {
+        showToast("Tipps: Links zum Bereich springen, Karte klicken, Kurven-Icon fuer Lichtkurve, HZ-Fokus fuer violette Kandidaten.");
       });
 
       window.addEventListener("resize", () => {
