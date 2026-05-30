@@ -44,20 +44,20 @@ jobs:
           fi
 
       - name: Setup Pages
-        if: steps.pages.outputs.enabled == 'true'
+        if: ${{ steps.pages.outputs.enabled == 'true' }}
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        if: steps.pages.outputs.enabled == 'true'
+        if: ${{ steps.pages.outputs.enabled == 'true' }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
       - name: Deploy
-        if: steps.pages.outputs.enabled == 'true'
+        if: ${{ steps.pages.outputs.enabled == 'true' }}
         id: deployment
         uses: actions/deploy-pages@v4
 
       - name: Skip Notice
-        if: steps.pages.outputs.enabled != 'true'
+        if: ${{ steps.pages.outputs.enabled != 'true' }}
         run: echo "Skipped: Enable GitHub Pages in repository settings to publish the site."
