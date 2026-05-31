@@ -1660,9 +1660,13 @@
 
         function collectCurveSources(item) {
           const sources = [];
+          const bustToken = encodeURIComponent(String(data.generatedAt || DASHBOARD_UI_VERSION || Date.now()));
           const push = (src) => {
             const value = String(src || "").trim();
             if (!value) return;
+            const sep = value.includes("?") ? "&" : "?";
+            const withBust = `${value}${sep}v=${bustToken}`;
+            if (!sources.includes(withBust)) sources.push(withBust);
             if (!sources.includes(value)) sources.push(value);
           };
           push(item.lightcurveImgDeploy);
@@ -1722,7 +1726,7 @@
           img.onload = () => settle(true);
           els.curveImageWrap.innerHTML = "";
           els.curveImageWrap.appendChild(img);
-          const timer = setTimeout(() => settle(false), 4500);
+          const timer = setTimeout(() => settle(false), 15000);
           try {
             img.src = src;
           } catch (_) {
