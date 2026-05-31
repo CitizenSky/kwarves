@@ -821,6 +821,11 @@
         padding: 14px;
       }
 
+      .tess-sector-main {
+        display: grid;
+        gap: 10px;
+      }
+
       .tess-sector-frame {
         position: relative;
         overflow: hidden;
@@ -851,14 +856,9 @@
       }
 
       .tess-sector-note {
-        position: absolute;
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        pointer-events: none;
       }
 
       .dot.blue {
@@ -1785,9 +1785,11 @@
                   </div>
                 </div>
                 <div class="tess-compare-layout">
-                  <div class="tess-sector-frame mode-3d" id="tessSectorFrame">
-                    <canvas id="tessSector2d" aria-label="2D TESS-Sektorenkarte"></canvas>
-                    <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
+                  <div class="tess-sector-main">
+                    <div class="tess-sector-frame mode-3d" id="tessSectorFrame">
+                      <canvas id="tessSector2d" aria-label="2D TESS-Sektorenkarte"></canvas>
+                      <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
+                    </div>
                     <div class="tess-sector-note">
                       <span class="legend-item"><span class="dot"></span> Gruen = Kandidatensektor</span>
                       <span class="legend-item"><span class="dot blue"></span> Blau = beobachtet</span>
@@ -4581,10 +4583,10 @@
 
         setText("#tessCompareCard h3", labels.tessCompareTitle);
         setText("#tessCompareCard h3 + p", t("tess_notice_symbolic"));
-        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(1)", t("tess_label_candidate_sector"));
-        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(2)", t("tess_label_observed"));
-        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(3)", t("tess_label_planned"));
-        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(4)", t("tess_label_background"));
+        setLegendText("#tessPanel .tess-sector-note .legend-item:nth-child(1)", t("tess_label_candidate_sector"));
+        setLegendText("#tessPanel .tess-sector-note .legend-item:nth-child(2)", t("tess_label_observed"));
+        setLegendText("#tessPanel .tess-sector-note .legend-item:nth-child(3)", t("tess_label_planned"));
+        setLegendText("#tessPanel .tess-sector-note .legend-item:nth-child(4)", t("tess_label_background"));
         setText(".tess-compare-side .tess-mini-stat:nth-child(1) span", labels.tessMiniSelected);
         setText(".tess-compare-side .tess-mini-stat:nth-child(2) span", labels.tessMiniHistory);
         setText(".tess-compare-side .tess-mini-stat:nth-child(3) span", labels.tessMiniOverlap);
