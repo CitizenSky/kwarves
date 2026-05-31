@@ -2150,7 +2150,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-n";
+      const DASHBOARD_UI_VERSION = "2026-05-31-o";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -2215,6 +2215,8 @@
           map_legend_selected: "Weisser Ring = ausgewaehlt",
           map_legend_sun: "Sonne/Erde (Standpunkt)",
           map_notice_symbolic: "Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.",
+          map_notice_gaia_full: "Astrometrische Himmelskarte auf Gaia-Basis (RA/Dec) fuer alle {total} Kandidaten. Winkel/Anordnung sind astronomisch, die Radialtiefe ist fuer die Visualisierung skaliert.",
+          map_notice_gaia_mixed: "Gemischte Karte: {gaia} Kandidaten mit Gaia-RA/Dec ({pct}%), {fallback} noch als Heuristik. Winkel sind nur fuer Gaia-Punkte astronomisch korrekt.",
           tess_notice_symbolic: "Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.",
           timeline_title: "TESS Coverage Timeline",
           timeline_observed: "Bisher beobachtet",
@@ -2248,6 +2250,11 @@
           detail_sector_edge: "Sektorrand-Risiko",
           detail_alias: "Period-Alias-Risiko",
           detail_rotation: "Aktivitaets-Risiko",
+          detail_ra: "RA",
+          detail_dec: "Dec",
+          detail_map_source: "Koordinatenquelle",
+          map_source_gaia: "Gaia DR3/DR2 (astrometrisch)",
+          map_source_fallback: "Heuristik (ohne RA/Dec)",
           matrix_reason_label: "Matrix Begruendung",
           matrix_next_label: "Naechster Schritt",
           path_prefix: "Pfad",
@@ -2394,6 +2401,8 @@
           map_legend_selected: "White ring = selected",
           map_legend_sun: "Sun/Earth reference",
           map_notice_symbolic: "Simplified star-map planning view. Positions, angles, and distances are symbolic and not astronomically to scale.",
+          map_notice_gaia_full: "Astrometric sky map based on Gaia (RA/Dec) for all {total} candidates. Angles/layout are astronomical; radial depth is scaled for visualization.",
+          map_notice_gaia_mixed: "Mixed map: {gaia} candidates with Gaia RA/Dec ({pct}%), {fallback} still heuristic. Angles are astronomical only for Gaia points.",
           tess_notice_symbolic: "Simplified TESS planning view. Positions, angles, and distances are symbolic and not astronomically to scale.",
           timeline_title: "TESS Coverage Timeline",
           timeline_observed: "Observed so far",
@@ -2427,6 +2436,11 @@
           detail_sector_edge: "Sector-edge risk",
           detail_alias: "Period alias risk",
           detail_rotation: "Activity risk",
+          detail_ra: "RA",
+          detail_dec: "Dec",
+          detail_map_source: "Coordinate source",
+          map_source_gaia: "Gaia DR3/DR2 (astrometric)",
+          map_source_fallback: "Heuristic (no RA/Dec)",
           matrix_reason_label: "Matrix rationale",
           matrix_next_label: "Next step",
           path_prefix: "Path",
@@ -2573,6 +2587,8 @@
           map_legend_selected: "Anneau blanc = selectionne",
           map_legend_sun: "Reference Soleil/Terre",
           map_notice_symbolic: "Vue de planification simplifiee de la carte stellaire. Les positions, angles et distances sont symboliques et non a l'echelle astronomique.",
+          map_notice_gaia_full: "Carte du ciel astrometrique basee sur Gaia (RA/Dec) pour les {total} candidats. Les angles/dispositions sont astronomiques; la profondeur radiale est mise a l'echelle pour la visualisation.",
+          map_notice_gaia_mixed: "Carte mixte: {gaia} candidats avec RA/Dec Gaia ({pct}%), {fallback} encore heuristiques. Les angles ne sont astronomiques que pour les points Gaia.",
           tess_notice_symbolic: "Vue de planification TESS simplifiee. Les positions, angles et distances sont symboliques et non a l'echelle astronomique.",
           timeline_title: "Chronologie de Couverture TESS",
           timeline_observed: "Deja observe",
@@ -2606,6 +2622,11 @@
           detail_sector_edge: "Risque bord secteur",
           detail_alias: "Risque alias periode",
           detail_rotation: "Risque activite",
+          detail_ra: "RA",
+          detail_dec: "Dec",
+          detail_map_source: "Source coordonnees",
+          map_source_gaia: "Gaia DR3/DR2 (astrometrique)",
+          map_source_fallback: "Heuristique (sans RA/Dec)",
           matrix_reason_label: "Justification matrice",
           matrix_next_label: "Etape suivante",
           path_prefix: "Chemin",
@@ -3966,6 +3987,30 @@
         return baseLabel;
       }
 
+      function mapSourceLabel(candidate) {
+        const source = String(candidate?.mapSource || "").toLowerCase();
+        if (source === "gaia_dr3") return t("map_source_gaia");
+        return t("map_source_fallback");
+      }
+
+      function currentMapNoticeText() {
+        const summary = data.summary || {};
+        const mode = String(summary.mapMode || "");
+        if (mode === "gaia_full") {
+          return t("map_notice_gaia_full", {
+            total: formatNumber(summary.total || data.candidates.length || 0),
+          });
+        }
+        if (mode === "gaia_mixed") {
+          return t("map_notice_gaia_mixed", {
+            gaia: formatNumber(summary.mapAstrometric || 0),
+            fallback: formatNumber(summary.mapFallback || 0),
+            pct: formatFloat(summary.mapCoveragePct, 2, "0"),
+          });
+        }
+        return t("map_notice_symbolic");
+      }
+
       function matchesCandidate(candidate, term) {
         if (!term) return true;
         return [
@@ -4522,7 +4567,7 @@
         setLegendText("#mapFrame .map-note .legend-item:nth-child(4)", t("map_legend_violet"));
         setText("#mapFrame .map-note .legend-item:nth-child(5)", t("map_legend_selected"));
         setLegendText("#mapFrame .map-note .legend-item:nth-child(6)", t("map_legend_sun"));
-        setText("#mapPanel .map-side .notice", t("map_notice_symbolic"));
+        setText("#mapPanel .map-side .notice", currentMapNoticeText());
         setText("#mapPanel .map-status:nth-of-type(1) span", labels.mapSelected);
         setText("#mapPanel .map-status:nth-of-type(2) span", labels.mapObserved);
         setText("#mapPanel .map-status:nth-of-type(3) span", labels.mapNext);
@@ -5033,6 +5078,8 @@
         const matrixNext = formatMaybe(candidate.nextStep);
         const depthText = Number.isFinite(Number(candidate.depthPpt)) ? `${formatFloat(candidate.depthPpt, 2)} ppt` : "-";
         const durationText = Number.isFinite(Number(candidate.durationHours)) ? `${formatFloat(candidate.durationHours, 2)} h` : "-";
+        const raText = Number.isFinite(Number(candidate.raDeg)) ? `${formatFloat(candidate.raDeg, 5)}°` : "-";
+        const decText = Number.isFinite(Number(candidate.decDeg)) ? `${formatFloat(candidate.decDeg, 5)}°` : "-";
         const localizedBaseColor = localizedBaseColorLabel(candidate);
         const chips = [
           `<span class="chip ${candidate.color}">${localizedBaseColor}</span>`,
@@ -5060,6 +5107,9 @@
             <div class="detail"><span>${t("detail_matrix_transits")}</span><strong>${formatMaybe(candidate.matrixVisibleTransits, "-")}/${formatMaybe(candidate.matrixTransits, "-")} · S ${formatMaybe(candidate.matrixSectors, "-")}</strong></div>
             <div class="detail"><span>${t("detail_radius")}</span><strong>${candidate.radius || "-"} R_E</strong></div>
             <div class="detail"><span>${t("detail_status")}</span><strong>${candidate.status || "-"}</strong></div>
+            <div class="detail"><span>${t("detail_ra")}</span><strong>${raText}</strong></div>
+            <div class="detail"><span>${t("detail_dec")}</span><strong>${decText}</strong></div>
+            <div class="detail"><span>${t("detail_map_source")}</span><strong>${mapSourceLabel(candidate)}</strong></div>
             <div class="detail"><span>${t("detail_shape")}</span><strong>${formatMaybe(candidate.transitShape)}</strong></div>
             <div class="detail"><span>${t("detail_sap_pdcsap")}</span><strong>${formatMaybe(candidate.sapPdcsapMatch)}</strong></div>
             <div class="detail"><span>${t("detail_oddeven")}</span><strong>${formatMaybe(candidate.oddEvenResult)}</strong></div>
@@ -5097,7 +5147,7 @@
       }
 
       function draw2dMap() {
-        // Project map coordinates are derived from TIC/SNR heuristics, not astrometric RA/Dec.
+        // Candidate map coordinates are Gaia RA/Dec based when available (fallback: heuristic).
         const { ctx, width, height } = setupCanvas(els.mapCanvas);
         const candidates = filteredCandidates();
         document.getElementById("visibleCount").textContent = formatNumber(candidates.length);

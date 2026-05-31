@@ -11,6 +11,7 @@ import re
 import shutil
 import sqlite3
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,9 @@ LIGHTCURVE_WEB_DIR = DASHBOARD_DIR / "lightcurves"
 DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
 OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
+GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
+GAIA_FETCH_BATCH_SIZE = int(os.environ.get("GAIA_FETCH_BATCH_SIZE", "350"))
+GAIA_FETCH_ENABLED = os.environ.get("GAIA_FETCH_ENABLED", "1").strip() not in {"0", "false", "False"}
 
 
 def clean_text(value: Any) -> str:
@@ -32,6 +36,17 @@ def clean_text(value: Any) -> str:
 
 
 def safe_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    mask = getattr(value, "mask", None)
+    if mask is True:
+        return None
+    if mask is not None:
+        try:
+            if bool(mask):
+                return None
+        except Exception:
+            pass
     try:
         number = float(value)
     except Exception:
@@ -53,6 +68,127 @@ def safe_int_or_none(value: Any) -> int | None:
         return int(float(value))
     except Exception:
         return None
+
+
+def parse_gaia_source_id(value: Any) -> int | None:
+    text = clean_text(value)
+    if not text:
+        return None
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    try:
+        source_id = int(digits)
+    except Exception:
+        return None
+    return source_id if source_id > 0 else None
+
+
+def load_gaia_cache(path: Path = GAIA_CACHE_PATH) -> dict[int, dict[str, float | None]]:
+    if not path.exists():
+        return {}
+    cache: dict[int, dict[str, float | None]] = {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            source_id = parse_gaia_source_id(row.get("source_id"))
+            if source_id is None:
+                continue
+            cache[source_id] = {
+                "ra": safe_float(row.get("ra_deg")),
+                "dec": safe_float(row.get("dec_deg")),
+                "parallax": safe_float(row.get("parallax_mas")),
+                "pmra": safe_float(row.get("pmra_masyr")),
+                "pmdec": safe_float(row.get("pmdec_masyr")),
+            }
+    return cache
+
+
+def save_gaia_cache(cache: dict[int, dict[str, float | None]], path: Path = GAIA_CACHE_PATH) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["source_id", "ra_deg", "dec_deg", "parallax_mas", "pmra_masyr", "pmdec_masyr"],
+        )
+        writer.writeheader()
+        for source_id in sorted(cache):
+            entry = cache[source_id] or {}
+            writer.writerow(
+                {
+                    "source_id": source_id,
+                    "ra_deg": entry.get("ra"),
+                    "dec_deg": entry.get("dec"),
+                    "parallax_mas": entry.get("parallax"),
+                    "pmra_masyr": entry.get("pmra"),
+                    "pmdec_masyr": entry.get("pmdec"),
+                }
+            )
+
+
+def fetch_gaia_coordinates(source_ids: list[int]) -> dict[int, dict[str, float | None]]:
+    if not source_ids or not GAIA_FETCH_ENABLED:
+        return {}
+    try:
+        from astropy.table import Table
+        from astroquery.gaia import Gaia
+    except Exception as exc:
+        print(f"[gaia] astroquery unavailable, skipping fetch: {exc}")
+        return {}
+
+    Gaia.ROW_LIMIT = -1
+    unique_ids = sorted({int(source_id) for source_id in source_ids if int(source_id) > 0})
+    result: dict[int, dict[str, float | None]] = {}
+    batch_size = max(25, GAIA_FETCH_BATCH_SIZE)
+
+    def query_table(table_name: str, ids: list[int]) -> dict[int, dict[str, float | None]]:
+        if not ids:
+            return {}
+        query = f"""
+            SELECT g.source_id, g.ra, g.dec, g.parallax, g.pmra, g.pmdec
+              FROM {table_name} AS g
+              JOIN tap_upload.src_ids AS u
+                ON g.source_id = u.source_id
+        """
+        fetched: dict[int, dict[str, float | None]] = {}
+        upload = Table({"source_id": ids})
+        job = Gaia.launch_job_async(
+            query=query,
+            upload_resource=upload,
+            upload_table_name="src_ids",
+            verbose=False,
+        )
+        rows = job.get_results()
+        for row in rows:
+            source_id = parse_gaia_source_id(row["source_id"])
+            if source_id is None:
+                continue
+            fetched[source_id] = {
+                "ra": safe_float(row["ra"]),
+                "dec": safe_float(row["dec"]),
+                "parallax": safe_float(row["parallax"]),
+                "pmra": safe_float(row["pmra"]),
+                "pmdec": safe_float(row["pmdec"]),
+            }
+        return fetched
+
+    for index in range(0, len(unique_ids), batch_size):
+        chunk = unique_ids[index : index + batch_size]
+        chunk_index = index // batch_size + 1
+        resolved: dict[int, dict[str, float | None]] = {}
+        try:
+            resolved.update(query_table("gaiadr3.gaia_source", chunk))
+        except Exception as exc:
+            print(f"[gaia] DR3 chunk {chunk_index} failed ({len(chunk)} ids): {exc}")
+        missing_ids = [source_id for source_id in chunk if source_id not in resolved]
+        if missing_ids:
+            try:
+                resolved.update(query_table("gaiadr2.gaia_source", missing_ids))
+            except Exception as exc:
+                print(f"[gaia] DR2 fallback chunk {chunk_index} failed ({len(missing_ids)} ids): {exc}")
+        result.update(resolved)
+        print(f"[gaia] fetched {len(resolved)} rows (chunk {chunk_index}, total cached {len(result)}/{len(unique_ids)})")
+    return result
 
 
 def parse_sector_text(value: Any) -> list[int]:
@@ -110,13 +246,18 @@ def sync_curve_asset(source_path: Path, tic: int) -> Path | None:
         return None
 
 
-def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
+def load_db_rows() -> tuple[
+    dict[int, dict[str, Any]],
+    dict[int, dict[str, Any]],
+    dict[int, dict[str, Any]],
+    dict[int, dict[str, Any]],
+]:
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=60)
     conn.row_factory = sqlite3.Row
     try:
         candidate_rows = conn.execute(
             """
-            SELECT TIC, status, spc_class, is_fp, hz_class, hz_status, distance_ly,
+            SELECT TIC, gaia_id, status, spc_class, is_fp, hz_class, hz_status, distance_ly,
                    best_period, planet_radius_earth, transit_snr, transit_count,
                    visible_transits, clean_sector_count, sector_count,
                    revisit_priority, next_recheck, notes
@@ -147,6 +288,15 @@ def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]
             ).fetchall()
         except sqlite3.OperationalError:
             sector_rows = []
+        try:
+            coord_rows = conn.execute(
+                """
+                SELECT TIC, gaia_id, tic_ra, tic_dec, tic_plx, tic_pmra, tic_pmdec, target_ra, target_dec, target_parallax
+                  FROM level4_hz_enriched_master
+                """
+            ).fetchall()
+        except sqlite3.OperationalError:
+            coord_rows = []
     finally:
         conn.close()
     return (
@@ -160,6 +310,17 @@ def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]
                 "newSectors": parse_sector_text(row["new_sectors_text"]),
             }
             for row in sector_rows
+        },
+        {
+            int(row["TIC"]): {
+                "gaia_id": clean_text(row["gaia_id"]),
+                "ra": safe_float(row["target_ra"]) if safe_float(row["target_ra"]) is not None else safe_float(row["tic_ra"]),
+                "dec": safe_float(row["target_dec"]) if safe_float(row["target_dec"]) is not None else safe_float(row["tic_dec"]),
+                "parallax": safe_float(row["target_parallax"]) if safe_float(row["target_parallax"]) is not None else safe_float(row["tic_plx"]),
+                "pmra": safe_float(row["tic_pmra"]),
+                "pmdec": safe_float(row["tic_pmdec"]),
+            }
+            for row in coord_rows
         },
     )
 
@@ -208,11 +369,47 @@ def stable_angle(tic: int) -> float:
     return ((tic * 137.508) % 360.0) * math.pi / 180.0
 
 
+def build_map_coordinates(
+    tic: int,
+    distance_ly: float,
+    snr: float,
+    max_distance: float,
+    gaia_coords: dict[str, float | None] | None,
+) -> tuple[dict[str, float], str]:
+    radial = math.sqrt(max(distance_ly, 1.0) / max(max_distance, 1.0))
+    scale = 0.16 + radial * 0.76
+    if gaia_coords:
+        ra = safe_float(gaia_coords.get("ra"))
+        dec = safe_float(gaia_coords.get("dec"))
+        if ra is not None and dec is not None:
+            ra_rad = math.radians(ra)
+            dec_rad = math.radians(dec)
+            x = math.cos(dec_rad) * math.cos(ra_rad) * scale
+            y = math.cos(dec_rad) * math.sin(ra_rad) * scale
+            z = math.sin(dec_rad) * scale
+            return (
+                {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
+                "gaia_dr3",
+            )
+
+    angle = stable_angle(tic)
+    jitter = ((tic % 97) / 97.0 - 0.5) * 0.08
+    x = math.cos(angle) * scale + jitter
+    y = math.sin(angle) * scale - jitter
+    z = min(1.0, max(0.0, snr / 120.0))
+    return (
+        {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
+        "heuristic_fallback",
+    )
+
+
 def build_candidate(
     row: dict[str, Any],
     db_row: dict[str, Any] | None,
     matrix_row: dict[str, Any] | None,
     sector_row: dict[str, Any] | None,
+    gaia_row: dict[str, Any] | None,
+    gaia_cache: dict[int, dict[str, float | None]],
     max_distance: float,
 ) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
@@ -224,12 +421,10 @@ def build_candidate(
     distance = safe_float(merged.get("distance_ly")) or 0.0
     period = safe_float(merged.get("best_period")) or 0.0
     snr = safe_float(merged.get("transit_snr")) or 0.0
-    angle = stable_angle(tic)
-    radial = math.sqrt(max(distance, 1.0) / max(max_distance, 1.0))
-    jitter = ((tic % 97) / 97.0 - 0.5) * 0.08
-    x = math.cos(angle) * (0.16 + radial * 0.76) + jitter
-    y = math.sin(angle) * (0.16 + radial * 0.76) - jitter
-    z = min(1.0, max(0.0, snr / 120.0))
+    gaia_source_id = parse_gaia_source_id(merged.get("gaia_id"))
+    coord_from_cache = gaia_cache.get(gaia_source_id) if gaia_source_id else None
+    gaia_coord = coord_from_cache or gaia_row or {}
+    map_coord, map_source = build_map_coordinates(tic, distance, snr, max_distance, gaia_coord)
     candidate_folder = clean_text(merged.get("candidate_folder"))
     lightcurve_img = ""
     lightcurve_img_local = ""
@@ -267,6 +462,11 @@ def build_candidate(
         "period": round(period, 4),
         "radius": round(safe_float(merged.get("planet_radius_earth")) or 0.0, 2),
         "snr": round(snr, 2),
+        "gaiaSourceId": gaia_source_id,
+        "raDeg": safe_float(gaia_coord.get("ra")) if gaia_coord else None,
+        "decDeg": safe_float(gaia_coord.get("dec")) if gaia_coord else None,
+        "parallaxMas": safe_float(gaia_coord.get("parallax")) if gaia_coord else None,
+        "mapSource": map_source,
         "transits": safe_int(merged.get("transit_count")),
         "visibleTransits": safe_int(merged.get("visible_transits")),
         "cleanSectors": safe_int(merged.get("clean_sector_count")),
@@ -307,7 +507,7 @@ def build_candidate(
         "lightcurveImg": lightcurve_img,
         "lightcurveImgLocal": lightcurve_img_local,
         "lightcurveImgDeploy": lightcurve_img_deploy,
-        "map": {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
+        "map": map_coord,
     }
 
 
@@ -357,9 +557,29 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
-    db_rows, matrix_rows, sector_rows = load_db_rows()
+    db_rows, matrix_rows, sector_rows, local_coord_rows = load_db_rows()
     with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
         manifest_rows = list(csv.DictReader(handle))
+
+    gaia_cache = load_gaia_cache()
+    manifest_tics = [safe_int(row.get("TIC")) for row in manifest_rows]
+    source_ids_to_query: list[int] = []
+    for tic in manifest_tics:
+        db_row = db_rows.get(tic) or {}
+        local_coord = local_coord_rows.get(tic) or {}
+        gaia_source_id = parse_gaia_source_id(db_row.get("gaia_id") or local_coord.get("gaia_id"))
+        if gaia_source_id is None:
+            continue
+        if gaia_source_id in gaia_cache:
+            cached = gaia_cache.get(gaia_source_id) or {}
+            if safe_float(cached.get("ra")) is not None and safe_float(cached.get("dec")) is not None:
+                continue
+        source_ids_to_query.append(gaia_source_id)
+
+    fetched_coords = fetch_gaia_coordinates(source_ids_to_query)
+    if fetched_coords:
+        gaia_cache.update(fetched_coords)
+        save_gaia_cache(gaia_cache)
 
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates = [
@@ -368,6 +588,8 @@ def main() -> int:
             db_rows.get(safe_int(row.get("TIC"))),
             matrix_rows.get(safe_int(row.get("TIC"))),
             sector_rows.get(safe_int(row.get("TIC"))),
+            local_coord_rows.get(safe_int(row.get("TIC"))),
+            gaia_cache,
             max_distance,
         )
         for row in manifest_rows
@@ -390,7 +612,20 @@ def main() -> int:
         "red": sum(1 for candidate in candidates if candidate["color"] == "red"),
         "violet": sum(1 for candidate in candidates if candidate["isViolet"]),
         "lightcurves": len(lightcurve_candidates),
+        "mapAstrometric": sum(1 for candidate in candidates if candidate["mapSource"] == "gaia_dr3"),
+        "mapFallback": sum(1 for candidate in candidates if candidate["mapSource"] != "gaia_dr3"),
+        "gaiaCacheSize": len(gaia_cache),
     }
+    summary["mapCoveragePct"] = round(
+        100.0 * summary["mapAstrometric"] / max(1, summary["total"]),
+        2,
+    )
+    summary["mapMode"] = (
+        "gaia_full"
+        if summary["mapAstrometric"] == summary["total"]
+        else ("gaia_mixed" if summary["mapAstrometric"] > 0 else "heuristic_only")
+    )
+    summary["coordinatesUpdatedAt"] = datetime.now().isoformat(timespec="seconds")
 
     data = {
         "generatedAt": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
