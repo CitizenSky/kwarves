@@ -759,6 +759,86 @@
         white-space: normal;
       }
 
+      .admin-layout {
+        display: grid;
+        gap: 12px;
+      }
+
+      .admin-login-card {
+        max-width: 460px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .admin-login-card h3 {
+        margin: 0 0 6px;
+      }
+
+      .admin-form {
+        display: grid;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .admin-form label {
+        display: grid;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .admin-form input {
+        height: 38px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--ink);
+      }
+
+      .admin-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .admin-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .admin-kpi {
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .admin-kpi span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .admin-kpi strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 20px;
+      }
+
+      .admin-table {
+        min-width: 780px;
+      }
+
+      .admin-hidden {
+        display: none !important;
+      }
+
       .docs-flow {
         display: flex;
         flex-wrap: wrap;
@@ -1093,7 +1173,8 @@
         .tree-children,
         .details-grid,
         .docs-grid,
-        .tess-kpis {
+        .tess-kpis,
+        .admin-kpis {
           grid-template-columns: minmax(0, 1fr);
         }
 
@@ -1158,6 +1239,10 @@
           <button type="button" title="Projektlogik" data-nav-target="docsPanel">
             <i data-lucide="book-open-text"></i>
             <span>Projektlogik</span>
+          </button>
+          <button type="button" title="Admin" data-nav-target="adminPanel">
+            <i data-lucide="shield-check"></i>
+            <span>Admin</span>
           </button>
         </nav>
 
@@ -1485,6 +1570,90 @@
               </div>
             </div>
           </section>
+
+          <section class="panel" id="adminPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Admin Bereich</h2>
+                <p class="panel-subtitle">Login und Seitenstatistik (Aufrufe, Laender, Aufenthaltsdauer).</p>
+              </div>
+              <div class="panel-actions">
+                <button class="icon-button" type="button" title="Admin aktualisieren" id="refreshAdmin">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+              </div>
+            </div>
+            <div class="panel-body admin-layout">
+              <div class="admin-login-card" id="adminLoginCard">
+                <h3>Login</h3>
+                <p class="muted">Zugang fuer den Admin-Bereich.</p>
+                <form class="admin-form" id="adminLoginForm">
+                  <label for="adminUserInput">
+                    Benutzername
+                    <input id="adminUserInput" type="text" autocomplete="username" />
+                  </label>
+                  <label for="adminPassInput">
+                    Passwort
+                    <input id="adminPassInput" type="password" autocomplete="current-password" />
+                  </label>
+                  <button class="button primary" type="submit">
+                    <i data-lucide="log-in"></i>
+                    Login
+                  </button>
+                </form>
+                <div class="mini" id="adminLoginHint"></div>
+              </div>
+
+              <div class="admin-hidden" id="adminStatsWrap">
+                <div class="admin-toolbar">
+                  <button class="small-button" type="button" id="adminResetStats">
+                    <i data-lucide="eraser"></i>
+                    Statistik zuruecksetzen
+                  </button>
+                  <button class="small-button" type="button" id="adminLogout">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                  </button>
+                </div>
+                <div class="admin-kpis" style="margin-top: 10px;">
+                  <article class="admin-kpi">
+                    <span>Seitenaufrufe</span>
+                    <strong id="adminViews">0</strong>
+                  </article>
+                  <article class="admin-kpi">
+                    <span>Sitzungen</span>
+                    <strong id="adminSessions">0</strong>
+                  </article>
+                  <article class="admin-kpi">
+                    <span>Durchschn. Dauer</span>
+                    <strong id="adminAvgDuration">0s</strong>
+                  </article>
+                  <article class="admin-kpi">
+                    <span>Letzter Besuch</span>
+                    <strong id="adminLastVisit">-</strong>
+                  </article>
+                </div>
+                <div class="notice" style="margin-top: 10px;">
+                  <strong>Aktuelles Land:</strong> <span id="adminCurrentCountry">-</span><br />
+                  <strong>Hinweis:</strong> Diese Statistik ist clientseitig im Browser gespeichert.
+                </div>
+                <div class="table-wrap" style="margin-top: 10px;">
+                  <table class="admin-table" aria-label="Laenderstatistik">
+                    <thead>
+                      <tr>
+                        <th>Land</th>
+                        <th>Aufrufe</th>
+                        <th>Sitzungen</th>
+                        <th>Gesamtdauer</th>
+                        <th>Durchschnitt/Sitzung</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminCountryRows"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -1492,7 +1661,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-b";
+      const DASHBOARD_UI_VERSION = "2026-05-31-c";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1504,6 +1673,11 @@
         sceneReady: false
       };
 
+      const ADMIN_USER = "Koni";
+      const ADMIN_PASSWORD = "starfield";
+      const ADMIN_LOGIN_KEY = "kwarves_admin_logged_in_v1";
+      const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
+
       const colors = {
         green: "#24a085",
         yellow: "#d08a24",
@@ -1511,6 +1685,15 @@
         violet: "#806cf0",
         gray: "#a9b4b0",
         sun: "#f4c96d"
+      };
+
+      const analytics = {
+        store: null,
+        sessionStartedAt: Date.now(),
+        sessionClosed: false,
+        countryCode: "UN",
+        countryName: "Unknown",
+        countryResolved: false
       };
 
       const tessMission = {
@@ -1791,7 +1974,19 @@
         tessYear8Info: document.getElementById("tessYear8Info"),
         tessGeometryInfo: document.getElementById("tessGeometryInfo"),
         tessScheduleRows: document.getElementById("tessScheduleRows"),
-        tessUpdatedAt: document.getElementById("tessUpdatedAt")
+        tessUpdatedAt: document.getElementById("tessUpdatedAt"),
+        adminLoginCard: document.getElementById("adminLoginCard"),
+        adminLoginForm: document.getElementById("adminLoginForm"),
+        adminUserInput: document.getElementById("adminUserInput"),
+        adminPassInput: document.getElementById("adminPassInput"),
+        adminLoginHint: document.getElementById("adminLoginHint"),
+        adminStatsWrap: document.getElementById("adminStatsWrap"),
+        adminViews: document.getElementById("adminViews"),
+        adminSessions: document.getElementById("adminSessions"),
+        adminAvgDuration: document.getElementById("adminAvgDuration"),
+        adminLastVisit: document.getElementById("adminLastVisit"),
+        adminCurrentCountry: document.getElementById("adminCurrentCountry"),
+        adminCountryRows: document.getElementById("adminCountryRows")
       };
 
       let toastTimer;
@@ -1840,6 +2035,194 @@
       function daysDiff(fromDate, toDate) {
         const diff = toDate.getTime() - fromDate.getTime();
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
+
+      function emptyAnalyticsStore() {
+        return {
+          totalViews: 0,
+          totalSessions: 0,
+          totalDurationSeconds: 0,
+          lastVisitAt: null,
+          countries: {}
+        };
+      }
+
+      function loadAnalyticsStore() {
+        try {
+          const raw = localStorage.getItem(ANALYTICS_STORE_KEY);
+          if (!raw) return emptyAnalyticsStore();
+          const parsed = JSON.parse(raw);
+          const base = emptyAnalyticsStore();
+          return {
+            totalViews: Number(parsed.totalViews) || 0,
+            totalSessions: Number(parsed.totalSessions) || 0,
+            totalDurationSeconds: Number(parsed.totalDurationSeconds) || 0,
+            lastVisitAt: parsed.lastVisitAt || null,
+            countries: parsed.countries && typeof parsed.countries === "object" ? parsed.countries : base.countries
+          };
+        } catch (_) {
+          return emptyAnalyticsStore();
+        }
+      }
+
+      function saveAnalyticsStore() {
+        if (!analytics.store) return;
+        localStorage.setItem(ANALYTICS_STORE_KEY, JSON.stringify(analytics.store));
+      }
+
+      function ensureCountryBucket(code, name = "Unknown") {
+        if (!analytics.store) analytics.store = loadAnalyticsStore();
+        const safeCode = String(code || "UN").toUpperCase();
+        if (!analytics.store.countries[safeCode]) {
+          analytics.store.countries[safeCode] = {
+            code: safeCode,
+            name: name || "Unknown",
+            views: 0,
+            sessions: 0,
+            totalDurationSeconds: 0
+          };
+        } else if (name && name !== "Unknown") {
+          analytics.store.countries[safeCode].name = name;
+        }
+        return analytics.store.countries[safeCode];
+      }
+
+      function formatDuration(seconds) {
+        const safe = Math.max(0, Math.round(Number(seconds) || 0));
+        if (safe < 60) return `${safe}s`;
+        const mins = Math.floor(safe / 60);
+        const secs = safe % 60;
+        if (mins < 60) return `${mins}m ${secs}s`;
+        const hours = Math.floor(mins / 60);
+        const restMins = mins % 60;
+        return `${hours}h ${restMins}m`;
+      }
+
+      function formatDateTime(isoValue) {
+        if (!isoValue) return "-";
+        const date = new Date(isoValue);
+        if (Number.isNaN(date.getTime())) return "-";
+        return new Intl.DateTimeFormat("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(date);
+      }
+
+      function isAdminLoggedIn() {
+        try {
+          return sessionStorage.getItem(ADMIN_LOGIN_KEY) === "1";
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function setAdminLoggedIn(value) {
+        try {
+          if (value) sessionStorage.setItem(ADMIN_LOGIN_KEY, "1");
+          else sessionStorage.removeItem(ADMIN_LOGIN_KEY);
+        } catch (_) {}
+      }
+
+      function renderAdmin() {
+        if (!analytics.store) analytics.store = loadAnalyticsStore();
+        const loggedIn = isAdminLoggedIn();
+        els.adminLoginCard.classList.toggle("admin-hidden", loggedIn);
+        els.adminStatsWrap.classList.toggle("admin-hidden", !loggedIn);
+
+        if (!loggedIn) {
+          els.adminLoginHint.textContent = "Benutzername: Koni";
+          return;
+        }
+
+        const store = analytics.store;
+        const avgDuration = store.totalSessions > 0 ? store.totalDurationSeconds / store.totalSessions : 0;
+        els.adminViews.textContent = formatNumber(store.totalViews);
+        els.adminSessions.textContent = formatNumber(store.totalSessions);
+        els.adminAvgDuration.textContent = formatDuration(avgDuration);
+        els.adminLastVisit.textContent = formatDateTime(store.lastVisitAt);
+        els.adminCurrentCountry.textContent = `${analytics.countryName} (${analytics.countryCode})`;
+
+        const rows = Object.values(store.countries)
+          .sort((a, b) => (b.views || 0) - (a.views || 0))
+          .map((item) => {
+            const avg = (item.sessions || 0) > 0 ? item.totalDurationSeconds / item.sessions : 0;
+            return `
+              <tr>
+                <td><strong>${item.name || "Unknown"} (${item.code || "UN"})</strong></td>
+                <td>${formatNumber(item.views || 0)}</td>
+                <td>${formatNumber(item.sessions || 0)}</td>
+                <td>${formatDuration(item.totalDurationSeconds || 0)}</td>
+                <td>${formatDuration(avg)}</td>
+              </tr>
+            `;
+          }).join("");
+        els.adminCountryRows.innerHTML = rows || `<tr><td colspan="5">Noch keine Eintraege.</td></tr>`;
+      }
+
+      async function resolveCountry() {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 4500);
+          const res = await fetch("https://ipapi.co/json/", {
+            signal: controller.signal,
+            cache: "no-store"
+          });
+          clearTimeout(timer);
+          if (!res.ok) throw new Error("ipapi failed");
+          const payload = await res.json();
+          const code = String(payload.country_code || payload.country || "UN").toUpperCase();
+          const name = String(payload.country_name || "Unknown");
+          return { code: code || "UN", name: name || "Unknown" };
+        } catch (_) {
+          return { code: "UN", name: "Unknown" };
+        }
+      }
+
+      function transferSessionCountry(fromCode, toCode, toName) {
+        const from = ensureCountryBucket(fromCode, "Unknown");
+        const to = ensureCountryBucket(toCode, toName || "Unknown");
+        from.views = Math.max(0, (from.views || 0) - 1);
+        from.sessions = Math.max(0, (from.sessions || 0) - 1);
+        to.views = (to.views || 0) + 1;
+        to.sessions = (to.sessions || 0) + 1;
+        saveAnalyticsStore();
+      }
+
+      function startAnalyticsTracking() {
+        analytics.store = loadAnalyticsStore();
+        analytics.sessionStartedAt = Date.now();
+        analytics.sessionClosed = false;
+
+        analytics.store.totalViews += 1;
+        analytics.store.totalSessions += 1;
+        analytics.store.lastVisitAt = new Date().toISOString();
+
+        const unknownBucket = ensureCountryBucket("UN", "Unknown");
+        unknownBucket.views += 1;
+        unknownBucket.sessions += 1;
+        saveAnalyticsStore();
+
+        resolveCountry().then((country) => {
+          analytics.countryCode = country.code;
+          analytics.countryName = country.name;
+          analytics.countryResolved = true;
+          if (country.code !== "UN") transferSessionCountry("UN", country.code, country.name);
+          renderAdmin();
+        });
+      }
+
+      function finalizeAnalyticsSession() {
+        if (analytics.sessionClosed) return;
+        analytics.sessionClosed = true;
+        if (!analytics.store) analytics.store = loadAnalyticsStore();
+        const elapsedSeconds = Math.max(1, Math.round((Date.now() - analytics.sessionStartedAt) / 1000));
+        analytics.store.totalDurationSeconds += elapsedSeconds;
+        const bucket = ensureCountryBucket(analytics.countryCode, analytics.countryName);
+        bucket.totalDurationSeconds = (bucket.totalDurationSeconds || 0) + elapsedSeconds;
+        saveAnalyticsStore();
       }
 
       function showToast(message) {
@@ -2446,6 +2829,7 @@
         renderTree();
         renderDocs();
         renderTess();
+        renderAdmin();
         renderSelected();
         renderTable();
         renderCurves(false);
@@ -2615,8 +2999,52 @@
         showToast("TESS-Sektorstatus aktualisiert.");
       });
 
+      els.adminLoginForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const user = String(els.adminUserInput.value || "").trim();
+        const pass = String(els.adminPassInput.value || "");
+        if (user === ADMIN_USER && pass === ADMIN_PASSWORD) {
+          setAdminLoggedIn(true);
+          els.adminPassInput.value = "";
+          els.adminLoginHint.textContent = "";
+          renderAdmin();
+          window.lucide?.createIcons();
+          showToast("Admin-Login erfolgreich.");
+        } else {
+          els.adminLoginHint.textContent = "Login fehlgeschlagen.";
+          showToast("Falscher Benutzer oder falsches Passwort.");
+        }
+      });
+
+      document.getElementById("adminLogout").addEventListener("click", () => {
+        setAdminLoggedIn(false);
+        renderAdmin();
+        showToast("Admin ausgeloggt.");
+      });
+
+      document.getElementById("adminResetStats").addEventListener("click", () => {
+        if (!window.confirm("Statistik wirklich zuruecksetzen?")) return;
+        analytics.store = emptyAnalyticsStore();
+        analytics.sessionStartedAt = Date.now();
+        analytics.sessionClosed = false;
+        analytics.store.totalViews = 1;
+        analytics.store.totalSessions = 1;
+        analytics.store.lastVisitAt = new Date().toISOString();
+        const bucket = ensureCountryBucket(analytics.countryCode, analytics.countryName);
+        bucket.views += 1;
+        bucket.sessions += 1;
+        saveAnalyticsStore();
+        renderAdmin();
+        showToast("Statistik zurueckgesetzt.");
+      });
+
+      document.getElementById("refreshAdmin").addEventListener("click", () => {
+        renderAdmin();
+        showToast("Admin-Bereich aktualisiert.");
+      });
+
       document.getElementById("showHints").addEventListener("click", () => {
-        showToast(`Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, HZ-Fokus fuer violette Kandidaten. UI ${DASHBOARD_UI_VERSION}`);
+        showToast(`Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, Admin fuer Statistik. UI ${DASHBOARD_UI_VERSION}`);
       });
 
       window.addEventListener("resize", () => {
@@ -2626,13 +3054,19 @@
         });
       });
 
+      window.addEventListener("pagehide", () => {
+        finalizeAnalyticsSession();
+      });
+
       updateDate();
+      startAnalyticsTracking();
       state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
       state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
       renderAll();
       setInterval(() => {
         updateDate();
         renderTess();
+        renderAdmin();
       }, 30000);
     </script>
   </body>
