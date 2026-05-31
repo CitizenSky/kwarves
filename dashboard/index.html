@@ -627,6 +627,11 @@
         background: var(--violet);
       }
 
+      .dot.sun {
+        background: #f4c96d;
+        box-shadow: 0 0 0 2px rgba(244, 201, 109, 0.24);
+      }
+
       .map-side {
         display: grid;
         gap: 10px;
@@ -1123,6 +1128,7 @@
                   <span class="legend-item"><span class="dot yellow"></span> Gelb</span>
                   <span class="legend-item"><span class="dot red"></span> Rot</span>
                   <span class="legend-item"><span class="dot violet"></span> violetter Ring = HZ</span>
+                  <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
                 </div>
               </div>
               <div class="map-side">
@@ -1239,7 +1245,8 @@
         yellow: "#d08a24",
         red: "#d75047",
         violet: "#806cf0",
-        gray: "#a9b4b0"
+        gray: "#a9b4b0",
+        sun: "#f4c96d"
       };
 
       const els = {
@@ -1507,9 +1514,25 @@
           points2d.push({ x, y, radius: size + 8, candidate });
         });
 
+        const centerX = width / 2;
+        const centerY = height / 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 11, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(244, 201, 109, 0.16)";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = colors.sun;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255, 242, 212, 0.78)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
         ctx.fillStyle = "rgba(255,255,255,0.72)";
         ctx.font = "700 12px Inter, system-ui, sans-serif";
-        ctx.fillText("innen = naeher, Punktgroesse = SNR", 14, 22);
+        ctx.fillText("Mitte = Sonne/Erde · innen = naeher · Punktgroesse = SNR", 14, 22);
       }
 
       function init3dMap() {
@@ -1522,6 +1545,31 @@
         const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
         camera.position.set(0, 0, 4.8);
         scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+
+        const referenceGroup = new THREE.Group();
+        const sunMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 18, 18),
+          new THREE.MeshBasicMaterial({ color: 0xf4c96d })
+        );
+        const sunHalo = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0xf4c96d, transparent: true, opacity: 0.2 })
+        );
+        const earthOrbit = new THREE.Mesh(
+          new THREE.RingGeometry(0.17, 0.176, 56),
+          new THREE.MeshBasicMaterial({ color: 0x95a9c4, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
+        );
+        earthOrbit.rotation.x = Math.PI / 2;
+        const earthMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.02, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0x84c7ff })
+        );
+        earthMesh.position.set(0.173, 0, 0);
+        referenceGroup.add(earthOrbit);
+        referenceGroup.add(sunHalo);
+        referenceGroup.add(sunMesh);
+        referenceGroup.add(earthMesh);
+        scene.add(referenceGroup);
 
         const groups = {};
         ["green", "yellow", "red", "gray"].forEach((key) => {
@@ -1543,7 +1591,7 @@
         const selectedMesh = new THREE.Mesh(selectedGeometry, selectedMaterial);
         scene.add(selectedMesh);
 
-        three = { renderer, scene, camera, groups, selectedMesh, rotation: 0 };
+        three = { renderer, scene, camera, groups, selectedMesh, earthMesh, rotation: 0 };
         state.sceneReady = true;
         update3dData();
         resize3d();
@@ -1589,6 +1637,10 @@
         three.rotation += 0.003;
         three.scene.rotation.y = three.rotation;
         three.scene.rotation.x = -0.18;
+        if (three.earthMesh) {
+          const orbit = three.rotation * 3.4;
+          three.earthMesh.position.set(Math.cos(orbit) * 0.173, 0, Math.sin(orbit) * 0.173);
+        }
         three.renderer.render(three.scene, three.camera);
         requestAnimationFrame(animate3d);
       }
