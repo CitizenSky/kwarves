@@ -1526,6 +1526,10 @@
             <i data-lucide="book-open-text"></i>
             <span>Projektlogik</span>
           </button>
+          <button type="button" title="Impressum" data-nav-target="impressumPanel">
+            <i data-lucide="file-text"></i>
+            <span>Impressum</span>
+          </button>
           <button type="button" title="Admin" data-nav-target="adminPanel">
             <i data-lucide="shield-check"></i>
             <span>Admin</span>
@@ -1930,6 +1934,30 @@
             <div class="panel-body">
               <div class="docs-flow" id="docsFlow"></div>
               <div class="docs-grid" id="docsLevels"></div>
+              <div class="table-wrap docs-table-wrap">
+                <table class="docs-table" aria-label="Skriptuebersicht">
+                  <thead>
+                    <tr>
+                      <th>Skript</th>
+                      <th>Was macht es?</th>
+                      <th>Warum sinnvoll?</th>
+                      <th>Level / Bereich</th>
+                    </tr>
+                  </thead>
+                  <tbody id="docsScriptRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="impressumPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Impressum und Hinweise</h2>
+                <p class="panel-subtitle">Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.</p>
+              </div>
+            </div>
+            <div class="panel-body">
               <div class="docs-legal">
                 <article class="docs-legal-card" id="aboutSection">
                   <h3>Wissenschaftlicher Hinweis</h3>
@@ -1950,19 +1978,6 @@
                   <p>Diese Webseite nutzt ein Dashboard mit lokalen Browser-Statistiken und optional externer Reichweitenmessung.</p>
                   <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
                 </article>
-              </div>
-              <div class="table-wrap docs-table-wrap">
-                <table class="docs-table" aria-label="Skriptuebersicht">
-                  <thead>
-                    <tr>
-                      <th>Skript</th>
-                      <th>Was macht es?</th>
-                      <th>Warum sinnvoll?</th>
-                      <th>Level / Bereich</th>
-                    </tr>
-                  </thead>
-                  <tbody id="docsScriptRows"></tbody>
-                </table>
               </div>
             </div>
           </section>
@@ -2065,9 +2080,9 @@
         <footer class="site-footer">
           <p class="site-footer-alert">⚠️ Vorläufige Forschungsergebnisse. Kandidatenbewertungen können sich durch neue TESS-Daten, Follow-up-Beobachtungen oder externe Analysen ändern.</p>
           <div class="site-footer-links">
-            <a href="#aboutSection" data-doc-anchor="aboutSection">About</a>
-            <a href="#impressumSection" data-doc-anchor="impressumSection">Impressum</a>
-            <a href="#privacySection" data-doc-anchor="privacySection">Privacy</a>
+            <a href="#aboutSection" data-doc-anchor="aboutSection" data-panel-target="impressumPanel">About</a>
+            <a href="#impressumSection" data-doc-anchor="impressumSection" data-panel-target="impressumPanel">Impressum</a>
+            <a href="#privacySection" data-doc-anchor="privacySection" data-panel-target="impressumPanel">Privacy</a>
             <a href="https://github.com/CitizenSky/kwarves" target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
         </footer>
@@ -2077,7 +2092,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-k";
+      const DASHBOARD_UI_VERSION = "2026-05-31-l";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -4103,10 +4118,11 @@
       document.querySelectorAll("[data-doc-anchor]").forEach((link) => {
         link.addEventListener("click", (event) => {
           const targetId = link.dataset.docAnchor;
+          const panelTarget = link.dataset.panelTarget || "docsPanel";
           if (!targetId) return;
           event.preventDefault();
-          setNavButtonActive("docsPanel");
-          scrollToPanel("docsPanel");
+          setNavButtonActive(panelTarget);
+          scrollToPanel(panelTarget);
           window.requestAnimationFrame(() => {
             const node = document.getElementById(targetId);
             if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4330,7 +4346,7 @@
       });
 
       document.getElementById("showHints").addEventListener("click", () => {
-        showToast(`Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, Admin fuer Statistik. UI ${DASHBOARD_UI_VERSION}`);
+        showToast(`Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, Impressum fuer Hinweise, Admin fuer Statistik. UI ${DASHBOARD_UI_VERSION}`);
       });
 
       window.addEventListener("resize", () => {
