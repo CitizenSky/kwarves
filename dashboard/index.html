@@ -1631,6 +1631,11 @@
                     Logout
                   </button>
                 </div>
+                <div class="notice" style="margin-top: 10px;">
+                  <strong>Globale Analytics:</strong> <span id="adminGlobalStatus">Inaktiv</span><br />
+                  <strong>Details:</strong> <span id="adminGlobalDetails">Kein externer Tracking-Endpunkt konfiguriert.</span><br />
+                  <strong>Dashboard:</strong> <a id="adminGlobalDashboardLink" href="#" target="_blank" rel="noopener noreferrer">oeffnen</a>
+                </div>
                 <div class="admin-kpis" style="margin-top: 10px;">
                   <article class="admin-kpi">
                     <span>Seitenaufrufe</span>
@@ -1652,7 +1657,7 @@
                 <div class="notice" style="margin-top: 10px;">
                   <strong>Aktuelles Land:</strong> <span id="adminCurrentCountry">-</span><br />
                   <strong>Quelle:</strong> <span id="adminCountrySource">-</span><br />
-                  <strong>Hinweis:</strong> Diese Statistik ist clientseitig im Browser gespeichert.
+                  <strong>Hinweis:</strong> Diese Tabelle ist der lokale Fallback im Browser. Fuer globale Zahlen bitte GoatCounter-Dashboard nutzen.
                 </div>
                 <div class="table-wrap" style="margin-top: 10px;">
                   <table class="admin-table" aria-label="Laenderstatistik">
@@ -1678,7 +1683,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-e";
+      const DASHBOARD_UI_VERSION = "2026-05-31-f";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1695,6 +1700,15 @@
       const ADMIN_LOGIN_KEY = "kwarves_admin_logged_in_v1";
       const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
       const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v2";
+      const GLOBAL_ANALYTICS_CONFIG = {
+        provider: "goatcounter",
+        // Beispiel:
+        // endpoint: "https://MYCODE.goatcounter.com/count",
+        // dashboardUrl: "https://MYCODE.goatcounter.com",
+        endpoint: "",
+        dashboardUrl: "",
+        allowLocalhost: false
+      };
 
       const colors = {
         green: "#24a085",
@@ -1713,6 +1727,15 @@
         countryName: "Unknown",
         countrySource: "nicht aufgeloest",
         countryResolved: false
+      };
+
+      const globalAnalytics = {
+        enabled: false,
+        loaded: false,
+        error: "",
+        mode: "inactive",
+        endpoint: "",
+        dashboardUrl: ""
       };
 
       const tessMission = {
@@ -2006,7 +2029,10 @@
         adminLastVisit: document.getElementById("adminLastVisit"),
         adminCurrentCountry: document.getElementById("adminCurrentCountry"),
         adminCountrySource: document.getElementById("adminCountrySource"),
-        adminCountryRows: document.getElementById("adminCountryRows")
+        adminCountryRows: document.getElementById("adminCountryRows"),
+        adminGlobalStatus: document.getElementById("adminGlobalStatus"),
+        adminGlobalDetails: document.getElementById("adminGlobalDetails"),
+        adminGlobalDashboardLink: document.getElementById("adminGlobalDashboardLink")
       };
 
       let toastTimer;
@@ -2194,6 +2220,83 @@
         });
       }
 
+      function isLocalHost(host) {
+        return host === "localhost" || host === "127.0.0.1" || host === "::1";
+      }
+
+      function normalizeGlobalAnalyticsConfig() {
+        const endpoint = String(GLOBAL_ANALYTICS_CONFIG.endpoint || "").trim();
+        const dashboardUrl = String(GLOBAL_ANALYTICS_CONFIG.dashboardUrl || "").trim();
+        return {
+          provider: String(GLOBAL_ANALYTICS_CONFIG.provider || "").toLowerCase(),
+          endpoint,
+          dashboardUrl: dashboardUrl || (endpoint ? endpoint.replace(/\/count\/?$/, "") : ""),
+          allowLocalhost: Boolean(GLOBAL_ANALYTICS_CONFIG.allowLocalhost)
+        };
+      }
+
+      function setupGlobalAnalytics() {
+        const cfg = normalizeGlobalAnalyticsConfig();
+        globalAnalytics.endpoint = cfg.endpoint;
+        globalAnalytics.dashboardUrl = cfg.dashboardUrl;
+        globalAnalytics.mode = "inactive";
+        globalAnalytics.error = "";
+
+        if (!cfg.endpoint) {
+          globalAnalytics.enabled = false;
+          globalAnalytics.mode = "inactive";
+          return;
+        }
+
+        if (!/^https?:\/\//i.test(cfg.endpoint)) {
+          globalAnalytics.enabled = false;
+          globalAnalytics.mode = "error";
+          globalAnalytics.error = "Endpoint muss mit http:// oder https:// beginnen.";
+          return;
+        }
+
+        if (cfg.provider !== "goatcounter") {
+          globalAnalytics.enabled = false;
+          globalAnalytics.mode = "error";
+          globalAnalytics.error = "Aktuell wird nur GoatCounter direkt unterstuetzt.";
+          return;
+        }
+
+        if (isLocalHost(location.hostname) && !cfg.allowLocalhost) {
+          globalAnalytics.enabled = false;
+          globalAnalytics.mode = "paused";
+          return;
+        }
+
+        if (document.querySelector('script[data-kwarves-global-analytics="goatcounter"]')) {
+          globalAnalytics.enabled = true;
+          globalAnalytics.mode = "active";
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = "https://gc.zgo.at/count.js";
+        script.setAttribute("data-goatcounter", cfg.endpoint);
+        script.setAttribute("data-kwarves-global-analytics", "goatcounter");
+        script.setAttribute("data-goatcounter-settings", JSON.stringify({ allow_local: cfg.allowLocalhost }));
+        script.onload = () => {
+          globalAnalytics.enabled = true;
+          globalAnalytics.loaded = true;
+          globalAnalytics.mode = "active";
+          renderAdmin();
+        };
+        script.onerror = () => {
+          globalAnalytics.enabled = false;
+          globalAnalytics.mode = "error";
+          globalAnalytics.error = "Tracking-Skript konnte nicht geladen werden (Blocker/Netzwerk/CSP).";
+          renderAdmin();
+        };
+        document.head.appendChild(script);
+        globalAnalytics.enabled = true;
+        globalAnalytics.mode = "loading";
+      }
+
       function emptyAnalyticsStore() {
         return {
           totalViews: 0,
@@ -2293,6 +2396,26 @@
           els.adminLoginHint.textContent = "Benutzername: Koni";
           return;
         }
+
+        const statusLabel =
+          globalAnalytics.mode === "active" ? "Aktiv" :
+          globalAnalytics.mode === "loading" ? "Startet..." :
+          globalAnalytics.mode === "paused" ? "Pausiert (localhost)" :
+          globalAnalytics.mode === "error" ? "Fehler" :
+          "Inaktiv";
+        const detailsLabel =
+          globalAnalytics.mode === "active" ? `GoatCounter Tracking an ${globalAnalytics.endpoint}` :
+          globalAnalytics.mode === "loading" ? "Tracking-Skript wird geladen." :
+          globalAnalytics.mode === "paused" ? "Globales Tracking ist lokal deaktiviert (allowLocalhost=false)." :
+          globalAnalytics.mode === "error" ? (globalAnalytics.error || "Unbekannter Fehler.") :
+          "Kein externer Tracking-Endpunkt konfiguriert.";
+        els.adminGlobalStatus.textContent = statusLabel;
+        els.adminGlobalDetails.textContent = detailsLabel;
+        const hasDashboard = Boolean(globalAnalytics.dashboardUrl);
+        els.adminGlobalDashboardLink.href = hasDashboard ? globalAnalytics.dashboardUrl : "#";
+        els.adminGlobalDashboardLink.textContent = hasDashboard ? globalAnalytics.dashboardUrl : "nicht gesetzt";
+        els.adminGlobalDashboardLink.style.pointerEvents = hasDashboard ? "auto" : "none";
+        els.adminGlobalDashboardLink.style.opacity = hasDashboard ? "1" : "0.6";
 
         const store = analytics.store;
         const avgDuration = store.totalSessions > 0 ? store.totalDurationSeconds / store.totalSessions : 0;
@@ -3247,6 +3370,7 @@
       });
 
       initPanelCollapseControls();
+      setupGlobalAnalytics();
       updateDate();
       startAnalyticsTracking();
       state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
