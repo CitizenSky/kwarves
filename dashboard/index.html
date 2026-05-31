@@ -200,6 +200,19 @@
         white-space: nowrap;
       }
 
+      .lang-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .lang-switch .small-button {
+        min-height: 30px;
+        min-width: 42px;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
       .button,
       .icon-button,
       .small-button {
@@ -1437,8 +1450,12 @@
         }
 
         .date {
-          width: 100%;
-          margin-left: 0;
+          width: auto;
+          margin-left: auto;
+        }
+
+        .lang-switch {
+          margin-left: auto;
         }
 
         .page {
@@ -1554,12 +1571,17 @@
             <input id="globalSearch" type="search" placeholder="Suche: TIC, Farbe, HZ, Status" />
           </label>
           <span class="date" id="dateLabel">Heute</span>
+          <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache">
+            <button class="small-button active" type="button" data-lang="de">DE</button>
+            <button class="small-button" type="button" data-lang="en">EN</button>
+            <button class="small-button" type="button" data-lang="fr">FR</button>
+          </div>
           <button class="icon-button" type="button" title="Hinweise" id="showHints">
             <i data-lucide="bell"></i>
           </button>
           <button class="button primary" id="focusHz" type="button">
             <i data-lucide="target"></i>
-            HZ Fokus
+            <span id="focusHzLabel">HZ Fokus</span>
           </button>
         </header>
         <section class="page">
@@ -2000,16 +2022,16 @@
                 <p class="muted">Zugang fuer den Admin-Bereich.</p>
                 <form class="admin-form" id="adminLoginForm">
                   <label for="adminUserInput">
-                    Benutzername
+                    <span id="adminUserLabel">Benutzername</span>
                     <input id="adminUserInput" type="text" autocomplete="username" />
                   </label>
                   <label for="adminPassInput">
-                    Passwort
+                    <span id="adminPassLabel">Passwort</span>
                     <input id="adminPassInput" type="password" autocomplete="current-password" />
                   </label>
                   <button class="button primary" type="submit">
                     <i data-lucide="log-in"></i>
-                    Login
+                    <span id="adminLoginButtonLabel">Login</span>
                   </button>
                 </form>
                 <div class="mini" id="adminLoginHint"></div>
@@ -2092,7 +2114,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-l";
+      const DASHBOARD_UI_VERSION = "2026-05-31-m";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -2102,7 +2124,556 @@
         selectedCurve: null,
         mapMode: "2d",
         tessMapMode: "3d",
-        sceneReady: false
+        sceneReady: false,
+        lang: "de"
+      };
+
+      const LANGUAGE_KEY = "kwarves_ui_language_v1";
+      const SUPPORTED_LANGS = ["de", "en", "fr"];
+      const LANGUAGE_LOCALES = {
+        de: "de-DE",
+        en: "en-US",
+        fr: "fr-FR"
+      };
+
+      const I18N = {
+        de: {
+          app_title: "Astro Dashboard - Farbenbaum",
+          lang_switch_label: "Sprache",
+          nav_tree: "Baumstruktur",
+          nav_map: "Sternkarte",
+          nav_tess: "TESS Mission",
+          nav_curves: "Lichtkurven",
+          nav_table: "Kandidaten",
+          nav_docs: "Projektlogik",
+          nav_impressum: "Impressum",
+          nav_admin: "Admin",
+          sidebar_rule_title: "Leseregel",
+          sidebar_rule_text: "Violett ist ein Zusatzmarker fuer HZ/Top-Tier. Ein Kandidat kann also gruen und violett sein.",
+          refresh_data: "Daten neu bauen",
+          search_placeholder: "Suche: TIC, Farbe, HZ, Status",
+          hint_button_title: "Hinweise",
+          hz_focus: "HZ Fokus",
+          lede: "Analyse echter TESS-Daten mit Farbklassifikation, Lichtkurven-Vetting und interaktiver Sternkarte.",
+          kpi_total: "Alle Kandidaten",
+          kpi_total_sub: "aus Manifest",
+          kpi_green: "Gruen",
+          kpi_green_sub: "SPC-Kandidaten",
+          kpi_yellow: "Gelb",
+          kpi_yellow_sub: "mehr Daten",
+          kpi_red: "Rot",
+          kpi_red_sub: "FP/Systematik",
+          kpi_violet: "Violett",
+          kpi_violet_sub: "HZ/Top-Tier",
+          filter_all: "Alle",
+          filter_green: "Gruen",
+          filter_yellow: "Gelb",
+          filter_red: "Rot",
+          filter_violet: "Violett",
+          curves_filter_violet: "HZ/Violett",
+          curves_filter_green: "Gruen",
+          map_legend_green: "Gruen = Kandidat",
+          map_legend_yellow: "Gelb = in Pruefung",
+          map_legend_red: "Rot = FP/Rejected",
+          map_legend_violet: "Violett-Ring = HZ-Fokus",
+          map_legend_selected: "Weisser Ring = ausgewaehlt",
+          map_legend_sun: "Sonne/Erde (Standpunkt)",
+          map_notice_symbolic: "Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.",
+          tess_notice_symbolic: "Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.",
+          timeline_title: "TESS Coverage Timeline",
+          timeline_observed: "Bisher beobachtet",
+          timeline_planned: "Geplant",
+          timeline_next: "Naechste Beobachtung",
+          timeline_status: "Status",
+          selected_title: "Ausgewaehlter Kandidat",
+          selected_subtitle: "Hier steht die Begruendung in Klartext.",
+          chip_violet_hz: "Violett / HZ",
+          chip_matrix_prefix: "Matrix {value}",
+          chip_evidence_prefix: "Evidence {value}",
+          chip_curve_available: "Lichtkurve vorhanden",
+          detail_matrix_status: "Matrix Status",
+          detail_matrix_class: "Matrix Klasse",
+          detail_evidence_score: "Evidence Score",
+          detail_distance: "Distanz",
+          detail_period: "Periode",
+          detail_snr: "SNR",
+          detail_transits_visible: "Transits sichtbar",
+          detail_matrix_transits: "Matrix Transits/Sektoren",
+          detail_radius: "Radius",
+          detail_status: "Status",
+          detail_shape: "Transitform",
+          detail_sap_pdcsap: "SAP vs PDCSAP",
+          detail_oddeven: "Odd/Even",
+          detail_secondary: "Secondary Eclipse",
+          detail_depth: "Tiefe",
+          detail_duration: "Dauer",
+          detail_depth_stable: "Tiefe stabil?",
+          detail_data_gap: "Datenluecken-Risiko",
+          detail_sector_edge: "Sektorrand-Risiko",
+          detail_alias: "Period-Alias-Risiko",
+          detail_rotation: "Aktivitaets-Risiko",
+          matrix_reason_label: "Matrix Begruendung",
+          matrix_next_label: "Naechster Schritt",
+          path_prefix: "Pfad",
+          footer_alert: "⚠️ Vorlaeufige Forschungsergebnisse. Kandidatenbewertungen koennen sich durch neue TESS-Daten, Follow-up-Beobachtungen oder externe Analysen aendern.",
+          footer_about: "About",
+          footer_impressum: "Impressum",
+          footer_privacy: "Privacy",
+          footer_github: "GitHub",
+          toggle_expand: "Bereich aufklappen",
+          toggle_collapse: "Bereich zuklappen",
+          tess_compare_expand: "3D TESS-Sektorenkarte aufklappen",
+          tess_compare_collapse: "3D TESS-Sektorenkarte einklappen",
+          phase_completed: "Abgeschlossen",
+          phase_planned: "Geplant",
+          phase_running: "Laufend",
+          unknown: "unbekannt",
+          not_available: "nicht verfuegbar",
+          not_set: "nicht gesetzt",
+          no_entries: "Noch keine Eintraege.",
+          no_candidate_selected: "Kein Kandidat ausgewaehlt.",
+          status_add_sector_data: "Erst Sektordaten aus MAST/TESS ergaenzen.",
+          status_recheck_possible: "Recheck moeglich, sobald neue TESS-Daten verfuegbar sind.",
+          status_waiting_data: "Warten auf neue Daten: aktuell keine passende neue Beobachtung.",
+          status_no_recheck: "Kein Recheck geplant: keine zukuenftigen TESS-Sektoren bekannt.",
+          next_no_sector: "Kein passender Year-8-Sektor geplant.",
+          next_running: "S{sector} laeuft jetzt ({range}).",
+          next_in_days: "S{sector} in {days} Tagen ({date}).",
+          not_computable_missing_history: "nicht berechenbar - Sektorhistorie fehlt",
+          map_status_green: "Gruen: Recheck moeglich - Kandidat liegt im relevanten geplanten Bereich.",
+          map_status_yellow: "Gelb: Warten auf neue Daten - aktuell keine neue passende Beobachtung.",
+          map_status_red: "Rot: Kein Recheck geplant - keine zukuenftigen TESS-Sektoren bekannt.",
+          map_status_missing: "Weiss: Daten fehlen - bitte Sektorhistorie aus MAST/TESS ergaenzen.",
+          map_status_hint: "Auswahl zeigt, ob der Kandidat im geplanten TESS-Bereich liegt.",
+          match_year8_none: "0 Sektoren",
+          match_year8_count: "{count} Sektoren ({list})",
+          match_current_running: "S{sector} (laufend)",
+          match_current_next: "S{sector} (naechster)",
+          observed_unknown_chip: "Sektorhistorie unbekannt",
+          planned_unknown_chip: "keine zukuenftigen Sektoren bekannt",
+          status_chip_green: "Recheck moeglich",
+          status_chip_yellow: "Warten auf neue Daten",
+          status_chip_red: "Kein Recheck geplant",
+          status_chip_missing: "Daten fehlen",
+          tess_label_candidate_sector: "Gruen = Kandidatensektor",
+          tess_label_observed: "Blau = beobachtet",
+          tess_label_planned: "Gelb = aktuell/geplant",
+          tess_label_background: "Grau = Hintergrund",
+          chart_legend_map: "Mitte = Sonne/Erde · innen = naeher · Punktgroesse = SNR",
+          chart_legend_tess: "Gruen = Kandidatensektor · Blau = beobachtet · Gelb = aktuell/geplant",
+          tess_status_none: "Kein laufender Sektor im Year-8-Ausschnitt.",
+          tess_status_running: "S{sector} laeuft aktuell. Restdauer ca. {days} Tage bis {date}.",
+          tess_status_next: "Naechster Sektor ist S{sector} und startet in ca. {days} Tagen ({date}).",
+          tess_sector_next: "S{sector} (naechster)",
+          tess_updated_at: "Quellenstand: {date} (HEASARC + MIT TESS Year 8).",
+          color_plus_violet: "{base} + Violett",
+          color_green_violet: "Gruen + Violett",
+          not_hz: "nicht HZ",
+          showing_limited_results: "Zeige 260 von {count} Treffern. Suche nach TIC, um enger zu filtern.",
+          no_curve_found: "Keine Lichtkurve gefunden",
+          no_curve_selected: "Keine Lichtkurve ausgewaehlt",
+          no_curve_for_filter: "Keine passende HZ/gruene Lichtkurve im aktuellen Filter.",
+          loading_curve: "Lade kombinierte Lichtkurve ...",
+          curve_load_failed: "PNG konnte nicht geladen werden. Bitte Pfad/Deploy pruefen.",
+          folder_missing: "kein Kandidatenordner",
+          selected_path_missing: "kein Level-0-Pfad gefunden",
+          status_inactive: "Inaktiv",
+          status_active: "Aktiv",
+          status_loading: "Startet...",
+          status_paused_filter: "Pausiert (Eigenfilter)",
+          status_paused_localhost: "Pausiert (localhost)",
+          status_error: "Fehler",
+          status_unknown_error: "Unbekannter Fehler.",
+          analytics_endpoint_missing: "Kein externer Tracking-Endpunkt konfiguriert.",
+          analytics_loading: "Tracking-Skript wird geladen.",
+          analytics_self_filter_active: "Eigenfilter ist aktiv: eigene Aufrufe werden nicht getrackt.",
+          analytics_local_disabled: "Globales Tracking ist lokal deaktiviert (allowLocalhost=false).",
+          analytics_tracking_to: "GoatCounter Tracking an {endpoint}",
+          admin_login_hint: "Benutzername: Koni",
+          admin_self_filter_on: "Aktiv",
+          admin_self_filter_off: "Aus",
+          admin_self_filter_disable: "Eigene Besuche NICHT zaehlen",
+          admin_self_filter_enable: "Eigene Besuche zaehlen",
+          table_country_unknown: "Unknown",
+          toast_no_curve_for_candidate: "Fuer diesen Kandidaten ist keine HZ/gruene Lichtkurve im Dashboard-Set.",
+          toast_filter_hz: "HZ/Violett gefiltert.",
+          toast_refresh_data: "Datenbundle: dashboard/build_dashboard_data.py erneut ausfuehren.",
+          toast_tree_updated: "Entscheidungsbaum aktualisiert.",
+          toast_docs_updated: "Projektlogik aktualisiert.",
+          toast_tess_updated: "TESS-Sektorstatus aktualisiert.",
+          toast_admin_login_ok: "Admin-Login erfolgreich.",
+          toast_admin_login_fail: "Falscher Benutzer oder falsches Passwort.",
+          login_failed: "Login fehlgeschlagen.",
+          toast_admin_logout: "Admin ausgeloggt.",
+          toast_filter_self_on: "Eigenfilter aktiv: eigene Besuche werden nicht gezaehlt.",
+          toast_filter_self_off: "Eigenfilter aus: eigene Besuche werden gezaehlt.",
+          confirm_reset_stats: "Statistik wirklich zuruecksetzen?",
+          toast_stats_reset: "Statistik zurueckgesetzt.",
+          toast_admin_refresh: "Admin-Bereich aktualisiert.",
+          toast_hints: "Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, Impressum fuer Hinweise, Admin fuer Statistik. UI {version}",
+          admin_country_source_unknown: "nicht aufgeloest",
+          admin_country_source_unavailable: "nicht verfuegbar",
+          year8_description: "Year 8 umfasst S97-S107; S97/98 sind 4-Orbit-Sektoren, danach folgen 9 gedrehte Ueberlappungssektoren.",
+          geometry_description: "Sektor-Footprint ca. 24x96 Grad; 4 Kameras in Streifenanordnung, Sektorlaenge typischerweise 27 Tage."
+        },
+        en: {
+          app_title: "Astro Dashboard - Color Tree",
+          lang_switch_label: "Language",
+          nav_tree: "Decision Tree",
+          nav_map: "Star Map",
+          nav_tess: "TESS Mission",
+          nav_curves: "Light Curves",
+          nav_table: "Candidates",
+          nav_docs: "Project Logic",
+          nav_impressum: "Legal",
+          nav_admin: "Admin",
+          sidebar_rule_title: "Reading Rule",
+          sidebar_rule_text: "Violet is an extra marker for HZ/top-tier. A candidate can be green and violet at the same time.",
+          refresh_data: "Rebuild Data",
+          search_placeholder: "Search: TIC, color, HZ, status",
+          hint_button_title: "Hints",
+          hz_focus: "HZ Focus",
+          lede: "Analysis of real TESS data with color classification, light-curve vetting, and an interactive star map.",
+          kpi_total: "All Candidates",
+          kpi_total_sub: "from manifest",
+          kpi_green: "Green",
+          kpi_green_sub: "SPC candidates",
+          kpi_yellow: "Yellow",
+          kpi_yellow_sub: "more data",
+          kpi_red: "Red",
+          kpi_red_sub: "FP/systematics",
+          kpi_violet: "Violet",
+          kpi_violet_sub: "HZ/top-tier",
+          filter_all: "All",
+          filter_green: "Green",
+          filter_yellow: "Yellow",
+          filter_red: "Red",
+          filter_violet: "Violet",
+          curves_filter_violet: "HZ/Violet",
+          curves_filter_green: "Green",
+          map_legend_green: "Green = candidate",
+          map_legend_yellow: "Yellow = under review",
+          map_legend_red: "Red = FP/rejected",
+          map_legend_violet: "Violet ring = HZ focus",
+          map_legend_selected: "White ring = selected",
+          map_legend_sun: "Sun/Earth reference",
+          map_notice_symbolic: "Simplified star-map planning view. Positions, angles, and distances are symbolic and not astronomically to scale.",
+          tess_notice_symbolic: "Simplified TESS planning view. Positions, angles, and distances are symbolic and not astronomically to scale.",
+          timeline_title: "TESS Coverage Timeline",
+          timeline_observed: "Observed so far",
+          timeline_planned: "Planned",
+          timeline_next: "Next observation",
+          timeline_status: "Status",
+          selected_title: "Selected Candidate",
+          selected_subtitle: "The plain-language rationale is shown here.",
+          chip_violet_hz: "Violet / HZ",
+          chip_matrix_prefix: "Matrix {value}",
+          chip_evidence_prefix: "Evidence {value}",
+          chip_curve_available: "Light curve available",
+          detail_matrix_status: "Matrix Status",
+          detail_matrix_class: "Matrix Class",
+          detail_evidence_score: "Evidence Score",
+          detail_distance: "Distance",
+          detail_period: "Period",
+          detail_snr: "SNR",
+          detail_transits_visible: "Visible transits",
+          detail_matrix_transits: "Matrix transits/sectors",
+          detail_radius: "Radius",
+          detail_status: "Status",
+          detail_shape: "Transit shape",
+          detail_sap_pdcsap: "SAP vs PDCSAP",
+          detail_oddeven: "Odd/Even",
+          detail_secondary: "Secondary eclipse",
+          detail_depth: "Depth",
+          detail_duration: "Duration",
+          detail_depth_stable: "Stable depth?",
+          detail_data_gap: "Data-gap risk",
+          detail_sector_edge: "Sector-edge risk",
+          detail_alias: "Period alias risk",
+          detail_rotation: "Activity risk",
+          matrix_reason_label: "Matrix rationale",
+          matrix_next_label: "Next step",
+          path_prefix: "Path",
+          footer_alert: "⚠️ Preliminary research results. Candidate ratings may change with new TESS data, follow-up observations, or external analyses.",
+          footer_about: "About",
+          footer_impressum: "Legal",
+          footer_privacy: "Privacy",
+          footer_github: "GitHub",
+          toggle_expand: "Expand section",
+          toggle_collapse: "Collapse section",
+          tess_compare_expand: "Expand 3D TESS sector map",
+          tess_compare_collapse: "Collapse 3D TESS sector map",
+          phase_completed: "Completed",
+          phase_planned: "Planned",
+          phase_running: "Running",
+          unknown: "unknown",
+          not_available: "not available",
+          not_set: "not set",
+          no_entries: "No entries yet.",
+          no_candidate_selected: "No candidate selected.",
+          status_add_sector_data: "Add sector history from MAST/TESS first.",
+          status_recheck_possible: "Recheck possible as soon as new TESS data is available.",
+          status_waiting_data: "Waiting for new data: no matching new observation yet.",
+          status_no_recheck: "No recheck planned: no future TESS sectors known.",
+          next_no_sector: "No matching Year-8 sector planned.",
+          next_running: "S{sector} is running now ({range}).",
+          next_in_days: "S{sector} in {days} days ({date}).",
+          not_computable_missing_history: "not computable - sector history missing",
+          map_status_green: "Green: recheck possible - candidate lies in the relevant planned area.",
+          map_status_yellow: "Yellow: waiting for new data - no suitable new observation right now.",
+          map_status_red: "Red: no recheck planned - no future TESS sectors known.",
+          map_status_missing: "White: data missing - add sector history from MAST/TESS.",
+          map_status_hint: "Selection shows whether the candidate lies in the planned TESS area.",
+          match_year8_none: "0 sectors",
+          match_year8_count: "{count} sectors ({list})",
+          match_current_running: "S{sector} (running)",
+          match_current_next: "S{sector} (next)",
+          observed_unknown_chip: "sector history unknown",
+          planned_unknown_chip: "no future sectors known",
+          status_chip_green: "Recheck possible",
+          status_chip_yellow: "Waiting for new data",
+          status_chip_red: "No recheck planned",
+          status_chip_missing: "Data missing",
+          tess_label_candidate_sector: "Green = candidate sector",
+          tess_label_observed: "Blue = observed",
+          tess_label_planned: "Yellow = current/planned",
+          tess_label_background: "Gray = background",
+          chart_legend_map: "Center = Sun/Earth · inner = closer · marker size = SNR",
+          chart_legend_tess: "Green = candidate sector · Blue = observed · Yellow = current/planned",
+          tess_status_none: "No running sector in the Year-8 subset.",
+          tess_status_running: "S{sector} is currently running. About {days} days left until {date}.",
+          tess_status_next: "Next sector is S{sector} and starts in about {days} days ({date}).",
+          tess_sector_next: "S{sector} (next)",
+          tess_updated_at: "Data source check: {date} (HEASARC + MIT TESS Year 8).",
+          color_plus_violet: "{base} + Violet",
+          color_green_violet: "Green + Violet",
+          not_hz: "not HZ",
+          showing_limited_results: "Showing 260 of {count} matches. Search by TIC to narrow results.",
+          no_curve_found: "No light curve found",
+          no_curve_selected: "No light curve selected",
+          no_curve_for_filter: "No matching HZ/green light curve for the current filter.",
+          loading_curve: "Loading combined light curve ...",
+          curve_load_failed: "PNG could not be loaded. Please check path/deploy.",
+          folder_missing: "no candidate folder",
+          selected_path_missing: "no Level-0 path found",
+          status_inactive: "Inactive",
+          status_active: "Active",
+          status_loading: "Starting...",
+          status_paused_filter: "Paused (self filter)",
+          status_paused_localhost: "Paused (localhost)",
+          status_error: "Error",
+          status_unknown_error: "Unknown error.",
+          analytics_endpoint_missing: "No external tracking endpoint configured.",
+          analytics_loading: "Tracking script is loading.",
+          analytics_self_filter_active: "Self filter is active: own visits are not tracked.",
+          analytics_local_disabled: "Global tracking is disabled locally (allowLocalhost=false).",
+          analytics_tracking_to: "GoatCounter tracking to {endpoint}",
+          admin_login_hint: "Username: Koni",
+          admin_self_filter_on: "On",
+          admin_self_filter_off: "Off",
+          admin_self_filter_disable: "Do NOT count own visits",
+          admin_self_filter_enable: "Count own visits",
+          table_country_unknown: "Unknown",
+          toast_no_curve_for_candidate: "No HZ/green light curve is available for this candidate in the dashboard set.",
+          toast_filter_hz: "Filtered to HZ/violet.",
+          toast_refresh_data: "Data bundle: re-run dashboard/build_dashboard_data.py.",
+          toast_tree_updated: "Decision tree updated.",
+          toast_docs_updated: "Project logic updated.",
+          toast_tess_updated: "TESS sector status updated.",
+          toast_admin_login_ok: "Admin login successful.",
+          toast_admin_login_fail: "Wrong username or password.",
+          login_failed: "Login failed.",
+          toast_admin_logout: "Admin logged out.",
+          toast_filter_self_on: "Self filter active: your own visits are not counted.",
+          toast_filter_self_off: "Self filter off: your own visits are counted.",
+          confirm_reset_stats: "Reset statistics now?",
+          toast_stats_reset: "Statistics reset.",
+          toast_admin_refresh: "Admin section refreshed.",
+          toast_hints: "Tips: use left nav, click map points, use TESS panel for sector planning, Legal panel for notes, Admin for stats. UI {version}",
+          admin_country_source_unknown: "not resolved",
+          admin_country_source_unavailable: "not available",
+          year8_description: "Year 8 includes S97-S107; S97/98 are 4-orbit sectors, followed by 9 rotated overlap sectors.",
+          geometry_description: "Sector footprint about 24x96 deg; 4 cameras in strip layout, typical sector duration about 27 days."
+        },
+        fr: {
+          app_title: "Tableau Astro - Arbre de Couleurs",
+          lang_switch_label: "Langue",
+          nav_tree: "Arbre de Decision",
+          nav_map: "Carte Stellaire",
+          nav_tess: "Mission TESS",
+          nav_curves: "Courbes de Lumiere",
+          nav_table: "Candidats",
+          nav_docs: "Logique Projet",
+          nav_impressum: "Mentions Legales",
+          nav_admin: "Admin",
+          sidebar_rule_title: "Regle de Lecture",
+          sidebar_rule_text: "Le violet est un marqueur supplementaire pour HZ/top-tier. Un candidat peut etre vert et violet en meme temps.",
+          refresh_data: "Reconstruire les Donnees",
+          search_placeholder: "Recherche: TIC, couleur, HZ, statut",
+          hint_button_title: "Astuces",
+          hz_focus: "Focus HZ",
+          lede: "Analyse de vraies donnees TESS avec classification couleur, vetting des courbes de lumiere et carte stellaire interactive.",
+          kpi_total: "Tous les Candidats",
+          kpi_total_sub: "du manifeste",
+          kpi_green: "Vert",
+          kpi_green_sub: "candidats SPC",
+          kpi_yellow: "Jaune",
+          kpi_yellow_sub: "plus de donnees",
+          kpi_red: "Rouge",
+          kpi_red_sub: "FP/systematiques",
+          kpi_violet: "Violet",
+          kpi_violet_sub: "HZ/top-tier",
+          filter_all: "Tous",
+          filter_green: "Vert",
+          filter_yellow: "Jaune",
+          filter_red: "Rouge",
+          filter_violet: "Violet",
+          curves_filter_violet: "HZ/Violet",
+          curves_filter_green: "Vert",
+          map_legend_green: "Vert = candidat",
+          map_legend_yellow: "Jaune = en verification",
+          map_legend_red: "Rouge = FP/rejete",
+          map_legend_violet: "Anneau violet = focus HZ",
+          map_legend_selected: "Anneau blanc = selectionne",
+          map_legend_sun: "Reference Soleil/Terre",
+          map_notice_symbolic: "Vue de planification simplifiee de la carte stellaire. Les positions, angles et distances sont symboliques et non a l'echelle astronomique.",
+          tess_notice_symbolic: "Vue de planification TESS simplifiee. Les positions, angles et distances sont symboliques et non a l'echelle astronomique.",
+          timeline_title: "Chronologie de Couverture TESS",
+          timeline_observed: "Deja observe",
+          timeline_planned: "Planifie",
+          timeline_next: "Prochaine observation",
+          timeline_status: "Statut",
+          selected_title: "Candidat Selectionne",
+          selected_subtitle: "La justification en langage clair apparait ici.",
+          chip_violet_hz: "Violet / HZ",
+          chip_matrix_prefix: "Matrice {value}",
+          chip_evidence_prefix: "Evidence {value}",
+          chip_curve_available: "Courbe disponible",
+          detail_matrix_status: "Statut matrice",
+          detail_matrix_class: "Classe matrice",
+          detail_evidence_score: "Score evidence",
+          detail_distance: "Distance",
+          detail_period: "Periode",
+          detail_snr: "SNR",
+          detail_transits_visible: "Transits visibles",
+          detail_matrix_transits: "Transits/secteurs matrice",
+          detail_radius: "Rayon",
+          detail_status: "Statut",
+          detail_shape: "Forme du transit",
+          detail_sap_pdcsap: "SAP vs PDCSAP",
+          detail_oddeven: "Odd/Even",
+          detail_secondary: "Eclipse secondaire",
+          detail_depth: "Profondeur",
+          detail_duration: "Duree",
+          detail_depth_stable: "Profondeur stable?",
+          detail_data_gap: "Risque lacunes",
+          detail_sector_edge: "Risque bord secteur",
+          detail_alias: "Risque alias periode",
+          detail_rotation: "Risque activite",
+          matrix_reason_label: "Justification matrice",
+          matrix_next_label: "Etape suivante",
+          path_prefix: "Chemin",
+          footer_alert: "⚠️ Resultats de recherche preliminaires. Les evaluations des candidats peuvent changer avec de nouvelles donnees TESS, des suivis ou des analyses externes.",
+          footer_about: "A propos",
+          footer_impressum: "Mentions Legales",
+          footer_privacy: "Confidentialite",
+          footer_github: "GitHub",
+          toggle_expand: "Ouvrir la section",
+          toggle_collapse: "Replier la section",
+          tess_compare_expand: "Ouvrir la carte 3D des secteurs TESS",
+          tess_compare_collapse: "Replier la carte 3D des secteurs TESS",
+          phase_completed: "Termine",
+          phase_planned: "Planifie",
+          phase_running: "En cours",
+          unknown: "inconnu",
+          not_available: "indisponible",
+          not_set: "non defini",
+          no_entries: "Aucune entree pour le moment.",
+          no_candidate_selected: "Aucun candidat selectionne.",
+          status_add_sector_data: "Ajouter d'abord l'historique des secteurs depuis MAST/TESS.",
+          status_recheck_possible: "Reverification possible des que de nouvelles donnees TESS sont disponibles.",
+          status_waiting_data: "En attente de nouvelles donnees: aucune nouvelle observation correspondante pour l'instant.",
+          status_no_recheck: "Aucune reverification planifiee: aucun futur secteur TESS connu.",
+          next_no_sector: "Aucun secteur Year-8 correspondant planifie.",
+          next_running: "S{sector} est en cours ({range}).",
+          next_in_days: "S{sector} dans {days} jours ({date}).",
+          not_computable_missing_history: "non calculable - historique de secteurs manquant",
+          map_status_green: "Vert: reverification possible - le candidat se trouve dans la zone planifiee pertinente.",
+          map_status_yellow: "Jaune: attente de nouvelles donnees - aucune nouvelle observation adaptee actuellement.",
+          map_status_red: "Rouge: aucune reverification planifiee - aucun futur secteur TESS connu.",
+          map_status_missing: "Blanc: donnees manquantes - ajouter l'historique des secteurs depuis MAST/TESS.",
+          map_status_hint: "La selection montre si le candidat se situe dans la zone TESS planifiee.",
+          match_year8_none: "0 secteur",
+          match_year8_count: "{count} secteurs ({list})",
+          match_current_running: "S{sector} (en cours)",
+          match_current_next: "S{sector} (prochain)",
+          observed_unknown_chip: "historique de secteurs inconnu",
+          planned_unknown_chip: "aucun futur secteur connu",
+          status_chip_green: "Reverification possible",
+          status_chip_yellow: "Attente de nouvelles donnees",
+          status_chip_red: "Aucune reverification planifiee",
+          status_chip_missing: "Donnees manquantes",
+          tess_label_candidate_sector: "Vert = secteur candidat",
+          tess_label_observed: "Bleu = observe",
+          tess_label_planned: "Jaune = actuel/planifie",
+          tess_label_background: "Gris = arriere-plan",
+          chart_legend_map: "Centre = Soleil/Terre · interieur = plus proche · taille du point = SNR",
+          chart_legend_tess: "Vert = secteur candidat · Bleu = observe · Jaune = actuel/planifie",
+          tess_status_none: "Aucun secteur en cours dans l'extrait Year-8.",
+          tess_status_running: "S{sector} est en cours. Environ {days} jours restants jusqu'au {date}.",
+          tess_status_next: "Le prochain secteur est S{sector} et commence dans environ {days} jours ({date}).",
+          tess_sector_next: "S{sector} (prochain)",
+          tess_updated_at: "Date des sources: {date} (HEASARC + MIT TESS Year 8).",
+          color_plus_violet: "{base} + Violet",
+          color_green_violet: "Vert + Violet",
+          not_hz: "pas HZ",
+          showing_limited_results: "Affichage de 260 resultats sur {count}. Recherchez par TIC pour filtrer davantage.",
+          no_curve_found: "Aucune courbe de lumiere trouvee",
+          no_curve_selected: "Aucune courbe de lumiere selectionnee",
+          no_curve_for_filter: "Aucune courbe HZ/verte correspondant au filtre actuel.",
+          loading_curve: "Chargement de la courbe de lumiere combinee ...",
+          curve_load_failed: "Le PNG n'a pas pu etre charge. Verifiez le chemin/deploiement.",
+          folder_missing: "aucun dossier candidat",
+          selected_path_missing: "aucun chemin Level-0 trouve",
+          status_inactive: "Inactif",
+          status_active: "Actif",
+          status_loading: "Demarrage...",
+          status_paused_filter: "Pause (filtre propre)",
+          status_paused_localhost: "Pause (localhost)",
+          status_error: "Erreur",
+          status_unknown_error: "Erreur inconnue.",
+          analytics_endpoint_missing: "Aucun endpoint de suivi externe configure.",
+          analytics_loading: "Le script de suivi est en cours de chargement.",
+          analytics_self_filter_active: "Le filtre propre est actif: vos propres visites ne sont pas tracees.",
+          analytics_local_disabled: "Le suivi global est desactive en local (allowLocalhost=false).",
+          analytics_tracking_to: "Suivi GoatCounter vers {endpoint}",
+          admin_login_hint: "Nom d'utilisateur: Koni",
+          admin_self_filter_on: "Actif",
+          admin_self_filter_off: "Off",
+          admin_self_filter_disable: "NE PAS compter mes visites",
+          admin_self_filter_enable: "Compter mes visites",
+          table_country_unknown: "Unknown",
+          toast_no_curve_for_candidate: "Aucune courbe HZ/verte disponible pour ce candidat dans le set dashboard.",
+          toast_filter_hz: "Filtre HZ/violet actif.",
+          toast_refresh_data: "Bundle de donnees: relancer dashboard/build_dashboard_data.py.",
+          toast_tree_updated: "Arbre de decision mis a jour.",
+          toast_docs_updated: "Logique projet mise a jour.",
+          toast_tess_updated: "Statut des secteurs TESS mis a jour.",
+          toast_admin_login_ok: "Connexion admin reussie.",
+          toast_admin_login_fail: "Nom d'utilisateur ou mot de passe incorrect.",
+          login_failed: "Echec de connexion.",
+          toast_admin_logout: "Admin deconnecte.",
+          toast_filter_self_on: "Filtre propre actif: vos visites ne sont pas comptees.",
+          toast_filter_self_off: "Filtre propre desactive: vos visites sont comptees.",
+          confirm_reset_stats: "Reinitialiser les statistiques maintenant?",
+          toast_stats_reset: "Statistiques reinitialisees.",
+          toast_admin_refresh: "Section admin actualisee.",
+          toast_hints: "Astuces: utilisez la navigation a gauche, cliquez la carte, utilisez le panneau TESS pour la planification, Mentions Legales pour les notes, Admin pour les stats. UI {version}",
+          admin_country_source_unknown: "non resolu",
+          admin_country_source_unavailable: "indisponible",
+          year8_description: "L'annee 8 couvre S97-S107; S97/98 sont des secteurs a 4 orbites, suivis de 9 secteurs de recouvrement tournes.",
+          geometry_description: "Empreinte secteur env. 24x96 deg; 4 cameras en bande, duree typique d'un secteur env. 27 jours."
+        }
       };
 
       const ADMIN_USER = "Koni";
@@ -2136,7 +2707,7 @@
         sessionCountCountryCode: "UN",
         countryCode: "UN",
         countryName: "Unknown",
-        countrySource: "nicht aufgeloest",
+        countrySource: "unknown",
         countryResolved: false,
         selfFilterEnabled: false
       };
@@ -2221,6 +2792,54 @@
           text: "Konsolidiert Status, Evidence Score, Entscheidungsgrund und naechsten Schritt. Macht die Pipeline nachvollziehbar und steuerbar."
         }
       ];
+
+      const projectFlowStepsI18n = {
+        de: projectFlowSteps,
+        en: [
+          "1) Collect raw data",
+          "2) Level 1: raw candidates + first plots",
+          "3) Level 2: planetary plausibility",
+          "4) Level 3: external catalogs + new candidates",
+          "5) Level 4: TTV and O-C analysis",
+          "6) Level 5: detailed validation",
+          "7) Level 6: candidate dossier and follow-up",
+          "8) Dashboard + matrix + monitoring"
+        ],
+        fr: [
+          "1) Collecte des donnees brutes",
+          "2) Niveau 1: candidats bruts + premiers graphiques",
+          "3) Niveau 2: plausibilite planetaire",
+          "4) Niveau 3: catalogues externes + nouveaux candidats",
+          "5) Niveau 4: analyse TTV et O-C",
+          "6) Niveau 5: validation detaillee",
+          "7) Niveau 6: dossier candidat et suivi",
+          "8) Dashboard + matrice + monitoring"
+        ]
+      };
+
+      const projectLevelsI18n = {
+        de: projectLevels,
+        en: [
+          { name: "Level 0 - Distance Color Tree", text: "Folder structure by distance (ly) and preliminary color. Candidate paths, PNG light curves, and first status logic live here." },
+          { name: "Level 1 - Raw Candidates", text: "BLS/transit search, reference plots, first manual screening, and priority lists. Goal: turn large raw data into workable candidates." },
+          { name: "Level 2 - Planet Check", text: "Fast plausibility check with A/B/C/uncertain/FP classes. Goal: remove obvious systematics early." },
+          { name: "Level 3 - External Check", text: "Crossmatch with ExoFOP/TOI/other catalogs plus class for unknown new candidates. Separates known objects from new opportunities." },
+          { name: "Level 4 - TTV / Timing", text: "O-C curves, TTV priorities, graphical checks, and rechecks. Important for dynamics, alias risks, and stability." },
+          { name: "Level 5 - Detailed Validation", text: "Odd/even, secondary eclipse, neighboring-star checks, single-transit control. Many FP/artifacts are filtered out here." },
+          { name: "Level 6 - Dossier", text: "Reports, follow-up priority, export packages, and hold decisions. This is the handoff into observable actions." },
+          { name: "Dashboard + Candidate Matrix", text: "Consolidates status, evidence score, decision reason, and next step. Makes the pipeline transparent and controllable." }
+        ],
+        fr: [
+          { name: "Niveau 0 - Arbre couleur par distance", text: "Structure de dossiers par distance (ly) et couleur preliminaire. On y trouve les chemins candidats, les courbes PNG et la premiere logique de statut." },
+          { name: "Niveau 1 - Candidats bruts", text: "Recherche BLS/transit, graphiques de reference, premiere revue manuelle et listes de priorite. Objectif: transformer de grandes donnees brutes en candidats exploitables." },
+          { name: "Niveau 2 - Verification planetaire", text: "Verification rapide de plausibilite avec classes A/B/C/incertain/FP. Objectif: retirer tot les systematiques evidentes." },
+          { name: "Niveau 3 - Verification externe", text: "Croisement avec ExoFOP/TOI/autres catalogues plus classe pour nouveaux candidats inconnus. Separe les objets connus des nouvelles opportunites." },
+          { name: "Niveau 4 - TTV / Timing", text: "Courbes O-C, priorites TTV, controles graphiques et reverifications. Important pour la dynamique, les risques d'alias et la stabilite." },
+          { name: "Niveau 5 - Validation detaillee", text: "Odd/even, eclipse secondaire, controles d'etoiles voisines, verification transit unique. Beaucoup de FP/artefacts sont filtres ici." },
+          { name: "Niveau 6 - Dossier", text: "Rapports, priorite de suivi, paquets export et mises en attente. C'est la transition vers des actions observables." },
+          { name: "Dashboard + Matrice Candidats", text: "Consolide statut, score d'evidence, raison de decision et prochaine etape. Rend le pipeline transparent et pilotable." }
+        ]
+      };
 
       const projectScripts = [
         {
@@ -2476,8 +3095,54 @@
       let tessPoints2d = [];
       let tessThree = { ready: false };
 
+      function normalizeLanguage(lang) {
+        const safe = String(lang || "").trim().toLowerCase();
+        if (SUPPORTED_LANGS.includes(safe)) return safe;
+        if (safe.startsWith("de")) return "de";
+        if (safe.startsWith("en")) return "en";
+        if (safe.startsWith("fr")) return "fr";
+        return "de";
+      }
+
+      function detectInitialLanguage() {
+        try {
+          const persisted = localStorage.getItem(LANGUAGE_KEY);
+          if (persisted) return normalizeLanguage(persisted);
+        } catch (_) {}
+        return normalizeLanguage((navigator.languages && navigator.languages[0]) || navigator.language || "de");
+      }
+
+      function currentLocale() {
+        return LANGUAGE_LOCALES[state.lang] || LANGUAGE_LOCALES.de;
+      }
+
+      function t(key, vars = {}) {
+        const table = I18N[state.lang] || I18N.de;
+        const fallback = I18N.de || {};
+        const template = table[key] !== undefined ? table[key] : fallback[key];
+        if (template === undefined) return key;
+        return String(template).replace(/\{(\w+)\}/g, (_, token) => {
+          const value = vars[token];
+          return value === undefined || value === null ? "" : String(value);
+        });
+      }
+
+      function setLanguage(lang, persist = true) {
+        state.lang = normalizeLanguage(lang);
+        if (persist) {
+          try {
+            localStorage.setItem(LANGUAGE_KEY, state.lang);
+          } catch (_) {}
+        }
+        applyLanguageToUi();
+        updateDate();
+        renderAll();
+      }
+
+      state.lang = detectInitialLanguage();
+
       function formatNumber(value) {
-        return new Intl.NumberFormat("de-DE").format(value || 0);
+        return new Intl.NumberFormat(currentLocale()).format(value || 0);
       }
 
       function formatMaybe(value, fallback = "-") {
@@ -2489,7 +3154,7 @@
       function formatFloat(value, digits = 2, fallback = "-") {
         const number = Number(value);
         if (!Number.isFinite(number)) return fallback;
-        return number.toLocaleString("de-DE", {
+        return number.toLocaleString(currentLocale(), {
           minimumFractionDigits: digits,
           maximumFractionDigits: digits
         });
@@ -2504,7 +3169,7 @@
       function formatDate(value) {
         const date = parseIsoDate(value);
         if (!date || Number.isNaN(date.getTime())) return "-";
-        return new Intl.DateTimeFormat("de-DE", {
+        return new Intl.DateTimeFormat(currentLocale(), {
           day: "2-digit",
           month: "2-digit",
           year: "numeric"
@@ -2560,14 +3225,14 @@
         const schedule = tessMission.year8Sectors.map((item) => {
           const startDate = parseIsoDate(item.start);
           const endDate = parseIsoDate(item.end, true);
-          let phase = "Abgeschlossen";
-          if (now < startDate) phase = "Geplant";
-          else if (now <= endDate) phase = "Laufend";
+          let phase = "completed";
+          if (now < startDate) phase = "planned";
+          else if (now <= endDate) phase = "running";
           return { ...item, startDate, endDate, phase };
         });
-        const current = schedule.find((item) => item.phase === "Laufend") || null;
-        const upcoming = schedule.filter((item) => item.phase === "Geplant");
-        const completed = schedule.filter((item) => item.phase === "Abgeschlossen");
+        const current = schedule.find((item) => item.phase === "running") || null;
+        const upcoming = schedule.filter((item) => item.phase === "planned");
+        const completed = schedule.filter((item) => item.phase === "completed");
         return { now, schedule, current, upcoming, completed, next: upcoming[0] || null };
       }
 
@@ -2587,7 +3252,7 @@
       function formatMonthYear(value) {
         const date = parseIsoDate(value);
         if (!date || Number.isNaN(date.getTime())) return "-";
-        return new Intl.DateTimeFormat("de-DE", {
+        return new Intl.DateTimeFormat(currentLocale(), {
           month: "short",
           year: "numeric"
         }).format(date);
@@ -2609,7 +3274,7 @@
         const observed = info.sectors;
         const observedSet = new Set(observed);
         const phaseSet = new Set(observed.map((sector) => sectorPhase(sector)));
-        const activeSchedule = scheduleState.schedule.filter((item) => item.phase !== "Abgeschlossen");
+        const activeSchedule = scheduleState.schedule.filter((item) => item.phase !== "completed");
         const hasFutureKnownSectors = activeSchedule.length > 0;
         let planned = activeSchedule.filter((item) => {
           if (observedSet.has(item.sector)) return true;
@@ -2621,30 +3286,37 @@
         const overlapYear8 = observed.filter((sector) => tessYear8SectorSet.has(sector));
         const inPlannedArea = planned.length > 0 && observed.length > 0;
 
-        let nextObservationText = "Kein passender Year-8-Sektor geplant.";
+        let nextObservationText = t("next_no_sector");
         if (nextItem) {
-          if (nextItem.phase === "Laufend") {
-            nextObservationText = `S${nextItem.sector} laeuft jetzt (${formatDateRange(nextItem.start, nextItem.end)}).`;
+          if (nextItem.phase === "running") {
+            nextObservationText = t("next_running", {
+              sector: nextItem.sector,
+              range: formatDateRange(nextItem.start, nextItem.end)
+            });
           } else {
             const startsIn = Math.max(0, daysDiff(scheduleState.now, nextItem.startDate));
-            nextObservationText = `S${nextItem.sector} in ${startsIn} Tagen (${formatDate(nextItem.start)}).`;
+            nextObservationText = t("next_in_days", {
+              sector: nextItem.sector,
+              days: startsIn,
+              date: formatDate(nextItem.start)
+            });
           }
         }
 
-        let statusText = "Kein Kandidat ausgewaehlt.";
+        let statusText = t("no_candidate_selected");
         let statusKey = "neutral";
         if (candidate) {
           if (!observed.length) {
-            statusText = "Erst Sektordaten aus MAST/TESS ergaenzen.";
+            statusText = t("status_add_sector_data");
             statusKey = "missing";
           } else if (inPlannedArea) {
-            statusText = "Recheck moeglich, sobald neue TESS-Daten verfuegbar sind.";
+            statusText = t("status_recheck_possible");
             statusKey = "green";
           } else if (hasFutureKnownSectors) {
-            statusText = "Warten auf neue Daten: aktuell keine passende neue Beobachtung.";
+            statusText = t("status_waiting_data");
             statusKey = "yellow";
           } else {
-            statusText = "Kein Recheck geplant: keine zukuenftigen TESS-Sektoren bekannt.";
+            statusText = t("status_no_recheck");
             statusKey = "red";
           }
         }
@@ -2665,9 +3337,9 @@
 
       function countryNameFromCode(code) {
         const safeCode = String(code || "").toUpperCase();
-        if (!/^[A-Z]{2}$/.test(safeCode)) return "Unknown";
+        if (!/^[A-Z]{2}$/.test(safeCode)) return t("table_country_unknown");
         try {
-          const formatter = new Intl.DisplayNames(["de-DE", "en-US"], { type: "region", fallback: "code" });
+          const formatter = new Intl.DisplayNames([currentLocale(), "en-US"], { type: "region", fallback: "code" });
           const name = formatter.of(safeCode);
           return name || safeCode;
         } catch (_) {
@@ -2750,8 +3422,8 @@
         card.classList.toggle("is-collapsed", isCollapsed);
         els.tessCompareToggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
         els.tessCompareToggle.title = isCollapsed
-          ? "3D TESS-Sektorenkarte aufklappen"
-          : "3D TESS-Sektorenkarte einklappen";
+          ? t("tess_compare_expand")
+          : t("tess_compare_collapse");
         if (store) {
           try {
             localStorage.setItem(TESS_COMPARE_COLLAPSE_KEY, isCollapsed ? "1" : "0");
@@ -2768,7 +3440,7 @@
       function collapseButtonState(button, collapsed) {
         if (!button) return;
         button.setAttribute("aria-expanded", collapsed ? "false" : "true");
-        button.title = collapsed ? "Bereich aufklappen" : "Bereich zuklappen";
+        button.title = collapsed ? t("toggle_expand") : t("toggle_collapse");
       }
 
       function setPanelCollapsed(panelId, collapsed, store = true) {
@@ -2865,14 +3537,14 @@
         if (!/^https?:\/\//i.test(cfg.endpoint)) {
           globalAnalytics.enabled = false;
           globalAnalytics.mode = "error";
-          globalAnalytics.error = "Endpoint muss mit http:// oder https:// beginnen.";
+          globalAnalytics.error = "Endpoint must start with http:// or https://.";
           return;
         }
 
         if (cfg.provider !== "goatcounter") {
           globalAnalytics.enabled = false;
           globalAnalytics.mode = "error";
-          globalAnalytics.error = "Aktuell wird nur GoatCounter direkt unterstuetzt.";
+          globalAnalytics.error = "Only GoatCounter is supported directly at the moment.";
           return;
         }
 
@@ -2910,7 +3582,7 @@
         script.onerror = () => {
           globalAnalytics.enabled = false;
           globalAnalytics.mode = "error";
-          globalAnalytics.error = "Tracking-Skript konnte nicht geladen werden (Blocker/Netzwerk/CSP).";
+          globalAnalytics.error = "Tracking script could not be loaded (blocker/network/CSP).";
           renderAdmin();
         };
         document.head.appendChild(script);
@@ -2966,18 +3638,19 @@
         } catch (_) {}
       }
 
-      function ensureCountryBucket(code, name = "Unknown") {
+      function ensureCountryBucket(code, name = "") {
         if (!analytics.store) analytics.store = loadAnalyticsStore();
         const safeCode = String(code || "UN").toUpperCase();
+        const unknownLabel = t("table_country_unknown");
         if (!analytics.store.countries[safeCode]) {
           analytics.store.countries[safeCode] = {
             code: safeCode,
-            name: name || "Unknown",
+            name: name || unknownLabel,
             views: 0,
             sessions: 0,
             totalDurationSeconds: 0
           };
-        } else if (name && name !== "Unknown") {
+        } else if (name && name !== unknownLabel) {
           analytics.store.countries[safeCode].name = name;
         }
         return analytics.store.countries[safeCode];
@@ -2998,7 +3671,7 @@
         if (!isoValue) return "-";
         const date = new Date(isoValue);
         if (Number.isNaN(date.getTime())) return "-";
-        return new Intl.DateTimeFormat("de-DE", {
+        return new Intl.DateTimeFormat(currentLocale(), {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -3029,35 +3702,35 @@
         els.adminStatsWrap.classList.toggle("admin-hidden", !loggedIn);
 
         if (!loggedIn) {
-          els.adminLoginHint.textContent = "Benutzername: Koni";
+          els.adminLoginHint.textContent = t("admin_login_hint");
           return;
         }
 
         const statusLabel =
-          globalAnalytics.mode === "active" ? "Aktiv" :
-          globalAnalytics.mode === "loading" ? "Startet..." :
-          globalAnalytics.mode === "paused_filter" ? "Pausiert (Eigenfilter)" :
-          globalAnalytics.mode === "paused" ? "Pausiert (localhost)" :
-          globalAnalytics.mode === "error" ? "Fehler" :
-          "Inaktiv";
+          globalAnalytics.mode === "active" ? t("status_active") :
+          globalAnalytics.mode === "loading" ? t("status_loading") :
+          globalAnalytics.mode === "paused_filter" ? t("status_paused_filter") :
+          globalAnalytics.mode === "paused" ? t("status_paused_localhost") :
+          globalAnalytics.mode === "error" ? t("status_error") :
+          t("status_inactive");
         const detailsLabel =
-          globalAnalytics.mode === "active" ? `GoatCounter Tracking an ${globalAnalytics.endpoint}` :
-          globalAnalytics.mode === "loading" ? "Tracking-Skript wird geladen." :
-          globalAnalytics.mode === "paused_filter" ? "Eigenfilter ist aktiv: eigene Aufrufe werden nicht getrackt." :
-          globalAnalytics.mode === "paused" ? "Globales Tracking ist lokal deaktiviert (allowLocalhost=false)." :
-          globalAnalytics.mode === "error" ? (globalAnalytics.error || "Unbekannter Fehler.") :
-          "Kein externer Tracking-Endpunkt konfiguriert.";
+          globalAnalytics.mode === "active" ? t("analytics_tracking_to", { endpoint: globalAnalytics.endpoint }) :
+          globalAnalytics.mode === "loading" ? t("analytics_loading") :
+          globalAnalytics.mode === "paused_filter" ? t("analytics_self_filter_active") :
+          globalAnalytics.mode === "paused" ? t("analytics_local_disabled") :
+          globalAnalytics.mode === "error" ? (globalAnalytics.error || t("status_unknown_error")) :
+          t("analytics_endpoint_missing");
         els.adminGlobalStatus.textContent = statusLabel;
         els.adminGlobalDetails.textContent = detailsLabel;
         const hasDashboard = Boolean(globalAnalytics.dashboardUrl);
         els.adminGlobalDashboardLink.href = hasDashboard ? globalAnalytics.dashboardUrl : "#";
-        els.adminGlobalDashboardLink.textContent = hasDashboard ? globalAnalytics.dashboardUrl : "nicht gesetzt";
+        els.adminGlobalDashboardLink.textContent = hasDashboard ? globalAnalytics.dashboardUrl : t("not_set");
         els.adminGlobalDashboardLink.style.pointerEvents = hasDashboard ? "auto" : "none";
         els.adminGlobalDashboardLink.style.opacity = hasDashboard ? "1" : "0.6";
-        els.adminSelfFilterStatus.textContent = analytics.selfFilterEnabled ? "Aktiv" : "Aus";
+        els.adminSelfFilterStatus.textContent = analytics.selfFilterEnabled ? t("admin_self_filter_on") : t("admin_self_filter_off");
         els.adminToggleSelfFilterLabel.textContent = analytics.selfFilterEnabled
-          ? "Eigene Besuche NICHT zaehlen"
-          : "Eigene Besuche zaehlen";
+          ? t("admin_self_filter_disable")
+          : t("admin_self_filter_enable");
 
         const store = analytics.store;
         const avgDuration = store.totalSessions > 0 ? store.totalDurationSeconds / store.totalSessions : 0;
@@ -3074,7 +3747,7 @@
             const avg = (item.sessions || 0) > 0 ? item.totalDurationSeconds / item.sessions : 0;
             return `
               <tr>
-                <td><strong>${item.name || "Unknown"} (${item.code || "UN"})</strong></td>
+                <td><strong>${item.name || t("table_country_unknown")} (${item.code || "UN"})</strong></td>
                 <td>${formatNumber(item.views || 0)}</td>
                 <td>${formatNumber(item.sessions || 0)}</td>
                 <td>${formatDuration(item.totalDurationSeconds || 0)}</td>
@@ -3082,7 +3755,7 @@
               </tr>
             `;
           }).join("");
-        els.adminCountryRows.innerHTML = rows || `<tr><td colspan="5">Noch keine Eintraege.</td></tr>`;
+        els.adminCountryRows.innerHTML = rows || `<tr><td colspan="5">${t("no_entries")}</td></tr>`;
       }
 
       async function resolveCountry() {
@@ -3105,12 +3778,12 @@
 
         const localeGuess = resolveCountryFromLocale();
         if (localeGuess) return localeGuess;
-        return { code: "UN", name: "Unknown", source: "nicht verfuegbar" };
+        return { code: "UN", name: t("table_country_unknown"), source: t("admin_country_source_unavailable") };
       }
 
       function transferSessionCountry(fromCode, toCode, toName) {
-        const from = ensureCountryBucket(fromCode, "Unknown");
-        const to = ensureCountryBucket(toCode, toName || "Unknown");
+        const from = ensureCountryBucket(fromCode, t("table_country_unknown"));
+        const to = ensureCountryBucket(toCode, toName || t("table_country_unknown"));
         from.views = Math.max(0, (from.views || 0) - 1);
         from.sessions = Math.max(0, (from.sessions || 0) - 1);
         to.views = (to.views || 0) + 1;
@@ -3144,7 +3817,7 @@
         if (!analytics.store || !analytics.sessionCounted) return;
         analytics.store.totalViews = Math.max(0, (analytics.store.totalViews || 0) - 1);
         analytics.store.totalSessions = Math.max(0, (analytics.store.totalSessions || 0) - 1);
-        const bucket = ensureCountryBucket(analytics.sessionCountCountryCode || "UN", analytics.countryName || "Unknown");
+        const bucket = ensureCountryBucket(analytics.sessionCountCountryCode || "UN", analytics.countryName || t("table_country_unknown"));
         bucket.views = Math.max(0, (bucket.views || 0) - 1);
         bucket.sessions = Math.max(0, (bucket.sessions || 0) - 1);
         analytics.sessionCounted = false;
@@ -3161,7 +3834,7 @@
           analytics.store.totalViews += 1;
           analytics.store.totalSessions += 1;
           analytics.store.lastVisitAt = new Date().toISOString();
-          const bucket = ensureCountryBucket(analytics.countryCode || "UN", analytics.countryName || "Unknown");
+          const bucket = ensureCountryBucket(analytics.countryCode || "UN", analytics.countryName || t("table_country_unknown"));
           bucket.views += 1;
           bucket.sessions += 1;
           analytics.sessionCounted = true;
@@ -3184,7 +3857,7 @@
           analytics.store.totalSessions += 1;
           analytics.store.lastVisitAt = new Date().toISOString();
 
-          const unknownBucket = ensureCountryBucket("UN", "Unknown");
+          const unknownBucket = ensureCountryBucket("UN", t("table_country_unknown"));
           unknownBucket.views += 1;
           unknownBucket.sessions += 1;
           analytics.sessionCounted = true;
@@ -3194,7 +3867,7 @@
         resolveCountry().then((country) => {
           analytics.countryCode = country.code;
           analytics.countryName = country.name;
-          analytics.countrySource = country.source || "unbekannt";
+          analytics.countrySource = country.source || t("admin_country_source_unknown");
           analytics.countryResolved = true;
           if (country.code !== "UN") {
             const migrated = migrateUnknownHistory(country.code, country.name);
@@ -3238,12 +3911,23 @@
         return "gray";
       }
 
+      function localizedBaseColorLabel(candidate) {
+        const explicit = String(candidate.color || "").toLowerCase();
+        const raw = String(candidate.baseColorLabel || "").toLowerCase();
+        if (explicit === "green" || raw.includes("gruen") || raw.includes("green") || raw.includes("vert")) return t("filter_green");
+        if (explicit === "yellow" || raw.includes("gelb") || raw.includes("yellow") || raw.includes("jaune")) return t("filter_yellow");
+        if (explicit === "red" || raw.includes("rot") || raw.includes("red") || raw.includes("rouge")) return t("filter_red");
+        if (candidate.isViolet || raw.includes("violett") || raw.includes("violet")) return t("filter_violet");
+        return candidate.baseColorLabel || "-";
+      }
+
       function colorName(candidate) {
-        if (candidate.isViolet && candidate.baseColorLabel !== "Gruen") {
-          return `${candidate.baseColorLabel} + Violett`;
+        const baseLabel = localizedBaseColorLabel(candidate);
+        if (candidate.isViolet && String(baseLabel).toLowerCase() !== String(t("filter_green")).toLowerCase()) {
+          return t("color_plus_violet", { base: baseLabel });
         }
-        if (candidate.isViolet) return "Gruen + Violett";
-        return candidate.baseColorLabel;
+        if (candidate.isViolet) return t("color_green_violet");
+        return baseLabel;
       }
 
       function matchesCandidate(candidate, term) {
@@ -3258,7 +3942,8 @@
           candidate.reason,
           candidate.hz,
           candidate.baseColorLabel,
-          candidate.isViolet ? "violett" : ""
+          localizedBaseColorLabel(candidate),
+          candidate.isViolet ? `${t("filter_violet")} violet violett` : ""
         ].join(" ").toLowerCase().includes(term);
       }
 
@@ -3279,7 +3964,7 @@
         document.getElementById("kpiRed").textContent = formatNumber(data.summary.red);
         document.getElementById("kpiViolet").textContent = formatNumber(data.summary.violet);
         document.getElementById("lcCount").textContent = formatNumber(data.summary.lightcurves);
-        document.getElementById("generatedAt").textContent = new Date(data.generatedAt).toLocaleTimeString("de-DE", {
+        document.getElementById("generatedAt").textContent = new Date(data.generatedAt).toLocaleTimeString(currentLocale(), {
           hour: "2-digit",
           minute: "2-digit"
         });
@@ -3308,12 +3993,94 @@
         window.lucide?.createIcons();
       }
 
+      function localizeScriptText(text) {
+        const source = String(text || "");
+        if (state.lang === "de") return source;
+        const replacements =
+          state.lang === "en"
+            ? [
+              [/Baut/g, "Builds"],
+              [/Erzeugt/g, "Generates"],
+              [/Erstellt/g, "Creates"],
+              [/Fuehrt/g, "Runs"],
+              [/Setzt/g, "Applies"],
+              [/Ordnet/g, "Organizes"],
+              [/Bereinigt\/depriorisiert/g, "Cleans/deprioritizes"],
+              [/Bewertet/g, "Evaluates"],
+              [/Sammelt/g, "Collects"],
+              [/Prueft/g, "Checks"],
+              [/Ueberwacht/g, "Monitors"],
+              [/Ergaenzt/g, "Fills"],
+              [/Verknuepft bzw\. synchronisiert/g, "Links and syncs"],
+              [/Exportiert/g, "Exports"],
+              [/Berechnet/g, "Computes"],
+              [/Spezialvetting fuer/g, "Special vetting for"],
+              [/Einzelfall-Deepdive fuer/g, "Single-case deep dive for"],
+              [/Sektor-spezifischer Deepdive zu/g, "Sector-specific deep dive for"],
+              [/fuer/g, "for"],
+              [/und/g, "and"],
+              [/Kandidaten/g, "candidates"],
+              [/Lichtkurven/g, "light curves"],
+              [/Status/g, "status"],
+              [/naechsten Schritt/g, "next step"]
+            ]
+            : [
+              [/Baut/g, "Construit"],
+              [/Erzeugt/g, "Genere"],
+              [/Erstellt/g, "Cree"],
+              [/Fuehrt/g, "Execute"],
+              [/Setzt/g, "Applique"],
+              [/Ordnet/g, "Organise"],
+              [/Bewertet/g, "Evalue"],
+              [/Sammelt/g, "Collecte"],
+              [/Prueft/g, "Verifie"],
+              [/Ueberwacht/g, "Surveille"],
+              [/Ergaenzt/g, "Complete"],
+              [/Verknuepft bzw\. synchronisiert/g, "Relie et synchronise"],
+              [/Exportiert/g, "Exporte"],
+              [/Berechnet/g, "Calcule"],
+              [/fuer/g, "pour"],
+              [/und/g, "et"],
+              [/Kandidaten/g, "candidats"],
+              [/Lichtkurven/g, "courbes de lumiere"],
+              [/Status/g, "statut"],
+              [/naechsten Schritt/g, "prochaine etape"]
+            ];
+        return replacements.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), source);
+      }
+
+      function localizeScriptLevel(text) {
+        const source = String(text || "");
+        if (state.lang === "de") return source;
+        if (state.lang === "en") {
+          return source
+            .replace(/alle Level/g, "all levels")
+            .replace(/Level/g, "Level")
+            .replace(/Archiv/g, "Archive")
+            .replace(/Hygiene/g, "Hygiene")
+            .replace(/Spezial/g, "Special")
+            .replace(/Reporting/g, "Reporting")
+            .replace(/Monitoring/g, "Monitoring");
+        }
+        return source
+          .replace(/alle Level/g, "tous niveaux")
+          .replace(/Level/g, "Niveau")
+          .replace(/Archiv/g, "Archive")
+          .replace(/Hygiene/g, "Hygiene")
+          .replace(/Spezial/g, "Special")
+          .replace(/Reporting/g, "Reporting")
+          .replace(/Monitoring/g, "Monitoring");
+      }
+
       function renderDocs() {
-        els.docsFlow.innerHTML = projectFlowSteps
+        const flowSteps = projectFlowStepsI18n[state.lang] || projectFlowStepsI18n.de;
+        const levels = projectLevelsI18n[state.lang] || projectLevelsI18n.de;
+
+        els.docsFlow.innerHTML = flowSteps
           .map((step) => `<span class="docs-step">${step}</span>`)
           .join("");
 
-        els.docsLevels.innerHTML = projectLevels
+        els.docsLevels.innerHTML = levels
           .map((level) => `
             <article class="docs-level">
               <strong>${level.name}</strong>
@@ -3326,12 +4093,536 @@
           .map((item) => `
             <tr>
               <td><span class="script-id">${item.script}</span></td>
-              <td>${item.does}</td>
-              <td>${item.why}</td>
-              <td>${item.level}</td>
+              <td>${localizeScriptText(item.does)}</td>
+              <td>${localizeScriptText(item.why)}</td>
+              <td>${localizeScriptLevel(item.level)}</td>
             </tr>
           `)
           .join("");
+      }
+
+      function setText(selector, value) {
+        const node = document.querySelector(selector);
+        if (node) node.textContent = value;
+      }
+
+      function setTitle(selector, value) {
+        const node = document.querySelector(selector);
+        if (node) node.title = value;
+      }
+
+      function setLegendText(selector, value) {
+        const node = document.querySelector(selector);
+        if (!node) return;
+        const dot = node.querySelector(".dot");
+        if (!dot) {
+          node.textContent = value;
+          return;
+        }
+        const dotHtml = dot.outerHTML;
+        node.innerHTML = `${dotHtml} ${value}`;
+      }
+
+      function applyLanguageToUi() {
+        document.documentElement.lang = state.lang;
+        document.title = t("app_title");
+
+        const labels = state.lang === "en"
+          ? {
+            brandSub: "Color Tree",
+            navAria: "Dashboard sections",
+            eyebrow: "Exoplanet Candidate Explorer",
+            treeTitle: "Decision Tree",
+            treeSub: "From first color to next action.",
+            treeRefresh: "Refresh tree",
+            mapTitle: "2D/3D Star Map",
+            mapSub: "Project points: color = status, depth = distance/SNR. Click to select candidates.",
+            mapSelected: "Selected candidate (white ring/point)",
+            mapObserved: "Observed sectors so far",
+            mapNext: "Next observation / recheck",
+            mapVisible: "Visible points after filter",
+            mapLc: "HZ/green light curves with PNG",
+            mapData: "Data timestamp",
+            tessCompareTitle: "3D TESS Sector Map",
+            tessMiniSelected: "selected candidate",
+            tessMiniHistory: "sector history",
+            tessMiniOverlap: "Year-8 overlap",
+            tessMiniCurrent: "current/next mission sector",
+            tessMiniCoverage: "candidates with sector history",
+            selectedCurveTitle: "Show light curve",
+            tessPanelTitle: "TESS Mission and Sectors",
+            tessPanelSub: "Live orientation: current sector, next planning, and sector arrangement.",
+            tessRefresh: "Refresh TESS section",
+            tessKpiCurrent: "Current sector",
+            tessKpiWindow: "Time window",
+            tessKpiTotal: "Numbered sectors",
+            tessKpiPrime: "Prime mission",
+            tessNoticeStatus: "Status today:",
+            tessNoticeYear8: "Year 8 structure:",
+            tessNoticeGeometry: "Geometry:",
+            tessTableSector: "Sector",
+            tessTableStart: "Start",
+            tessTableEnd: "End",
+            tessTableStatus: "Status",
+            tessTableArrangement: "Arrangement",
+            tessSource1: "HEASARC sector windows",
+            tessSource2: "MIT Year 8 plan",
+            curvesTitle: "Light Curves: HZ and Green Candidates",
+            curvesSub: "All matching candidates are selectable on the left; the combined curve appears on the right.",
+            curveSearch: "Search light curve",
+            curveOpenCandidate: "Mark candidate",
+            tableTitle: "Candidate List with Rationale",
+            tableSub: "Sorted by distance; selection syncs tree, map, and light curve.",
+            tableHeaders: ["TIC", "Color", "Status", "Matrix", "Evidence", "Why", "Next step", "HZ", "Distance", "Period", "SNR", "Transits"],
+            docsTitle: "Project Logic and Scripts",
+            docsSub: "What each script does, why it matters, and which level it supports.",
+            docsRefresh: "Refresh docs",
+            docsHeaders: ["Script", "What does it do?", "Why useful?", "Level / Area"],
+            legalTitle: "Legal and Notes",
+            legalSub: "Project status, responsibility, and privacy notes.",
+            adminTitle: "Admin Area",
+            adminSub: "Login and page analytics (views, countries, duration).",
+            adminRefresh: "Refresh admin",
+            adminLoginTitle: "Login",
+            adminLoginSub: "Access for the admin section.",
+            adminUser: "Username",
+            adminPass: "Password",
+            adminLoginBtn: "Login",
+            adminReset: "Reset statistics",
+            adminLogout: "Logout",
+            adminGlobal: "Global analytics:",
+            adminDetails: "Details:",
+            adminDashboard: "Dashboard:",
+            adminSelfFilter: "Self filter:",
+            adminViews: "Page views",
+            adminSessions: "Sessions",
+            adminAvg: "Avg. duration",
+            adminLast: "Last visit",
+            adminCountry: "Current country:",
+            adminSource: "Source:",
+            adminNoteLabel: "Note:",
+            adminHint: "This table is the local browser fallback. Use GoatCounter dashboard for global numbers.",
+            adminCountryHeaders: ["Country", "Views", "Sessions", "Total duration", "Avg/session"],
+            aboutHtml: `
+              <h3>Scientific Notice</h3>
+              <p>Kwarves is an independent citizen-science project analyzing publicly available TESS and Gaia data.</p>
+              <p>Displayed candidates, ratings, and classifications are generated automatically and are partly in an early research stage.</p>
+              <p>Not all available observations, follow-up measurements, archive data, or scientific publications are fully included.</p>
+              <p>New data can lead to re-evaluation, confirmation, or rejection of a candidate.</p>
+              <p>Displayed results are not a confirmation of an exoplanet and do not claim completeness or scientific finality.</p>
+            `,
+            impressumHtml: `
+              <h3>Legal Notice</h3>
+              <p><strong>Responsible for content:</strong><br />Konrad Gottschalk</p>
+              <p>Kwarves is an independent citizen-science project analyzing publicly available astronomical data.</p>
+              <p><strong>Contact:</strong><br />[Project email]</p>
+            `,
+            privacyHtml: `
+              <h3>Privacy</h3>
+              <p>This website uses a dashboard with local browser statistics and optional external audience measurement.</p>
+              <p>Analytics data is used only to improve the project and does not replace scientific publication.</p>
+            `
+          }
+          : state.lang === "fr"
+            ? {
+              brandSub: "Arbre Couleur",
+              navAria: "Sections du dashboard",
+              eyebrow: "Exoplanet Candidate Explorer",
+              treeTitle: "Arbre de Decision",
+              treeSub: "De la premiere couleur a l'action suivante.",
+              treeRefresh: "Actualiser l'arbre",
+              mapTitle: "Carte Stellaire 2D/3D",
+              mapSub: "Points du projet: couleur = statut, profondeur = distance/SNR. Cliquez pour selectionner un candidat.",
+              mapSelected: "Candidat selectionne (anneau/point blanc)",
+              mapObserved: "Secteurs deja observes",
+              mapNext: "Prochaine observation / reverification",
+              mapVisible: "Points visibles apres filtre",
+              mapLc: "Courbes HZ/vertes avec PNG",
+              mapData: "Horodatage des donnees",
+              tessCompareTitle: "Carte 3D des Secteurs TESS",
+              tessMiniSelected: "candidat selectionne",
+              tessMiniHistory: "historique secteurs",
+              tessMiniOverlap: "recouvrement Year-8",
+              tessMiniCurrent: "secteur mission actuel/prochain",
+              tessMiniCoverage: "candidats avec historique secteurs",
+              selectedCurveTitle: "Afficher la courbe",
+              tessPanelTitle: "Mission TESS et Secteurs",
+              tessPanelSub: "Orientation en direct: secteur actuel, planification suivante et organisation des secteurs.",
+              tessRefresh: "Actualiser la section TESS",
+              tessKpiCurrent: "Secteur actuel",
+              tessKpiWindow: "Fenetre temporelle",
+              tessKpiTotal: "Secteurs numerotes",
+              tessKpiPrime: "Mission prime",
+              tessNoticeStatus: "Statut aujourd'hui:",
+              tessNoticeYear8: "Structure Year 8:",
+              tessNoticeGeometry: "Geometrie:",
+              tessTableSector: "Secteur",
+              tessTableStart: "Debut",
+              tessTableEnd: "Fin",
+              tessTableStatus: "Statut",
+              tessTableArrangement: "Disposition",
+              tessSource1: "Fenetres secteurs HEASARC",
+              tessSource2: "Planification MIT Year 8",
+              curvesTitle: "Courbes de Lumiere: HZ et Candidats Verts",
+              curvesSub: "Tous les candidats correspondants sont selectionnables a gauche; la courbe combinee apparait a droite.",
+              curveSearch: "Rechercher une courbe",
+              curveOpenCandidate: "Marquer le candidat",
+              tableTitle: "Liste des Candidats avec Justification",
+              tableSub: "Triee par distance; la selection synchronise arbre, carte et courbe.",
+              tableHeaders: ["TIC", "Couleur", "Statut", "Matrice", "Evidence", "Pourquoi", "Etape suivante", "HZ", "Distance", "Periode", "SNR", "Transits"],
+              docsTitle: "Logique Projet et Scripts",
+              docsSub: "Ce que fait chaque script, pourquoi il est utile, et quel niveau il sert.",
+              docsRefresh: "Actualiser la doc",
+              docsHeaders: ["Script", "Que fait-il?", "Pourquoi utile?", "Niveau / Zone"],
+              legalTitle: "Mentions Legales et Notes",
+              legalSub: "Statut du projet, responsabilite et notes de confidentialite.",
+              adminTitle: "Zone Admin",
+              adminSub: "Connexion et statistiques de page (vues, pays, duree).",
+              adminRefresh: "Actualiser admin",
+              adminLoginTitle: "Connexion",
+              adminLoginSub: "Acces a la section admin.",
+              adminUser: "Nom d'utilisateur",
+              adminPass: "Mot de passe",
+              adminLoginBtn: "Connexion",
+              adminReset: "Reinitialiser statistiques",
+              adminLogout: "Deconnexion",
+              adminGlobal: "Analytics global:",
+              adminDetails: "Details:",
+              adminDashboard: "Dashboard:",
+              adminSelfFilter: "Filtre propre:",
+              adminViews: "Vues de page",
+              adminSessions: "Sessions",
+              adminAvg: "Duree moyenne",
+              adminLast: "Derniere visite",
+              adminCountry: "Pays actuel:",
+              adminSource: "Source:",
+              adminNoteLabel: "Note:",
+              adminHint: "Ce tableau est le fallback local du navigateur. Pour les chiffres globaux, utilisez le dashboard GoatCounter.",
+              adminCountryHeaders: ["Pays", "Vues", "Sessions", "Duree totale", "Moyenne/session"],
+              aboutHtml: `
+                <h3>Note Scientifique</h3>
+                <p>Kwarves est un projet citizen-science independant pour l'analyse de donnees TESS et Gaia publiquement disponibles.</p>
+                <p>Les candidats, evaluations et classifications affiches sont generes automatiquement et se trouvent en partie a un stade de recherche precoce.</p>
+                <p>Toutes les observations disponibles, mesures de suivi, donnees d'archives ou publications scientifiques ne sont pas prises en compte de facon exhaustive.</p>
+                <p>De nouvelles donnees peuvent conduire a une reevaluation, une confirmation ou un rejet d'un candidat.</p>
+                <p>Les resultats affiches ne constituent pas une confirmation d'exoplanete et ne pretendent ni a l'exhaustivite ni a une finalite scientifique.</p>
+              `,
+              impressumHtml: `
+                <h3>Mentions Legales</h3>
+                <p><strong>Responsable du contenu:</strong><br />Konrad Gottschalk</p>
+                <p>Kwarves est un projet citizen-science independant pour l'analyse de donnees astronomiques publiquement disponibles.</p>
+                <p><strong>Contact:</strong><br />[E-mail projet]</p>
+              `,
+              privacyHtml: `
+                <h3>Confidentialite</h3>
+                <p>Ce site utilise un dashboard avec statistiques locales navigateur et mesure d'audience externe optionnelle.</p>
+                <p>Les donnees d'analyse servent uniquement a ameliorer le projet et ne remplacent pas une publication scientifique.</p>
+              `
+            }
+            : {
+              brandSub: "Farbenbaum",
+              navAria: "Dashboard Bereiche",
+              eyebrow: "Exoplanet Candidate Explorer",
+              treeTitle: "Baumstruktur der Entscheidung",
+              treeSub: "Von der ersten Farbe bis zur naechsten Aktion.",
+              treeRefresh: "Baum aktualisieren",
+              mapTitle: "2D/3D Sternkarte",
+              mapSub: "Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung/SNR. Klicken waehlt Kandidaten aus.",
+              mapSelected: "Ausgewaehlter Kandidat (weisser Ring/Punkt)",
+              mapObserved: "Bisher beobachtete Sektoren",
+              mapNext: "Naechste Beobachtung / Recheck",
+              mapVisible: "sichtbare Punkte nach Filter",
+              mapLc: "HZ/gruene Lichtkurven mit PNG",
+              mapData: "Datenstand",
+              tessCompareTitle: "3D TESS-Sektorenkarte",
+              tessMiniSelected: "ausgewaehlter Kandidat",
+              tessMiniHistory: "Sektorhistorie",
+              tessMiniOverlap: "Year-8-Abgleich",
+              tessMiniCurrent: "aktueller/naechster Mission-Sektor",
+              tessMiniCoverage: "Kandidaten mit Sektorhistorie",
+              selectedCurveTitle: "Lichtkurve zeigen",
+              tessPanelTitle: "TESS Mission und Sektoren",
+              tessPanelSub: "Live-Orientierung: aktueller Sektor, naechste Planung und Anordnung der Sektoren.",
+              tessRefresh: "TESS-Bereich aktualisieren",
+              tessKpiCurrent: "Aktueller Sektor",
+              tessKpiWindow: "Zeitfenster",
+              tessKpiTotal: "Nummerierte Sektoren",
+              tessKpiPrime: "Prime Mission",
+              tessNoticeStatus: "Status heute:",
+              tessNoticeYear8: "Year 8 Struktur:",
+              tessNoticeGeometry: "Geometrie:",
+              tessTableSector: "Sektor",
+              tessTableStart: "Start",
+              tessTableEnd: "Ende",
+              tessTableStatus: "Status",
+              tessTableArrangement: "Anordnung",
+              tessSource1: "HEASARC Sektorzeiten",
+              tessSource2: "MIT Year 8 Planung",
+              curvesTitle: "Lichtkurven: HZ und gruene Kandidaten",
+              curvesSub: "Alle passenden Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.",
+              curveSearch: "Lichtkurve suchen",
+              curveOpenCandidate: "Kandidat markieren",
+              tableTitle: "Kandidatenliste mit Begruendung",
+              tableSub: "Sortiert nach Entfernung; Auswahl synchronisiert Baum, Karte und Lichtkurve.",
+              tableHeaders: ["TIC", "Farbe", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
+              docsTitle: "Projektlogik und Skripte",
+              docsSub: "Was jedes Skript macht, warum es sinnvoll ist und welches Level es bedient.",
+              docsRefresh: "Dokuseite aktualisieren",
+              docsHeaders: ["Skript", "Was macht es?", "Warum sinnvoll?", "Level / Bereich"],
+              legalTitle: "Impressum und Hinweise",
+              legalSub: "Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.",
+              adminTitle: "Admin Bereich",
+              adminSub: "Login und Seitenstatistik (Aufrufe, Laender, Aufenthaltsdauer).",
+              adminRefresh: "Admin aktualisieren",
+              adminLoginTitle: "Login",
+              adminLoginSub: "Zugang fuer den Admin-Bereich.",
+              adminUser: "Benutzername",
+              adminPass: "Passwort",
+              adminLoginBtn: "Login",
+              adminReset: "Statistik zuruecksetzen",
+              adminLogout: "Logout",
+              adminGlobal: "Globale Analytics:",
+              adminDetails: "Details:",
+              adminDashboard: "Dashboard:",
+              adminSelfFilter: "Eigenfilter:",
+              adminViews: "Seitenaufrufe",
+              adminSessions: "Sitzungen",
+              adminAvg: "Durchschn. Dauer",
+              adminLast: "Letzter Besuch",
+              adminCountry: "Aktuelles Land:",
+              adminSource: "Quelle:",
+              adminNoteLabel: "Hinweis:",
+              adminHint: "Diese Tabelle ist der lokale Fallback im Browser. Fuer globale Zahlen bitte GoatCounter-Dashboard nutzen.",
+              adminCountryHeaders: ["Land", "Aufrufe", "Sitzungen", "Gesamtdauer", "Durchschnitt/Sitzung"],
+              aboutHtml: `
+                <h3>Wissenschaftlicher Hinweis</h3>
+                <p>Kwarves ist ein unabhaengiges Citizen-Science-Projekt zur Analyse oeffentlich verfuegbarer TESS- und Gaia-Daten.</p>
+                <p>Die dargestellten Kandidaten, Bewertungen und Klassifizierungen werden automatisiert erzeugt und befinden sich teilweise in einem fruehen Forschungsstadium.</p>
+                <p>Nicht alle verfuegbaren Beobachtungen, Follow-up-Messungen, Archivdaten oder wissenschaftlichen Veroeffentlichungen werden vollstaendig beruecksichtigt.</p>
+                <p>Neue Daten koennen zu einer Neubewertung, Bestaetigung oder Ablehnung eines Kandidaten fuehren.</p>
+                <p>Die dargestellten Ergebnisse stellen keine Bestaetigung eines Exoplaneten dar und erheben keinen Anspruch auf Vollstaendigkeit oder wissenschaftliche Endgueltigkeit.</p>
+              `,
+              impressumHtml: `
+                <h3>Impressum</h3>
+                <p><strong>Verantwortlich fuer den Inhalt:</strong><br />Konrad Gottschalk</p>
+                <p>Kwarves ist ein unabhaengiges Citizen-Science-Projekt zur Analyse oeffentlich verfuegbarer astronomischer Daten.</p>
+                <p><strong>Kontakt:</strong><br />[Projekt-E-Mail]</p>
+              `,
+              privacyHtml: `
+                <h3>Privacy</h3>
+                <p>Diese Webseite nutzt ein Dashboard mit lokalen Browser-Statistiken und optional externer Reichweitenmessung.</p>
+                <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
+              `
+            };
+
+        const setNav = (panel, text) => {
+          setText(`[data-nav-target="${panel}"] span`, text);
+          setTitle(`[data-nav-target="${panel}"]`, text);
+        };
+
+        document.querySelector(".brand span").textContent = labels.brandSub;
+        document.querySelector(".nav").setAttribute("aria-label", labels.navAria);
+        setNav("treePanel", t("nav_tree"));
+        setNav("mapPanel", t("nav_map"));
+        setNav("tessPanel", t("nav_tess"));
+        setNav("curvesPanel", t("nav_curves"));
+        setNav("tablePanel", t("nav_table"));
+        setNav("docsPanel", t("nav_docs"));
+        setNav("impressumPanel", t("nav_impressum"));
+        setNav("adminPanel", t("nav_admin"));
+
+        setText(".sidebar-note strong", t("sidebar_rule_title"));
+        setText(".sidebar-note span", t("sidebar_rule_text"));
+        setText("#refreshData span", t("refresh_data"));
+        setTitle("#refreshData", t("refresh_data"));
+        setText(".eyebrow", labels.eyebrow);
+        setText(".lede", t("lede"));
+        setText("#focusHzLabel", t("hz_focus"));
+        setTitle("#showHints", t("hint_button_title"));
+        document.getElementById("globalSearch").placeholder = t("search_placeholder");
+        document.getElementById("curveSearch").placeholder = labels.curveSearch;
+
+        const langSwitch = document.getElementById("langSwitch");
+        if (langSwitch) {
+          langSwitch.setAttribute("aria-label", t("lang_switch_label"));
+          langSwitch.querySelectorAll("[data-lang]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.lang === state.lang);
+          });
+        }
+
+        setText(".kpis article:nth-child(1) .card-top span", t("kpi_total"));
+        setText(".kpis article:nth-child(2) .card-top span", t("kpi_green"));
+        setText(".kpis article:nth-child(3) .card-top span", t("kpi_yellow"));
+        setText(".kpis article:nth-child(4) .card-top span", t("kpi_red"));
+        setText(".kpis article:nth-child(5) .card-top span", t("kpi_violet"));
+        document.querySelector(".kpis article:nth-child(1) .metric-line").innerHTML = `<i data-lucide="folder-tree"></i> ${t("kpi_total_sub")}`;
+        document.querySelector(".kpis article:nth-child(2) .metric-line").innerHTML = `<i data-lucide="arrow-up-right"></i> ${t("kpi_green_sub")}`;
+        document.querySelector(".kpis article:nth-child(3) .metric-line").innerHTML = `<i data-lucide="hourglass"></i> ${t("kpi_yellow_sub")}`;
+        document.querySelector(".kpis article:nth-child(4) .metric-line").innerHTML = `<i data-lucide="ban"></i> ${t("kpi_red_sub")}`;
+        document.querySelector(".kpis article:nth-child(5) .metric-line").innerHTML = `<i data-lucide="sun-medium"></i> ${t("kpi_violet_sub")}`;
+
+        setText("#treePanel h2", labels.treeTitle);
+        setText("#treePanel .panel-subtitle", labels.treeSub);
+        setTitle("#refreshTree", labels.treeRefresh);
+
+        setText("#mapPanel h2", labels.mapTitle);
+        setText("#mapPanel > .panel-header .panel-subtitle", labels.mapSub);
+        setText('[data-color-filter="all"]', t("filter_all"));
+        setText('[data-color-filter="green"]', t("filter_green"));
+        setText('[data-color-filter="yellow"]', t("filter_yellow"));
+        setText('[data-color-filter="red"]', t("filter_red"));
+        setText('[data-color-filter="violet"]', t("filter_violet"));
+        setLegendText("#mapFrame .map-note .legend-item:nth-child(1)", t("map_legend_green"));
+        setLegendText("#mapFrame .map-note .legend-item:nth-child(2)", t("map_legend_yellow"));
+        setLegendText("#mapFrame .map-note .legend-item:nth-child(3)", t("map_legend_red"));
+        setLegendText("#mapFrame .map-note .legend-item:nth-child(4)", t("map_legend_violet"));
+        setText("#mapFrame .map-note .legend-item:nth-child(5)", t("map_legend_selected"));
+        setLegendText("#mapFrame .map-note .legend-item:nth-child(6)", t("map_legend_sun"));
+        setText("#mapPanel .map-side .notice", t("map_notice_symbolic"));
+        setText("#mapPanel .map-status:nth-of-type(1) span", labels.mapSelected);
+        setText("#mapPanel .map-status:nth-of-type(2) span", labels.mapObserved);
+        setText("#mapPanel .map-status:nth-of-type(3) span", labels.mapNext);
+        if (!state.selected) {
+          setText("#mapCoverageStatus", t("map_status_hint"));
+        }
+        setText("#mapPanel .map-stat:nth-of-type(1) span", labels.mapVisible);
+        setText("#mapPanel .map-stat:nth-of-type(2) span", labels.mapLc);
+        setText("#mapPanel .map-stat:nth-of-type(3) span", labels.mapData);
+
+        setText("#tessCompareCard h3", labels.tessCompareTitle);
+        setText("#tessCompareCard h3 + p", t("tess_notice_symbolic"));
+        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(1)", t("tess_label_candidate_sector"));
+        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(2)", t("tess_label_observed"));
+        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(3)", t("tess_label_planned"));
+        setLegendText("#tessSectorFrame .tess-sector-note .legend-item:nth-child(4)", t("tess_label_background"));
+        setText(".tess-compare-side .tess-mini-stat:nth-child(1) span", labels.tessMiniSelected);
+        setText(".tess-compare-side .tess-mini-stat:nth-child(2) span", labels.tessMiniHistory);
+        setText(".tess-compare-side .tess-mini-stat:nth-child(3) span", labels.tessMiniOverlap);
+        setText(".tess-compare-side .tess-mini-stat:nth-child(4) span", labels.tessMiniCurrent);
+        setText(".tess-compare-side .tess-mini-stat:nth-child(5) span", labels.tessMiniCoverage);
+        setText(".coverage-timeline h4", t("timeline_title"));
+        setText(".coverage-timeline .timeline-row:nth-child(2) .timeline-label", t("timeline_observed"));
+        setText(".coverage-timeline .timeline-row:nth-child(3) .timeline-label", t("timeline_planned"));
+        setText(".coverage-timeline .timeline-row:nth-child(4) .timeline-label", t("timeline_next"));
+        setText(".coverage-timeline .timeline-row:nth-child(5) .timeline-label", t("timeline_status"));
+        setText(".map-selected-head h3", t("selected_title"));
+        setText(".map-selected-head p", t("selected_subtitle"));
+        setTitle("#showSelectedCurve", labels.selectedCurveTitle);
+
+        setText("#tessPanel h2", labels.tessPanelTitle);
+        setText("#tessPanel .panel-subtitle", labels.tessPanelSub);
+        setTitle("#refreshTess", labels.tessRefresh);
+        setText("#tessPanel .tess-kpi:nth-child(1) span", labels.tessKpiCurrent);
+        setText("#tessPanel .tess-kpi:nth-child(2) span", labels.tessKpiWindow);
+        setText("#tessPanel .tess-kpi:nth-child(3) span", labels.tessKpiTotal);
+        setText("#tessPanel .tess-kpi:nth-child(4) span", labels.tessKpiPrime);
+        const tessNotice = document.querySelector("#tessPanel .panel-body .notice");
+        if (tessNotice) {
+          tessNotice.innerHTML = `<strong>${labels.tessNoticeStatus}</strong> <span id="tessCurrentStatus">-</span><br />
+            <strong>${labels.tessNoticeYear8}</strong> <span id="tessYear8Info">-</span><br />
+            <strong>${labels.tessNoticeGeometry}</strong> <span id="tessGeometryInfo">-</span>`;
+          els.tessCurrentStatus = document.getElementById("tessCurrentStatus");
+          els.tessYear8Info = document.getElementById("tessYear8Info");
+          els.tessGeometryInfo = document.getElementById("tessGeometryInfo");
+        }
+        document.querySelectorAll("#tessPanel thead th").forEach((th, index) => {
+          th.textContent = labels.tessTableSector;
+          if (index === 1) th.textContent = labels.tessTableStart;
+          if (index === 2) th.textContent = labels.tessTableEnd;
+          if (index === 3) th.textContent = labels.tessTableStatus;
+          if (index === 4) th.textContent = labels.tessTableArrangement;
+        });
+        setText("#tessPanel .tess-sources a:nth-child(1)", labels.tessSource1);
+        setText("#tessPanel .tess-sources a:nth-child(2)", labels.tessSource2);
+
+        setText("#curvesPanel h2", labels.curvesTitle);
+        setText("#curvesPanel .panel-subtitle", labels.curvesSub);
+        setText('[data-curve-filter="all"]', t("filter_all"));
+        setText('[data-curve-filter="violet"]', t("curves_filter_violet"));
+        setText('[data-curve-filter="green"]', t("curves_filter_green"));
+        setTitle("#openCurveCandidate", labels.curveOpenCandidate);
+
+        setText("#tablePanel h2", labels.tableTitle);
+        setText("#tablePanel .panel-subtitle", labels.tableSub);
+        document.querySelectorAll("#tablePanel thead th").forEach((th, index) => {
+          th.textContent = labels.tableHeaders[index] || th.textContent;
+        });
+
+        setText("#docsPanel h2", labels.docsTitle);
+        setText("#docsPanel .panel-subtitle", labels.docsSub);
+        setTitle("#refreshDocs", labels.docsRefresh);
+        document.querySelectorAll("#docsPanel .docs-table thead th").forEach((th, index) => {
+          th.textContent = labels.docsHeaders[index] || th.textContent;
+        });
+
+        setText("#impressumPanel h2", labels.legalTitle);
+        setText("#impressumPanel .panel-subtitle", labels.legalSub);
+        const about = document.getElementById("aboutSection");
+        const impressum = document.getElementById("impressumSection");
+        const privacy = document.getElementById("privacySection");
+        if (about) about.innerHTML = labels.aboutHtml;
+        if (impressum) impressum.innerHTML = labels.impressumHtml;
+        if (privacy) privacy.innerHTML = labels.privacyHtml;
+
+        setText("#adminPanel h2", labels.adminTitle);
+        setText("#adminPanel .panel-subtitle", labels.adminSub);
+        setTitle("#refreshAdmin", labels.adminRefresh);
+        setText("#adminLoginCard h3", labels.adminLoginTitle);
+        setText("#adminLoginCard .muted", labels.adminLoginSub);
+        setText("#adminUserLabel", labels.adminUser);
+        setText("#adminPassLabel", labels.adminPass);
+        setText("#adminLoginButtonLabel", labels.adminLoginBtn);
+        const adminResetBtn = document.getElementById("adminResetStats");
+        if (adminResetBtn) adminResetBtn.innerHTML = `<i data-lucide="eraser"></i> ${labels.adminReset}`;
+        const adminLogoutBtn = document.getElementById("adminLogout");
+        if (adminLogoutBtn) adminLogoutBtn.innerHTML = `<i data-lucide="log-out"></i> ${labels.adminLogout}`;
+        const adminGlobalNotice = document.querySelector("#adminStatsWrap .notice");
+        if (adminGlobalNotice) {
+          adminGlobalNotice.innerHTML = `<strong>${labels.adminGlobal}</strong> <span id="adminGlobalStatus">-</span><br />
+            <strong>${labels.adminDetails}</strong> <span id="adminGlobalDetails">-</span><br />
+            <strong>${labels.adminDashboard}</strong> <a id="adminGlobalDashboardLink" href="#" target="_blank" rel="noopener noreferrer">-</a><br />
+            <strong>${labels.adminSelfFilter}</strong> <span id="adminSelfFilterStatus">-</span>`;
+          els.adminGlobalStatus = document.getElementById("adminGlobalStatus");
+          els.adminGlobalDetails = document.getElementById("adminGlobalDetails");
+          els.adminGlobalDashboardLink = document.getElementById("adminGlobalDashboardLink");
+          els.adminSelfFilterStatus = document.getElementById("adminSelfFilterStatus");
+        }
+        setText("#adminStatsWrap .admin-kpi:nth-child(1) span", labels.adminViews);
+        setText("#adminStatsWrap .admin-kpi:nth-child(2) span", labels.adminSessions);
+        setText("#adminStatsWrap .admin-kpi:nth-child(3) span", labels.adminAvg);
+        setText("#adminStatsWrap .admin-kpi:nth-child(4) span", labels.adminLast);
+        const adminCountryNotice = document.querySelectorAll("#adminStatsWrap .notice")[1];
+        if (adminCountryNotice) {
+          adminCountryNotice.innerHTML = `<strong>${labels.adminCountry}</strong> <span id="adminCurrentCountry">-</span><br />
+            <strong>${labels.adminSource}</strong> <span id="adminCountrySource">-</span><br />
+            <strong>${labels.adminNoteLabel}</strong> ${labels.adminHint}`;
+          els.adminCurrentCountry = document.getElementById("adminCurrentCountry");
+          els.adminCountrySource = document.getElementById("adminCountrySource");
+        }
+        document.querySelectorAll("#adminStatsWrap .admin-table thead th").forEach((th, index) => {
+          th.textContent = labels.adminCountryHeaders[index] || th.textContent;
+        });
+
+        setText(".site-footer-alert", t("footer_alert"));
+        setText('.site-footer-links a[href="#aboutSection"]', t("footer_about"));
+        setText('.site-footer-links a[href="#impressumSection"]', t("footer_impressum"));
+        setText('.site-footer-links a[href="#privacySection"]', t("footer_privacy"));
+        setText('.site-footer-links a[href*="github.com"]', t("footer_github"));
+
+        tessMission.year8Description = t("year8_description");
+        tessMission.geometryDescription = t("geometry_description");
+        if (!analytics.countryResolved) {
+          analytics.countrySource = t("admin_country_source_unknown");
+          if (!analytics.countryName || analytics.countryCode === "UN") {
+            analytics.countryName = t("table_country_unknown");
+          }
+        }
+        setTessCompareCollapsed(Boolean(els.tessCompareCard?.classList.contains("is-collapsed")), false);
+        document.querySelectorAll(".panel-collapse-toggle").forEach((button) => {
+          collapseButtonState(button, button.getAttribute("aria-expanded") === "false");
+        });
+
+        window.lucide?.createIcons();
       }
 
       function tessSectorVisual(sector, observedSet, plannedSet, currentSector, nextSector) {
@@ -3359,49 +4650,49 @@
         const coverage = buildCandidateCoverageModel(scheduleState);
         const candidate = coverage.candidate;
         els.tessMatchSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
-        els.tessMatchSectorList.textContent = coverage.observed.length ? formatSectorList(coverage.observed, 12) : "unbekannt";
+        els.tessMatchSectorList.textContent = coverage.observed.length ? formatSectorList(coverage.observed, 12) : t("unknown");
         els.tessMatchYear8Overlap.textContent = coverage.observed.length
           ? (coverage.overlapYear8.length
-            ? `${coverage.overlapYear8.length} Sektoren (${formatSectorList(coverage.overlapYear8, 8)})`
-            : "0 Sektoren")
-          : "nicht berechenbar - Sektorhistorie fehlt";
+            ? t("match_year8_count", { count: coverage.overlapYear8.length, list: formatSectorList(coverage.overlapYear8, 8) })
+            : t("match_year8_none"))
+          : t("not_computable_missing_history");
         els.tessMatchCoverage.textContent = `${withSectorHistory}/${formatNumber((data.candidates || []).length)}`;
         if (scheduleState.current) {
-          els.tessMatchCurrent.textContent = `S${scheduleState.current.sector} (laufend)`;
+          els.tessMatchCurrent.textContent = t("match_current_running", { sector: scheduleState.current.sector });
         } else if (scheduleState.next) {
-          els.tessMatchCurrent.textContent = `S${scheduleState.next.sector} (naechster)`;
+          els.tessMatchCurrent.textContent = t("match_current_next", { sector: scheduleState.next.sector });
         } else {
           els.tessMatchCurrent.textContent = "-";
         }
 
         const observedHtml = coverage.observed.length
           ? coverage.observed.map((sector) => `<span class="sector-chip observed">S${sector} ✓</span>`).join("")
-          : '<span class="sector-chip background">Sektorhistorie unbekannt</span>';
+          : `<span class="sector-chip background">${t("observed_unknown_chip")}</span>`;
         els.tessTimelineObserved.innerHTML = observedHtml;
 
         const plannedSource = coverage.planned.length
           ? coverage.planned
-          : (coverage.observed.length ? [] : scheduleState.schedule.filter((item) => item.phase !== "Abgeschlossen").slice(0, 2));
+          : (coverage.observed.length ? [] : scheduleState.schedule.filter((item) => item.phase !== "completed").slice(0, 2));
         const plannedHtml = plannedSource.length
           ? plannedSource.slice(0, 6).map((item) => {
             const cls = coverage.observed.includes(item.sector) ? "candidate" : "planned";
             return `<span class="sector-chip ${cls}">S${item.sector} - ${formatMonthYear(item.start)}</span>`;
           }).join("")
-          : '<span class="sector-chip background">keine zukuenftigen Sektoren bekannt</span>';
+          : `<span class="sector-chip background">${t("planned_unknown_chip")}</span>`;
         els.tessTimelinePlanned.innerHTML = plannedHtml;
         els.tessTimelineNext.textContent = coverage.observed.length
           ? coverage.nextObservationText
-          : "nicht berechenbar - Sektorhistorie fehlt";
+          : t("not_computable_missing_history");
         const statusChipClass =
           coverage.statusKey === "green" ? "candidate" :
           coverage.statusKey === "yellow" ? "planned" :
           coverage.statusKey === "red" ? "red" :
           "background";
         const statusLabel =
-          coverage.statusKey === "green" ? "Recheck moeglich" :
-          coverage.statusKey === "yellow" ? "Warten auf neue Daten" :
-          coverage.statusKey === "red" ? "Kein Recheck geplant" :
-          "Daten fehlen";
+          coverage.statusKey === "green" ? t("status_chip_green") :
+          coverage.statusKey === "yellow" ? t("status_chip_yellow") :
+          coverage.statusKey === "red" ? t("status_chip_red") :
+          t("status_chip_missing");
         els.tessTimelineStatus.innerHTML = `<span class="sector-chip ${statusChipClass}">${statusLabel}</span> ${coverage.statusText}`;
 
         renderMapCoverageSummary(coverage);
@@ -3412,28 +4703,42 @@
         els.mapSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
         els.mapObservedSectors.textContent = coverage.observed.length
           ? formatSectorList(coverage.observed, 10)
-          : "unbekannt";
+          : t("unknown");
         els.mapNextRecheck.textContent = coverage.observed.length
           ? coverage.nextObservationText
-          : (candidate && candidate.nextRecheck ? `DB-Recheck: ${candidate.nextRecheck}` : "nicht berechenbar - Sektorhistorie fehlt");
+          : (candidate && candidate.nextRecheck ? `DB-Recheck: ${candidate.nextRecheck}` : t("not_computable_missing_history"));
 
         if (!candidate) {
-          els.mapCoverageStatus.textContent = "Kein Kandidat ausgewaehlt.";
+          els.mapCoverageStatus.textContent = t("no_candidate_selected");
           return;
         }
         if (coverage.statusKey === "green") {
-          els.mapCoverageStatus.textContent = "Gruen: Recheck moeglich - Kandidat liegt im relevanten geplanten Bereich.";
+          els.mapCoverageStatus.textContent = t("map_status_green");
           return;
         }
         if (coverage.statusKey === "yellow") {
-          els.mapCoverageStatus.textContent = "Gelb: Warten auf neue Daten - aktuell keine neue passende Beobachtung.";
+          els.mapCoverageStatus.textContent = t("map_status_yellow");
           return;
         }
         if (coverage.statusKey === "red") {
-          els.mapCoverageStatus.textContent = "Rot: Kein Recheck geplant - keine zukuenftigen TESS-Sektoren bekannt.";
+          els.mapCoverageStatus.textContent = t("map_status_red");
           return;
         }
-        els.mapCoverageStatus.textContent = "Weiss: Daten fehlen - bitte Sektorhistorie aus MAST/TESS ergaenzen.";
+        els.mapCoverageStatus.textContent = t("map_status_missing");
+      }
+
+      function localizeTessArrangement(value) {
+        const raw = String(value || "").trim();
+        if (!raw) return "-";
+        if (state.lang === "de") return raw;
+        if (state.lang === "en") {
+          return raw
+            .replace(/Suedpol/g, "South pole")
+            .replace(/Grad Roll\/Shift/g, "deg roll/shift");
+        }
+        return raw
+          .replace(/Suedpol/g, "Pole sud")
+          .replace(/Grad Roll\/Shift/g, "deg rotation/decalage");
       }
 
       function drawTessSector2d(scheduleState) {
@@ -3491,7 +4796,7 @@
 
         ctx.fillStyle = "rgba(255,255,255,0.74)";
         ctx.font = "700 12px Inter, system-ui, sans-serif";
-        ctx.fillText("Gruen = Kandidatensektor · Blau = beobachtet · Gelb = aktuell/geplant", 12, 22);
+        ctx.fillText(t("chart_legend_tess"), 12, 22);
       }
 
       function initTessSector3d() {
@@ -3594,16 +4899,24 @@
           next
         } = buildTessScheduleState();
 
-        let statusText = "Kein laufender Sektor im Year-8-Ausschnitt.";
+        let statusText = t("tess_status_none");
         if (current) {
           const daysLeft = Math.max(0, daysDiff(now, current.endDate));
-          statusText = `S${current.sector} laeuft aktuell. Restdauer ca. ${daysLeft} Tage bis ${formatDate(current.end)}.`;
+          statusText = t("tess_status_running", {
+            sector: current.sector,
+            days: daysLeft,
+            date: formatDate(current.end)
+          });
         } else if (next) {
           const startsIn = Math.max(0, daysDiff(now, next.startDate));
-          statusText = `Naechster Sektor ist S${next.sector} und startet in ca. ${startsIn} Tagen (${formatDate(next.start)}).`;
+          statusText = t("tess_status_next", {
+            sector: next.sector,
+            days: startsIn,
+            date: formatDate(next.start)
+          });
         }
 
-        els.tessCurrentSector.textContent = current ? `S${current.sector}` : (next ? `S${next.sector} (naechster)` : "-");
+        els.tessCurrentSector.textContent = current ? `S${current.sector}` : (next ? t("tess_sector_next", { sector: next.sector }) : "-");
         els.tessCurrentWindow.textContent = current ? formatDateRange(current.start, current.end) : (next ? formatDateRange(next.start, next.end) : "-");
         els.tessTotalNumbered.textContent = `1-${tessMission.totalNumberedSectorsPlanned}`;
         els.tessPrimaryCount.textContent = `${tessMission.primaryMissionSectors} (13+13)`;
@@ -3618,33 +4931,33 @@
           const after = schedule.slice(currentIndex + 1, currentIndex + 4);
           const withCurrent = [...before, current, ...after];
           els.tessScheduleRows.innerHTML = withCurrent.map((item) => {
-            const statusClass = item.phase === "Laufend" ? "green" : item.phase === "Geplant" ? "yellow" : "gray";
+            const statusClass = item.phase === "running" ? "green" : item.phase === "planned" ? "yellow" : "gray";
             return `
               <tr>
                 <td><strong>S${item.sector}</strong></td>
                 <td>${formatDate(item.start)}</td>
                 <td>${formatDate(item.end)}</td>
-                <td><span class="pill ${statusClass}">${item.phase}</span></td>
-                <td class="wrap-cell">${item.arrangement}</td>
+                <td><span class="pill ${statusClass}">${item.phase === "running" ? t("phase_running") : item.phase === "planned" ? t("phase_planned") : t("phase_completed")}</span></td>
+                <td class="wrap-cell">${localizeTessArrangement(item.arrangement)}</td>
               </tr>
             `;
           }).join("");
         } else {
           els.tessScheduleRows.innerHTML = rows.map((item) => {
-            const statusClass = item.phase === "Geplant" ? "yellow" : "gray";
+            const statusClass = item.phase === "planned" ? "yellow" : "gray";
             return `
               <tr>
                 <td><strong>S${item.sector}</strong></td>
                 <td>${formatDate(item.start)}</td>
                 <td>${formatDate(item.end)}</td>
-                <td><span class="pill ${statusClass}">${item.phase}</span></td>
-                <td class="wrap-cell">${item.arrangement}</td>
+                <td><span class="pill ${statusClass}">${item.phase === "planned" ? t("phase_planned") : t("phase_completed")}</span></td>
+                <td class="wrap-cell">${localizeTessArrangement(item.arrangement)}</td>
               </tr>
             `;
           }).join("");
         }
 
-        els.tessUpdatedAt.textContent = `Quellenstand: ${tessMission.sourceCheckedAt} (HEASARC + MIT TESS Year 8).`;
+        els.tessUpdatedAt.textContent = t("tess_updated_at", { date: tessMission.sourceCheckedAt });
         const scheduleState = { now, schedule, current, upcoming, completed, next };
         renderTessSectorSummary(scheduleState);
         drawTessSector2d(scheduleState);
@@ -3676,13 +4989,14 @@
         const matrixNext = formatMaybe(candidate.nextStep);
         const depthText = Number.isFinite(Number(candidate.depthPpt)) ? `${formatFloat(candidate.depthPpt, 2)} ppt` : "-";
         const durationText = Number.isFinite(Number(candidate.durationHours)) ? `${formatFloat(candidate.durationHours, 2)} h` : "-";
+        const localizedBaseColor = localizedBaseColorLabel(candidate);
         const chips = [
-          `<span class="chip ${candidate.color}">${candidate.baseColorLabel}</span>`,
-          candidate.isViolet ? `<span class="chip violet">Violett / HZ</span>` : "",
+          `<span class="chip ${candidate.color}">${localizedBaseColor}</span>`,
+          candidate.isViolet ? `<span class="chip violet">${t("chip_violet_hz")}</span>` : "",
           candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
-          candidate.matrixStatus ? `<span class="chip ${matrixColorClass(candidate)}">Matrix ${candidate.matrixStatus}</span>` : "",
-          candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${matrixColorClass(candidate)}">Evidence ${candidate.evidenceScore}</span>` : "",
-          candidate.lightcurveImg ? `<span class="chip">Lichtkurve vorhanden</span>` : ""
+          candidate.matrixStatus ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
+          candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_evidence_prefix", { value: candidate.evidenceScore })}</span>` : "",
+          candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
         ].filter(Boolean).join("");
         els.selectedCard.innerHTML = `
           <div class="selected-title">
@@ -3692,38 +5006,38 @@
           <div class="chips">${chips}</div>
           <p>${candidate.reason}</p>
           <div class="details-grid">
-            <div class="detail"><span>Matrix Status</span><strong>${matrixStatus}</strong></div>
-            <div class="detail"><span>Matrix Klasse</span><strong>${matrixClass}</strong></div>
-            <div class="detail"><span>Evidence Score</span><strong>${evidence}</strong></div>
-            <div class="detail"><span>Distanz</span><strong>${candidate.distance} ly</strong></div>
-            <div class="detail"><span>Periode</span><strong>${candidate.period} d</strong></div>
-            <div class="detail"><span>SNR</span><strong>${candidate.snr}</strong></div>
-            <div class="detail"><span>Transits sichtbar</span><strong>${candidate.visibleTransits}/${candidate.transits}</strong></div>
-            <div class="detail"><span>Matrix Transits/Sektoren</span><strong>${formatMaybe(candidate.matrixVisibleTransits, "-")}/${formatMaybe(candidate.matrixTransits, "-")} · S ${formatMaybe(candidate.matrixSectors, "-")}</strong></div>
-            <div class="detail"><span>Radius</span><strong>${candidate.radius || "-"} R_E</strong></div>
-            <div class="detail"><span>Status</span><strong>${candidate.status || "-"}</strong></div>
-            <div class="detail"><span>Transitform</span><strong>${formatMaybe(candidate.transitShape)}</strong></div>
-            <div class="detail"><span>SAP vs PDCSAP</span><strong>${formatMaybe(candidate.sapPdcsapMatch)}</strong></div>
-            <div class="detail"><span>Odd/Even</span><strong>${formatMaybe(candidate.oddEvenResult)}</strong></div>
-            <div class="detail"><span>Secondary Eclipse</span><strong>${formatMaybe(candidate.secondaryEclipse)}</strong></div>
-            <div class="detail"><span>Tiefe</span><strong>${depthText}</strong></div>
-            <div class="detail"><span>Dauer</span><strong>${durationText}</strong></div>
-            <div class="detail"><span>Tiefe stabil?</span><strong>${formatMaybe(candidate.depthStability)}</strong></div>
-            <div class="detail"><span>Datenluecken-Risiko</span><strong>${formatMaybe(candidate.dataGapRisk)}</strong></div>
-            <div class="detail"><span>Sektorrand-Risiko</span><strong>${formatMaybe(candidate.sectorEdgeRisk)}</strong></div>
-            <div class="detail"><span>Period-Alias-Risiko</span><strong>${formatMaybe(candidate.periodAliasRisk)}</strong></div>
-            <div class="detail"><span>Aktivitaets-Risiko</span><strong>${formatMaybe(candidate.rotationRisk)}</strong></div>
+            <div class="detail"><span>${t("detail_matrix_status")}</span><strong>${matrixStatus}</strong></div>
+            <div class="detail"><span>${t("detail_matrix_class")}</span><strong>${matrixClass}</strong></div>
+            <div class="detail"><span>${t("detail_evidence_score")}</span><strong>${evidence}</strong></div>
+            <div class="detail"><span>${t("detail_distance")}</span><strong>${candidate.distance} ly</strong></div>
+            <div class="detail"><span>${t("detail_period")}</span><strong>${candidate.period} d</strong></div>
+            <div class="detail"><span>${t("detail_snr")}</span><strong>${candidate.snr}</strong></div>
+            <div class="detail"><span>${t("detail_transits_visible")}</span><strong>${candidate.visibleTransits}/${candidate.transits}</strong></div>
+            <div class="detail"><span>${t("detail_matrix_transits")}</span><strong>${formatMaybe(candidate.matrixVisibleTransits, "-")}/${formatMaybe(candidate.matrixTransits, "-")} · S ${formatMaybe(candidate.matrixSectors, "-")}</strong></div>
+            <div class="detail"><span>${t("detail_radius")}</span><strong>${candidate.radius || "-"} R_E</strong></div>
+            <div class="detail"><span>${t("detail_status")}</span><strong>${candidate.status || "-"}</strong></div>
+            <div class="detail"><span>${t("detail_shape")}</span><strong>${formatMaybe(candidate.transitShape)}</strong></div>
+            <div class="detail"><span>${t("detail_sap_pdcsap")}</span><strong>${formatMaybe(candidate.sapPdcsapMatch)}</strong></div>
+            <div class="detail"><span>${t("detail_oddeven")}</span><strong>${formatMaybe(candidate.oddEvenResult)}</strong></div>
+            <div class="detail"><span>${t("detail_secondary")}</span><strong>${formatMaybe(candidate.secondaryEclipse)}</strong></div>
+            <div class="detail"><span>${t("detail_depth")}</span><strong>${depthText}</strong></div>
+            <div class="detail"><span>${t("detail_duration")}</span><strong>${durationText}</strong></div>
+            <div class="detail"><span>${t("detail_depth_stable")}</span><strong>${formatMaybe(candidate.depthStability)}</strong></div>
+            <div class="detail"><span>${t("detail_data_gap")}</span><strong>${formatMaybe(candidate.dataGapRisk)}</strong></div>
+            <div class="detail"><span>${t("detail_sector_edge")}</span><strong>${formatMaybe(candidate.sectorEdgeRisk)}</strong></div>
+            <div class="detail"><span>${t("detail_alias")}</span><strong>${formatMaybe(candidate.periodAliasRisk)}</strong></div>
+            <div class="detail"><span>${t("detail_rotation")}</span><strong>${formatMaybe(candidate.rotationRisk)}</strong></div>
           </div>
           <div class="notice matrix-note">
-            <strong>Matrix Begruendung</strong>
+            <strong>${t("matrix_reason_label")}</strong>
             <span>${matrixReason}</span>
           </div>
           <div class="notice matrix-note">
-            <strong>Naechster Schritt</strong>
+            <strong>${t("matrix_next_label")}</strong>
             <span>${matrixNext}</span>
           </div>
           <div class="notice">
-            Pfad: ${candidate.folder || "kein Level-0-Pfad gefunden"}
+            ${t("path_prefix")}: ${candidate.folder || t("selected_path_missing")}
           </div>
         `;
       }
@@ -3808,7 +5122,7 @@
 
         ctx.fillStyle = "rgba(255,255,255,0.72)";
         ctx.font = "700 12px Inter, system-ui, sans-serif";
-        ctx.fillText("Mitte = Sonne/Erde · innen = naeher · Punktgroesse = SNR", 14, 22);
+        ctx.fillText(t("chart_legend_map"), 14, 22);
       }
 
       function init3dMap() {
@@ -3968,11 +5282,11 @@
         els.curveList.innerHTML = curves.slice(0, 260).map((candidate) => `
           <button class="curve-item ${state.selectedCurve && state.selectedCurve.tic === candidate.tic ? "active" : ""}" type="button" data-curve-tic="${candidate.tic}">
             <strong>TIC ${candidate.tic}</strong>
-            <span>${colorName(candidate)} · ${candidate.hz || "nicht HZ"} · SNR ${candidate.snr}</span>
+            <span>${colorName(candidate)} · ${candidate.hz || t("not_hz")} · SNR ${candidate.snr}</span>
           </button>
         `).join("");
         if (curves.length > 260) {
-          els.curveList.insertAdjacentHTML("beforeend", `<div class="notice">Zeige 260 von ${formatNumber(curves.length)} Treffern. Suche nach TIC, um enger zu filtern.</div>`);
+          els.curveList.insertAdjacentHTML("beforeend", `<div class="notice">${t("showing_limited_results", { count: formatNumber(curves.length) })}</div>`);
         }
         renderCurveViewer();
       }
@@ -3980,9 +5294,9 @@
       function renderCurveViewer() {
         const candidate = state.selectedCurve;
         if (!candidate) {
-          els.curveTitle.textContent = "Keine Lichtkurve gefunden";
+          els.curveTitle.textContent = t("no_curve_found");
           els.curveMeta.textContent = "";
-          els.curveImageWrap.innerHTML = '<div class="notice">Keine passende HZ/gruene Lichtkurve im aktuellen Filter.</div>';
+          els.curveImageWrap.innerHTML = `<div class="notice">${t("no_curve_for_filter")}</div>`;
           return;
         }
 
@@ -4015,21 +5329,21 @@
             .join("");
           els.curveImageWrap.innerHTML = `
             <div class="notice">
-              PNG konnte nicht geladen werden. Bitte Pfad/Deploy pruefen.<br />
-              TIC ${item.tic} · ${item.folder || "kein Kandidatenordner"}<br />
+              ${t("curve_load_failed")}<br />
+              TIC ${item.tic} · ${item.folder || t("folder_missing")}<br />
               <ul style="margin:8px 0 0 18px; padding:0;">${triedList}</ul>
             </div>
           `;
         }
 
         els.curveTitle.textContent = `TIC ${candidate.tic}`;
-        els.curveMeta.textContent = `${colorName(candidate)} · ${candidate.hz || "nicht HZ"} · ${candidate.distance} ly · P ${candidate.period} d`;
+        els.curveMeta.textContent = `${colorName(candidate)} · ${candidate.hz || t("not_hz")} · ${candidate.distance} ly · P ${candidate.period} d`;
         const sources = collectCurveSources(candidate);
         if (!sources.length) {
           renderMissingCurve(candidate, []);
           return;
         }
-        els.curveImageWrap.innerHTML = '<div class="notice">Lade kombinierte Lichtkurve ...</div>';
+        els.curveImageWrap.innerHTML = `<div class="notice">${t("loading_curve")}</div>`;
         const tried = [];
         const tryLoad = (index) => {
           if (index >= sources.length) {
@@ -4083,7 +5397,7 @@
       }
 
       function updateDate() {
-        document.getElementById("dateLabel").textContent = new Intl.DateTimeFormat("de-DE", {
+        document.getElementById("dateLabel").textContent = new Intl.DateTimeFormat(currentLocale(), {
           weekday: "short",
           day: "2-digit",
           month: "2-digit",
@@ -4112,6 +5426,14 @@
           const target = button.dataset.navTarget;
           setNavButtonActive(target);
           scrollToPanel(target);
+        });
+      });
+
+      document.querySelectorAll("#langSwitch [data-lang]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const lang = button.dataset.lang;
+          if (!lang || lang === state.lang) return;
+          setLanguage(lang, true);
         });
       });
 
@@ -4249,7 +5571,7 @@
           setNavButtonActive("curvesPanel");
           document.getElementById("curvesPanel").scrollIntoView({ behavior: "smooth", block: "start" });
         } else {
-          showToast("Fuer diesen Kandidaten ist keine HZ/gruene Lichtkurve im Dashboard-Set.");
+          showToast(t("toast_no_curve_for_candidate"));
         }
       });
 
@@ -4264,27 +5586,27 @@
         renderTable();
         draw2dMap();
         update3dData();
-        showToast("HZ/Violett gefiltert.");
+        showToast(t("toast_filter_hz"));
       });
 
       document.getElementById("refreshData").addEventListener("click", () => {
-        showToast("Datenbundle: dashboard/build_dashboard_data.py erneut ausfuehren.");
+        showToast(t("toast_refresh_data"));
       });
 
       document.getElementById("refreshTree").addEventListener("click", () => {
         renderTree();
         window.lucide?.createIcons();
-        showToast("Entscheidungsbaum aktualisiert.");
+        showToast(t("toast_tree_updated"));
       });
 
       document.getElementById("refreshDocs").addEventListener("click", () => {
         renderDocs();
-        showToast("Projektlogik aktualisiert.");
+        showToast(t("toast_docs_updated"));
       });
 
       document.getElementById("refreshTess").addEventListener("click", () => {
         renderTess();
-        showToast("TESS-Sektorstatus aktualisiert.");
+        showToast(t("toast_tess_updated"));
       });
 
       els.adminLoginForm.addEventListener("submit", (event) => {
@@ -4297,29 +5619,29 @@
           els.adminLoginHint.textContent = "";
           renderAdmin();
           window.lucide?.createIcons();
-          showToast("Admin-Login erfolgreich.");
+          showToast(t("toast_admin_login_ok"));
         } else {
-          els.adminLoginHint.textContent = "Login fehlgeschlagen.";
-          showToast("Falscher Benutzer oder falsches Passwort.");
+          els.adminLoginHint.textContent = t("login_failed");
+          showToast(t("toast_admin_login_fail"));
         }
       });
 
       document.getElementById("adminLogout").addEventListener("click", () => {
         setAdminLoggedIn(false);
         renderAdmin();
-        showToast("Admin ausgeloggt.");
+        showToast(t("toast_admin_logout"));
       });
 
       els.adminToggleSelfFilter.addEventListener("click", () => {
         const next = !analytics.selfFilterEnabled;
         setSelfFilterEnabled(next);
         showToast(next
-          ? "Eigenfilter aktiv: eigene Besuche werden nicht gezaehlt."
-          : "Eigenfilter aus: eigene Besuche werden gezaehlt.");
+          ? t("toast_filter_self_on")
+          : t("toast_filter_self_off"));
       });
 
       document.getElementById("adminResetStats").addEventListener("click", () => {
-        if (!window.confirm("Statistik wirklich zuruecksetzen?")) return;
+        if (!window.confirm(t("confirm_reset_stats"))) return;
         analytics.store = emptyAnalyticsStore();
         analytics.sessionStartedAt = Date.now();
         analytics.sessionClosed = false;
@@ -4337,16 +5659,16 @@
         }
         saveAnalyticsStore();
         renderAdmin();
-        showToast("Statistik zurueckgesetzt.");
+        showToast(t("toast_stats_reset"));
       });
 
       document.getElementById("refreshAdmin").addEventListener("click", () => {
         renderAdmin();
-        showToast("Admin-Bereich aktualisiert.");
+        showToast(t("toast_admin_refresh"));
       });
 
       document.getElementById("showHints").addEventListener("click", () => {
-        showToast(`Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, Impressum fuer Hinweise, Admin fuer Statistik. UI ${DASHBOARD_UI_VERSION}`);
+        showToast(t("toast_hints", { version: DASHBOARD_UI_VERSION }));
       });
 
       window.addEventListener("resize", () => {
@@ -4367,6 +5689,7 @@
       initPanelCollapseControls();
       setTessCompareCollapsed(loadTessCompareCollapsed(), false);
       analytics.selfFilterEnabled = loadSelfFilterPreference();
+      applyLanguageToUi();
       setupGlobalAnalytics();
       updateDate();
       startAnalyticsTracking();
