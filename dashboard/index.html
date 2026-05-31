@@ -616,6 +616,11 @@
         gap: 14px;
       }
 
+      .map-main {
+        display: grid;
+        gap: 10px;
+      }
+
       .map-frame {
         position: relative;
         overflow: hidden;
@@ -652,27 +657,21 @@
       }
 
       .map-note {
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        pointer-events: none;
       }
 
       .legend-item {
         gap: 6px;
         min-height: 28px;
         padding: 0 9px;
-        border: 1px solid rgba(255, 255, 255, 0.24);
+        border: 1px solid var(--line);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.14);
-        color: #edf7f4;
+        background: #f8fbfa;
+        color: var(--text);
         font-size: 12px;
         font-weight: 780;
-        backdrop-filter: blur(10px);
       }
 
       .dot {
@@ -1718,9 +1717,11 @@
             </div>
             <div class="panel-body">
               <div class="map-layout">
-                <div class="map-frame mode-2d" id="mapFrame">
-                  <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
-                  <div id="map3d" aria-label="3D Sternkarte"></div>
+                <div class="map-main">
+                  <div class="map-frame mode-2d" id="mapFrame">
+                    <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
+                    <div id="map3d" aria-label="3D Sternkarte"></div>
+                  </div>
                   <div class="map-note">
                     <span class="legend-item"><span class="dot"></span> Gruen = Kandidat</span>
                     <span class="legend-item"><span class="dot yellow"></span> Gelb = in Pruefung</span>
@@ -4561,12 +4562,12 @@
         setText('[data-color-filter="yellow"]', t("filter_yellow"));
         setText('[data-color-filter="red"]', t("filter_red"));
         setText('[data-color-filter="violet"]', t("filter_violet"));
-        setLegendText("#mapFrame .map-note .legend-item:nth-child(1)", t("map_legend_green"));
-        setLegendText("#mapFrame .map-note .legend-item:nth-child(2)", t("map_legend_yellow"));
-        setLegendText("#mapFrame .map-note .legend-item:nth-child(3)", t("map_legend_red"));
-        setLegendText("#mapFrame .map-note .legend-item:nth-child(4)", t("map_legend_violet"));
-        setText("#mapFrame .map-note .legend-item:nth-child(5)", t("map_legend_selected"));
-        setLegendText("#mapFrame .map-note .legend-item:nth-child(6)", t("map_legend_sun"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(1)", t("map_legend_green"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(2)", t("map_legend_yellow"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(3)", t("map_legend_red"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(4)", t("map_legend_violet"));
+        setText("#mapPanel .map-note .legend-item:nth-child(5)", t("map_legend_selected"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(6)", t("map_legend_sun"));
         setText("#mapPanel .map-side .notice", currentMapNoticeText());
         setText("#mapPanel .map-status:nth-of-type(1) span", labels.mapSelected);
         setText("#mapPanel .map-status:nth-of-type(2) span", labels.mapObserved);
