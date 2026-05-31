@@ -6,7 +6,7 @@ Independent citizen-science exoplanet project.
 
 GitHub Pages (main branch, root folder):
 
-- https://hoppeldino.github.io/kwarves/
+- https://citizensky.github.io/kwarves/
 
 ## Deployment
 
