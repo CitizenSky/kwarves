@@ -7,6 +7,7 @@ import csv
 import json
 import math
 import os
+import shutil
 import sqlite3
 from collections import Counter
 from pathlib import Path
@@ -55,6 +56,23 @@ def safe_int_or_none(value: Any) -> int | None:
 
 def rel_from_dashboard(path: Path) -> str:
     return os.path.relpath(path, DASHBOARD_DIR)
+
+
+def sync_curve_asset(source_path: Path, tic: int) -> Path | None:
+    """Ensure a deployable copy exists under dashboard/lightcurves."""
+    try:
+        LIGHTCURVE_WEB_DIR.mkdir(parents=True, exist_ok=True)
+        target_path = LIGHTCURVE_WEB_DIR / f"TIC_{tic}.png"
+        needs_copy = not target_path.exists()
+        if not needs_copy:
+            src_stat = source_path.stat()
+            dst_stat = target_path.stat()
+            needs_copy = src_stat.st_size != dst_stat.st_size or src_stat.st_mtime > dst_stat.st_mtime
+        if needs_copy:
+            shutil.copy2(source_path, target_path)
+        return target_path
+    except Exception:
+        return None
 
 
 def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
@@ -164,11 +182,12 @@ def build_candidate(
         path = PROJECT_ROOT / candidate_folder / "lichtkurven_png" / "LICHTKURVE_COMBINED.png"
         if path.exists():
             lightcurve_img_local = rel_from_dashboard(path)
-            lightcurve_img = lightcurve_img_local
-            deploy_path = LIGHTCURVE_WEB_DIR / f"TIC_{tic}.png"
-            if deploy_path.exists():
+            deploy_path = sync_curve_asset(path, tic)
+            if deploy_path and deploy_path.exists():
                 lightcurve_img_deploy = rel_from_dashboard(deploy_path)
                 lightcurve_img = lightcurve_img_deploy
+            else:
+                lightcurve_img = lightcurve_img_local
     matrix_status_color = clean_text(matrix.get("status_color")).upper()
     evidence_score = safe_float(matrix.get("evidence_score"))
     if evidence_score is not None:
