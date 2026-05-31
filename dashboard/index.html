@@ -745,6 +745,10 @@
         overflow: hidden;
       }
 
+      .tess-compare.is-collapsed .tess-compare-layout {
+        display: none;
+      }
+
       .tess-compare-header {
         display: flex;
         align-items: center;
@@ -763,6 +767,14 @@
         margin: 4px 0 0;
         color: var(--muted);
         font-size: 13px;
+      }
+
+      .tess-compare-toggle svg {
+        transition: transform 150ms ease;
+      }
+
+      .tess-compare-toggle[aria-expanded="false"] svg {
+        transform: rotate(180deg);
       }
 
       .tess-compare-layout {
@@ -906,6 +918,11 @@
       .sector-chip.background {
         background: #eef2f1;
         color: #5f6d69;
+      }
+
+      .sector-chip.red {
+        background: #fde7e4;
+        color: #982820;
       }
 
       .tess-kpis {
@@ -1597,7 +1614,7 @@
                 </div>
                 <div class="map-side">
                   <div class="notice">
-                    Vereinfachte Projekt-Planungsansicht. Zeigt Kandidatenstatus und Recheck-Relevanz - keine exakte Himmelskarte.
+                    Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.
                   </div>
                   <div class="map-status">
                     <strong id="mapSelectedTic">-</strong>
@@ -1628,11 +1645,11 @@
                   </div>
                 </div>
               </div>
-              <div class="tess-compare">
+              <div class="tess-compare" id="tessCompareCard">
                 <div class="tess-compare-header">
                   <div>
                     <h3>3D TESS-Sektorenkarte</h3>
-                    <p>Vereinfachte TESS-Planungsansicht. Zeigt, welche Sektoren für Kandidaten-Rechecks relevant sind – keine exakte Himmelskarte.</p>
+                    <p>Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.</p>
                   </div>
                   <div class="map-header-group">
                     <button class="small-button" type="button" data-tess-map-mode="2d">
@@ -1642,6 +1659,9 @@
                     <button class="small-button active" type="button" data-tess-map-mode="3d">
                       <i data-lucide="orbit"></i>
                       3D
+                    </button>
+                    <button class="icon-button tess-compare-toggle" type="button" id="tessCompareToggle" title="3D TESS-Sektorenkarte einklappen" aria-expanded="true" aria-controls="tessSectorFrame">
+                      <i data-lucide="chevron-up"></i>
                     </button>
                   </div>
                 </div>
@@ -1663,11 +1683,11 @@
                     </div>
                     <div class="tess-mini-stat">
                       <strong id="tessMatchSectorList">-</strong>
-                      <span>bekannte Sektoren dieses Kandidaten</span>
+                      <span>Sektorhistorie</span>
                     </div>
                     <div class="tess-mini-stat">
                       <strong id="tessMatchYear8Overlap">-</strong>
-                      <span>Treffer mit Year-8-Sektoren</span>
+                      <span>Year-8-Abgleich</span>
                     </div>
                     <div class="tess-mini-stat">
                       <strong id="tessMatchCurrent">-</strong>
@@ -1971,7 +1991,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-i";
+      const DASHBOARD_UI_VERSION = "2026-05-31-j";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1990,6 +2010,7 @@
       const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
       const ANALYTICS_SELF_FILTER_KEY = "kwarves_analytics_filter_self_v1";
       const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v2";
+      const TESS_COMPARE_COLLAPSE_KEY = "kwarves_tess_compare_collapsed_v1";
       const GLOBAL_ANALYTICS_CONFIG = {
         provider: "goatcounter",
         endpoint: "https://koni.goatcounter.com/count",
@@ -2303,6 +2324,8 @@
         mapObservedSectors: document.getElementById("mapObservedSectors"),
         mapNextRecheck: document.getElementById("mapNextRecheck"),
         mapCoverageStatus: document.getElementById("mapCoverageStatus"),
+        tessCompareCard: document.getElementById("tessCompareCard"),
+        tessCompareToggle: document.getElementById("tessCompareToggle"),
         tessSectorCanvas: document.getElementById("tessSector2d"),
         tessSectorFrame: document.getElementById("tessSectorFrame"),
         tessSector3d: document.getElementById("tessSector3d"),
@@ -2414,6 +2437,7 @@
       }
 
       function buildTessSectorLayout(totalSectors) {
+        // Symbolic mission layout: no RA/Dec input and no sky projection.
         const result = [];
         for (let sector = 1; sector <= totalSectors; sector += 1) {
           const index = sector - 1;
@@ -2485,15 +2509,12 @@
         const observedSet = new Set(observed);
         const phaseSet = new Set(observed.map((sector) => sectorPhase(sector)));
         const activeSchedule = scheduleState.schedule.filter((item) => item.phase !== "Abgeschlossen");
+        const hasFutureKnownSectors = activeSchedule.length > 0;
         let planned = activeSchedule.filter((item) => {
           if (observedSet.has(item.sector)) return true;
           if (phaseSet.has(sectorPhase(item.sector))) return true;
           return false;
         });
-
-        if (!planned.length && !observed.length) {
-          planned = activeSchedule.slice(0, 2);
-        }
 
         const nextItem = planned[0] || null;
         const overlapYear8 = observed.filter((sector) => tessYear8SectorSet.has(sector));
@@ -2510,13 +2531,20 @@
         }
 
         let statusText = "Kein Kandidat ausgewaehlt.";
+        let statusKey = "neutral";
         if (candidate) {
           if (!observed.length) {
-            statusText = "Noch keine Sektorhistorie hinterlegt. Recheck nach naechstem Sektor-Update.";
+            statusText = "Erst Sektordaten aus MAST/TESS ergaenzen.";
+            statusKey = "missing";
           } else if (inPlannedArea) {
             statusText = "Recheck moeglich, sobald neue TESS-Daten verfuegbar sind.";
+            statusKey = "green";
+          } else if (hasFutureKnownSectors) {
+            statusText = "Warten auf neue Daten: aktuell keine passende neue Beobachtung.";
+            statusKey = "yellow";
           } else {
-            statusText = "Aktuell kein direkter Year-8-Match. Kandidat weiter monitoren.";
+            statusText = "Kein Recheck geplant: keine zukuenftigen TESS-Sektoren bekannt.";
+            statusKey = "red";
           }
         }
 
@@ -2527,8 +2555,10 @@
           planned,
           nextItem,
           inPlannedArea,
+          hasFutureKnownSectors,
           nextObservationText,
-          statusText
+          statusText,
+          statusKey
         };
       }
 
@@ -2602,6 +2632,36 @@
         try {
           localStorage.setItem(PANEL_COLLAPSE_KEY, JSON.stringify(stateMap || {}));
         } catch (_) {}
+      }
+
+      function loadTessCompareCollapsed() {
+        try {
+          return localStorage.getItem(TESS_COMPARE_COLLAPSE_KEY) === "1";
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function setTessCompareCollapsed(collapsed, store = true) {
+        const card = els.tessCompareCard;
+        if (!card || !els.tessCompareToggle) return;
+        const isCollapsed = Boolean(collapsed);
+        card.classList.toggle("is-collapsed", isCollapsed);
+        els.tessCompareToggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+        els.tessCompareToggle.title = isCollapsed
+          ? "3D TESS-Sektorenkarte aufklappen"
+          : "3D TESS-Sektorenkarte einklappen";
+        if (store) {
+          try {
+            localStorage.setItem(TESS_COMPARE_COLLAPSE_KEY, isCollapsed ? "1" : "0");
+          } catch (_) {}
+        }
+        if (!isCollapsed) {
+          const tessState = buildTessScheduleState();
+          drawTessSector2d(tessState);
+          resizeTessSector3d();
+          updateTessSector3dData(tessState);
+        }
       }
 
       function collapseButtonState(button, collapsed) {
@@ -3198,10 +3258,12 @@
         const coverage = buildCandidateCoverageModel(scheduleState);
         const candidate = coverage.candidate;
         els.tessMatchSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
-        els.tessMatchSectorList.textContent = coverage.observed.length ? formatSectorList(coverage.observed, 12) : "keine Sektordaten";
-        els.tessMatchYear8Overlap.textContent = coverage.overlapYear8.length
-          ? `${coverage.overlapYear8.length} (${formatSectorList(coverage.overlapYear8, 8)})`
-          : "0";
+        els.tessMatchSectorList.textContent = coverage.observed.length ? formatSectorList(coverage.observed, 12) : "unbekannt";
+        els.tessMatchYear8Overlap.textContent = coverage.observed.length
+          ? (coverage.overlapYear8.length
+            ? `${coverage.overlapYear8.length} Sektoren (${formatSectorList(coverage.overlapYear8, 8)})`
+            : "0 Sektoren")
+          : "nicht berechenbar - Sektorhistorie fehlt";
         els.tessMatchCoverage.textContent = `${withSectorHistory}/${formatNumber((data.candidates || []).length)}`;
         if (scheduleState.current) {
           els.tessMatchCurrent.textContent = `S${scheduleState.current.sector} (laufend)`;
@@ -3213,18 +3275,33 @@
 
         const observedHtml = coverage.observed.length
           ? coverage.observed.map((sector) => `<span class="sector-chip observed">S${sector} ✓</span>`).join("")
-          : '<span class="sector-chip background">keine Daten</span>';
+          : '<span class="sector-chip background">Sektorhistorie unbekannt</span>';
         els.tessTimelineObserved.innerHTML = observedHtml;
 
-        const plannedHtml = coverage.planned.length
-          ? coverage.planned.slice(0, 6).map((item) => {
+        const plannedSource = coverage.planned.length
+          ? coverage.planned
+          : (coverage.observed.length ? [] : scheduleState.schedule.filter((item) => item.phase !== "Abgeschlossen").slice(0, 2));
+        const plannedHtml = plannedSource.length
+          ? plannedSource.slice(0, 6).map((item) => {
             const cls = coverage.observed.includes(item.sector) ? "candidate" : "planned";
             return `<span class="sector-chip ${cls}">S${item.sector} - ${formatMonthYear(item.start)}</span>`;
           }).join("")
-          : '<span class="sector-chip background">kein direkter Year-8 Match</span>';
+          : '<span class="sector-chip background">keine zukuenftigen Sektoren bekannt</span>';
         els.tessTimelinePlanned.innerHTML = plannedHtml;
-        els.tessTimelineNext.textContent = coverage.nextObservationText;
-        els.tessTimelineStatus.textContent = coverage.statusText;
+        els.tessTimelineNext.textContent = coverage.observed.length
+          ? coverage.nextObservationText
+          : "nicht berechenbar - Sektorhistorie fehlt";
+        const statusChipClass =
+          coverage.statusKey === "green" ? "candidate" :
+          coverage.statusKey === "yellow" ? "planned" :
+          coverage.statusKey === "red" ? "red" :
+          "background";
+        const statusLabel =
+          coverage.statusKey === "green" ? "Recheck moeglich" :
+          coverage.statusKey === "yellow" ? "Warten auf neue Daten" :
+          coverage.statusKey === "red" ? "Kein Recheck geplant" :
+          "Daten fehlen";
+        els.tessTimelineStatus.innerHTML = `<span class="sector-chip ${statusChipClass}">${statusLabel}</span> ${coverage.statusText}`;
 
         renderMapCoverageSummary(coverage);
       }
@@ -3234,20 +3311,28 @@
         els.mapSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
         els.mapObservedSectors.textContent = coverage.observed.length
           ? formatSectorList(coverage.observed, 10)
-          : "keine Sektordaten";
-        els.mapNextRecheck.textContent = coverage.nextItem
+          : "unbekannt";
+        els.mapNextRecheck.textContent = coverage.observed.length
           ? coverage.nextObservationText
-          : (candidate && candidate.nextRecheck ? `DB-Recheck: ${candidate.nextRecheck}` : "noch offen");
+          : (candidate && candidate.nextRecheck ? `DB-Recheck: ${candidate.nextRecheck}` : "nicht berechenbar - Sektorhistorie fehlt");
 
         if (!candidate) {
           els.mapCoverageStatus.textContent = "Kein Kandidat ausgewaehlt.";
-        } else if (!coverage.observed.length) {
-          els.mapCoverageStatus.textContent = "Noch keine Sektorhistorie fuer diesen Kandidaten. Recheck folgt mit neuen Inventardaten.";
-        } else if (coverage.inPlannedArea) {
-          els.mapCoverageStatus.textContent = "Kandidat liegt im geplanten TESS-Bereich. Neue Daten koennen Recheck ausloesen.";
-        } else {
-          els.mapCoverageStatus.textContent = "Kandidat liegt aktuell ausserhalb des direkten Year-8-Fokus. Monitoring bleibt aktiv.";
+          return;
         }
+        if (coverage.statusKey === "green") {
+          els.mapCoverageStatus.textContent = "Gruen: Recheck moeglich - Kandidat liegt im relevanten geplanten Bereich.";
+          return;
+        }
+        if (coverage.statusKey === "yellow") {
+          els.mapCoverageStatus.textContent = "Gelb: Warten auf neue Daten - aktuell keine neue passende Beobachtung.";
+          return;
+        }
+        if (coverage.statusKey === "red") {
+          els.mapCoverageStatus.textContent = "Rot: Kein Recheck geplant - keine zukuenftigen TESS-Sektoren bekannt.";
+          return;
+        }
+        els.mapCoverageStatus.textContent = "Weiss: Daten fehlen - bitte Sektorhistorie aus MAST/TESS ergaenzen.";
       }
 
       function drawTessSector2d(scheduleState) {
@@ -3553,6 +3638,7 @@
       }
 
       function draw2dMap() {
+        // Project map coordinates are derived from TIC/SNR heuristics, not astrometric RA/Dec.
         const { ctx, width, height } = setupCanvas(els.mapCanvas);
         const candidates = filteredCandidates();
         document.getElementById("visibleCount").textContent = formatNumber(candidates.length);
@@ -3969,6 +4055,14 @@
         });
       });
 
+      if (els.tessCompareToggle) {
+        els.tessCompareToggle.addEventListener("click", () => {
+          const card = els.tessCompareCard;
+          const collapsed = card ? !card.classList.contains("is-collapsed") : false;
+          setTessCompareCollapsed(collapsed, true);
+        });
+      }
+
       document.querySelectorAll("[data-curve-filter]").forEach((button) => {
         button.addEventListener("click", () => {
           state.curveFilter = button.dataset.curveFilter;
@@ -4154,6 +4248,7 @@
       });
 
       initPanelCollapseControls();
+      setTessCompareCollapsed(loadTessCompareCollapsed(), false);
       analytics.selfFilterEnabled = loadSelfFilterPreference();
       setupGlobalAnalytics();
       updateDate();
