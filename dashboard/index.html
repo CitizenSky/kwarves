@@ -716,6 +716,108 @@
         font-size: 12px;
       }
 
+      .tess-compare {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .tess-compare-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .tess-compare-header h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .tess-compare-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .tess-compare-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 330px;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .tess-sector-frame {
+        position: relative;
+        overflow: hidden;
+        height: 340px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 26% 22%, rgba(105, 86, 197, 0.2), transparent 24%),
+          radial-gradient(circle at 76% 72%, rgba(22, 132, 111, 0.16), transparent 28%),
+          #0d1618;
+      }
+
+      #tessSector3d {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease;
+      }
+
+      .tess-sector-frame.mode-3d #tessSector3d {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .tess-sector-frame.mode-3d #tessSector2d {
+        opacity: 0;
+      }
+
+      .tess-sector-note {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .dot.blue {
+        background: #5c8cf6;
+      }
+
+      .tess-compare-side {
+        display: grid;
+        align-content: start;
+        gap: 10px;
+      }
+
+      .tess-mini-stat {
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .tess-mini-stat strong {
+        display: block;
+        font-size: 16px;
+      }
+
+      .tess-mini-stat span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
       .tess-kpis {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1101,6 +1203,7 @@
 
         .grid-2,
         .map-layout,
+        .tess-compare-layout,
         .curve-layout {
           grid-template-columns: minmax(0, 1fr);
         }
@@ -1200,6 +1303,10 @@
 
         .map-frame {
           height: 380px;
+        }
+
+        .tess-sector-frame {
+          height: 320px;
         }
       }
 
@@ -1413,6 +1520,60 @@
                   <div class="map-stat">
                     <strong id="generatedAt">-</strong>
                     <span>Datenstand</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tess-compare">
+                <div class="tess-compare-header">
+                  <div>
+                    <h3>3D TESS-Sektorenkarte</h3>
+                    <p>Vergleich: aktueller Kandidat vs. bekannte TESS-Sektoren.</p>
+                  </div>
+                  <div class="map-header-group">
+                    <button class="small-button" type="button" data-tess-map-mode="2d">
+                      <i data-lucide="map"></i>
+                      2D
+                    </button>
+                    <button class="small-button active" type="button" data-tess-map-mode="3d">
+                      <i data-lucide="orbit"></i>
+                      3D
+                    </button>
+                  </div>
+                </div>
+                <div class="tess-compare-layout">
+                  <div class="tess-sector-frame mode-3d" id="tessSectorFrame">
+                    <canvas id="tessSector2d" aria-label="2D TESS-Sektorenkarte"></canvas>
+                    <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
+                    <div class="tess-sector-note">
+                      <span class="legend-item"><span class="dot"></span> Kandidatensektor</span>
+                      <span class="legend-item"><span class="dot blue"></span> Year 8 (S97-107)</span>
+                      <span class="legend-item"><span class="dot yellow"></span> aktuell/geplant</span>
+                    </div>
+                  </div>
+                  <div class="tess-compare-side">
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchSelectedTic">-</strong>
+                      <span>ausgewaehlter Kandidat</span>
+                    </div>
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchSectorList">-</strong>
+                      <span>bekannte Sektoren dieses Kandidaten</span>
+                    </div>
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchYear8Overlap">-</strong>
+                      <span>Treffer mit Year-8-Sektoren</span>
+                    </div>
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchCurrent">-</strong>
+                      <span>aktueller/naechster Mission-Sektor</span>
+                    </div>
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchCoverage">-</strong>
+                      <span>Kandidaten mit Sektorhistorie</span>
+                    </div>
+                    <div class="notice mini">
+                      Geometrie ist eine robuste Missionsansicht (nicht exakte Himmelsprojektion), um Kandidaten-Sektoren schnell mit der TESS-Planung zu matchen.
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1688,7 +1849,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-g";
+      const DASHBOARD_UI_VERSION = "2026-05-31-h";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1697,6 +1858,7 @@
         selected: null,
         selectedCurve: null,
         mapMode: "2d",
+        tessMapMode: "3d",
         sceneReady: false
       };
 
@@ -1767,6 +1929,8 @@
           { sector: 107, start: "2026-08-09", end: "2026-09-07", arrangement: "Suedpol, 40 Grad Roll/Shift" }
         ]
       };
+      const tessYear8SectorSet = new Set(tessMission.year8Sectors.map((item) => item.sector));
+      const tessSectorLayout = buildTessSectorLayout(tessMission.totalNumberedSectorsPlanned);
 
       const projectFlowSteps = [
         "1) Rohdaten sammeln",
@@ -2013,6 +2177,14 @@
         mapCanvas: document.getElementById("starMap2d"),
         mapFrame: document.getElementById("mapFrame"),
         map3d: document.getElementById("map3d"),
+        tessSectorCanvas: document.getElementById("tessSector2d"),
+        tessSectorFrame: document.getElementById("tessSectorFrame"),
+        tessSector3d: document.getElementById("tessSector3d"),
+        tessMatchSelectedTic: document.getElementById("tessMatchSelectedTic"),
+        tessMatchSectorList: document.getElementById("tessMatchSectorList"),
+        tessMatchYear8Overlap: document.getElementById("tessMatchYear8Overlap"),
+        tessMatchCurrent: document.getElementById("tessMatchCurrent"),
+        tessMatchCoverage: document.getElementById("tessMatchCoverage"),
         toast: document.getElementById("toast"),
         tessCurrentSector: document.getElementById("tessCurrentSector"),
         tessCurrentWindow: document.getElementById("tessCurrentWindow"),
@@ -2047,6 +2219,8 @@
       let toastTimer;
       let points2d = [];
       let three = {};
+      let tessPoints2d = [];
+      let tessThree = { ready: false };
 
       function formatNumber(value) {
         return new Intl.NumberFormat("de-DE").format(value || 0);
@@ -2090,6 +2264,74 @@
       function daysDiff(fromDate, toDate) {
         const diff = toDate.getTime() - fromDate.getTime();
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
+
+      function normalizeSectorList(values) {
+        if (!Array.isArray(values)) return [];
+        const seen = new Set();
+        const normalized = [];
+        values.forEach((value) => {
+          const number = Number(value);
+          if (!Number.isFinite(number)) return;
+          const sector = Math.round(number);
+          if (sector < 1 || sector > tessMission.totalNumberedSectorsPlanned) return;
+          if (seen.has(sector)) return;
+          seen.add(sector);
+          normalized.push(sector);
+        });
+        normalized.sort((a, b) => a - b);
+        return normalized;
+      }
+
+      function buildTessSectorLayout(totalSectors) {
+        const result = [];
+        for (let sector = 1; sector <= totalSectors; sector += 1) {
+          const index = sector - 1;
+          const cycle = Math.floor(index / 13);
+          const inCycle = index % 13;
+          const angle = (inCycle / 13) * Math.PI * 2 - Math.PI / 2;
+          const hemisphere = cycle % 2 === 0 ? -1 : 1;
+          const radius = 0.56 + cycle * 0.185;
+          const x = Math.cos(angle) * radius;
+          const y = hemisphere * (0.36 + cycle * 0.03);
+          const z = Math.sin(angle) * radius * 0.7;
+          result.push({ sector, cycle, x, y, z });
+        }
+        return result;
+      }
+
+      function buildTessScheduleState() {
+        const now = new Date();
+        const schedule = tessMission.year8Sectors.map((item) => {
+          const startDate = parseIsoDate(item.start);
+          const endDate = parseIsoDate(item.end, true);
+          let phase = "Abgeschlossen";
+          if (now < startDate) phase = "Geplant";
+          else if (now <= endDate) phase = "Laufend";
+          return { ...item, startDate, endDate, phase };
+        });
+        const current = schedule.find((item) => item.phase === "Laufend") || null;
+        const upcoming = schedule.filter((item) => item.phase === "Geplant");
+        const completed = schedule.filter((item) => item.phase === "Abgeschlossen");
+        return { now, schedule, current, upcoming, completed, next: upcoming[0] || null };
+      }
+
+      function formatSectorList(sectors, maxItems = 9) {
+        const list = normalizeSectorList(sectors);
+        if (!list.length) return "-";
+        const shown = list.slice(0, maxItems).map((sector) => `S${sector}`);
+        const suffix = list.length > maxItems ? ` +${list.length - maxItems}` : "";
+        return `${shown.join(", ")}${suffix}`;
+      }
+
+      function selectedCandidateSectorInfo() {
+        const candidate = state.selected || null;
+        const sectors = normalizeSectorList(candidate && candidate.observedSectors);
+        return {
+          candidate,
+          sectors,
+          sectorSet: new Set(sectors)
+        };
       }
 
       function countryNameFromCode(code) {
@@ -2185,6 +2427,9 @@
           window.requestAnimationFrame(() => {
             draw2dMap();
             resize3d();
+            const tessState = buildTessScheduleState();
+            drawTessSector2d(tessState.current, tessState.next);
+            resizeTessSector3d();
           });
         }
       }
@@ -2729,21 +2974,190 @@
           .join("");
       }
 
-      function renderTess() {
-        const now = new Date();
-        const schedule = tessMission.year8Sectors.map((item) => {
-          const startDate = parseIsoDate(item.start);
-          const endDate = parseIsoDate(item.end, true);
-          let phase = "Abgeschlossen";
-          if (now < startDate) phase = "Geplant";
-          else if (now <= endDate) phase = "Laufend";
-          return { ...item, startDate, endDate, phase };
+      function tessSectorVisual(sector, selectedSectorSet, currentSector, nextSector) {
+        if (sector === currentSector) return "current";
+        if (sector === nextSector) return "next";
+        const selected = selectedSectorSet.has(sector);
+        const year8 = tessYear8SectorSet.has(sector);
+        if (selected && year8) return "candidateYear8";
+        if (selected) return "candidate";
+        if (year8) return "year8";
+        return "base";
+      }
+
+      function tessSectorColor(visualType) {
+        if (visualType === "current") return "#f2c968";
+        if (visualType === "next") return "#e39f3a";
+        if (visualType === "candidateYear8") return "#8f7af2";
+        if (visualType === "candidate") return "#2ca98c";
+        if (visualType === "year8") return "#5c8cf6";
+        return "#5c6872";
+      }
+
+      function renderTessSectorSummary(current, next) {
+        const info = selectedCandidateSectorInfo();
+        const candidate = info.candidate;
+        const sectors = info.sectors;
+        const overlap = sectors.filter((sector) => tessYear8SectorSet.has(sector));
+        const withSectorHistory = (data.candidates || []).filter((item) => normalizeSectorList(item.observedSectors).length > 0).length;
+        els.tessMatchSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
+        els.tessMatchSectorList.textContent = sectors.length ? formatSectorList(sectors, 12) : "keine Sektordaten";
+        els.tessMatchYear8Overlap.textContent = overlap.length ? `${overlap.length} (${formatSectorList(overlap, 8)})` : "0";
+        els.tessMatchCoverage.textContent = `${withSectorHistory}/${formatNumber((data.candidates || []).length)}`;
+        if (current) {
+          els.tessMatchCurrent.textContent = `S${current.sector} (laufend)`;
+        } else if (next) {
+          els.tessMatchCurrent.textContent = `S${next.sector} (naechster)`;
+        } else {
+          els.tessMatchCurrent.textContent = "-";
+        }
+      }
+
+      function drawTessSector2d(current, next) {
+        if (!els.tessSectorCanvas) return;
+        const { ctx, width, height } = setupCanvas(els.tessSectorCanvas);
+        tessPoints2d = [];
+        ctx.clearRect(0, 0, width, height);
+        const gradient = ctx.createRadialGradient(width * 0.5, height * 0.5, 18, width * 0.5, height * 0.5, width * 0.75);
+        gradient.addColorStop(0, "#152226");
+        gradient.addColorStop(1, "#0b1215");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.11)";
+        ctx.lineWidth = 1;
+        for (let cycle = 0; cycle <= 8; cycle += 1) {
+          const radius = 50 + cycle * 22;
+          ctx.beginPath();
+          ctx.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        const info = selectedCandidateSectorInfo();
+        const currentSector = current ? current.sector : null;
+        const nextSector = next ? next.sector : null;
+
+        tessSectorLayout.forEach((entry) => {
+          const visual = tessSectorVisual(entry.sector, info.sectorSet, currentSector, nextSector);
+          const x = width / 2 + entry.x * width * 0.22;
+          const y = height / 2 + (entry.z * 0.82 + entry.y * 0.18) * height * 0.28;
+          const radius = visual === "current" ? 5.2 : visual === "candidate" || visual === "candidateYear8" ? 4.3 : 3.3;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = tessSectorColor(visual);
+          ctx.globalAlpha = visual === "base" ? 0.6 : 0.95;
+          ctx.fill();
+          if (visual === "current" || visual === "candidateYear8") {
+            ctx.beginPath();
+            ctx.arc(x, y, radius + 2.2, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 1.1;
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          tessPoints2d.push({ x, y, radius, sector: entry.sector });
         });
 
-        const current = schedule.find((item) => item.phase === "Laufend") || null;
-        const upcoming = schedule.filter((item) => item.phase === "Geplant");
-        const completed = schedule.filter((item) => item.phase === "Abgeschlossen");
-        const next = upcoming[0] || null;
+        ctx.fillStyle = "rgba(255,255,255,0.74)";
+        ctx.font = "700 12px Inter, system-ui, sans-serif";
+        ctx.fillText("S1-S107: Year-8 blau, Kandidat gruen, laufend gelb", 12, 22);
+      }
+
+      function initTessSector3d() {
+        if (!window.THREE || tessThree.ready || !els.tessSector3d) return;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        els.tessSector3d.innerHTML = "";
+        els.tessSector3d.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(56, 1, 0.1, 120);
+        camera.position.set(0, 0.65, 5.6);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.95));
+
+        const root = new THREE.Group();
+        scene.add(root);
+
+        const meshes = new Map();
+        const sphereGeometry = new THREE.SphereGeometry(0.052, 10, 10);
+        tessSectorLayout.forEach((entry) => {
+          const material = new THREE.MeshBasicMaterial({ color: 0x5c6872 });
+          const mesh = new THREE.Mesh(sphereGeometry, material);
+          mesh.position.set(entry.x * 1.72, entry.y * 1.35, entry.z * 1.72);
+          mesh.userData = { sector: entry.sector };
+          meshes.set(entry.sector, mesh);
+          root.add(mesh);
+        });
+
+        const sun = new THREE.Mesh(
+          new THREE.SphereGeometry(0.078, 18, 18),
+          new THREE.MeshBasicMaterial({ color: 0xf4c96d })
+        );
+        root.add(sun);
+
+        tessThree = {
+          ready: true,
+          renderer,
+          scene,
+          camera,
+          root,
+          meshes,
+          rotation: 0
+        };
+        const tessState = buildTessScheduleState();
+        updateTessSector3dData(tessState.current, tessState.next);
+        resizeTessSector3d();
+        animateTessSector3d();
+      }
+
+      function updateTessSector3dData(current, next) {
+        if (!tessThree.ready) return;
+        const info = selectedCandidateSectorInfo();
+        const currentSector = current ? current.sector : null;
+        const nextSector = next ? next.sector : null;
+        tessSectorLayout.forEach((entry) => {
+          const visual = tessSectorVisual(entry.sector, info.sectorSet, currentSector, nextSector);
+          const color = tessSectorColor(visual);
+          const mesh = tessThree.meshes.get(entry.sector);
+          if (!mesh) return;
+          mesh.material.color.set(color);
+          mesh.material.opacity = visual === "base" ? 0.66 : 0.98;
+          mesh.material.transparent = true;
+          const scale =
+            visual === "current" ? 1.55 :
+            visual === "candidateYear8" ? 1.42 :
+            visual === "candidate" ? 1.33 :
+            visual === "year8" ? 1.25 : 1;
+          mesh.scale.set(scale, scale, scale);
+        });
+      }
+
+      function resizeTessSector3d() {
+        if (!tessThree.ready || !els.tessSector3d) return;
+        const rect = els.tessSector3d.getBoundingClientRect();
+        tessThree.renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+        tessThree.camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
+        tessThree.camera.updateProjectionMatrix();
+      }
+
+      function animateTessSector3d() {
+        if (!tessThree.ready) return;
+        tessThree.rotation += 0.0021;
+        tessThree.root.rotation.y = tessThree.rotation;
+        tessThree.root.rotation.x = -0.31;
+        tessThree.renderer.render(tessThree.scene, tessThree.camera);
+        requestAnimationFrame(animateTessSector3d);
+      }
+
+      function renderTess() {
+        const {
+          now,
+          schedule,
+          current,
+          upcoming,
+          completed,
+          next
+        } = buildTessScheduleState();
 
         let statusText = "Kein laufender Sektor im Year-8-Ausschnitt.";
         if (current) {
@@ -2796,6 +3210,9 @@
         }
 
         els.tessUpdatedAt.textContent = `Quellenstand: ${tessMission.sourceCheckedAt} (HEASARC + MIT TESS Year 8).`;
+        renderTessSectorSummary(current, next);
+        drawTessSector2d(current, next);
+        updateTessSector3dData(current, next);
       }
 
       function selectCandidate(candidate, source = "table") {
@@ -2804,6 +3221,7 @@
         renderTable();
         draw2dMap();
         update3dSelection();
+        renderTess();
         const curve = data.lightcurveCandidates.find((item) => item.tic === candidate.tic);
         if (curve && source !== "curve") {
           state.selectedCurve = curve;
@@ -3281,6 +3699,23 @@
         });
       });
 
+      document.querySelectorAll("[data-tess-map-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.tessMapMode = button.dataset.tessMapMode;
+          document.querySelectorAll("[data-tess-map-mode]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          els.tessSectorFrame.classList.toggle("mode-3d", state.tessMapMode === "3d");
+          if (state.tessMapMode === "3d") {
+            initTessSector3d();
+            resizeTessSector3d();
+          } else {
+            const tessState = buildTessScheduleState();
+            drawTessSector2d(tessState.current, tessState.next);
+            updateTessSector3dData(tessState.current, tessState.next);
+          }
+        });
+      });
+
       document.querySelectorAll("[data-curve-filter]").forEach((button) => {
         button.addEventListener("click", () => {
           state.curveFilter = button.dataset.curveFilter;
@@ -3454,6 +3889,10 @@
         window.requestAnimationFrame(() => {
           draw2dMap();
           resize3d();
+          const tessState = buildTessScheduleState();
+          drawTessSector2d(tessState.current, tessState.next);
+          updateTessSector3dData(tessState.current, tessState.next);
+          resizeTessSector3d();
         });
       });
 
@@ -3469,6 +3908,9 @@
       state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
       state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
       renderAll();
+      if (state.tessMapMode === "3d") {
+        initTessSector3d();
+      }
       setInterval(() => {
         updateDate();
         renderTess();

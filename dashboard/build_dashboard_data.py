@@ -7,6 +7,7 @@ import csv
 import json
 import math
 import os
+import re
 import shutil
 import sqlite3
 from collections import Counter
@@ -54,6 +55,40 @@ def safe_int_or_none(value: Any) -> int | None:
         return None
 
 
+def parse_sector_text(value: Any) -> list[int]:
+    text = clean_text(value)
+    if not text:
+        return []
+    sectors: list[int] = []
+    seen: set[int] = set()
+    for raw_token in re.split(r"[,\s;/|]+", text):
+        token = raw_token.strip()
+        if not token:
+            continue
+        if "-" in token:
+            left, _, right = token.partition("-")
+            try:
+                start = int(left)
+                end = int(right)
+            except Exception:
+                continue
+            if end < start:
+                start, end = end, start
+            for number in range(start, min(end, start + 200) + 1):
+                if number > 0 and number not in seen:
+                    sectors.append(number)
+                    seen.add(number)
+            continue
+        try:
+            number = int(token)
+        except Exception:
+            continue
+        if number > 0 and number not in seen:
+            sectors.append(number)
+            seen.add(number)
+    return sectors
+
+
 def rel_from_dashboard(path: Path) -> str:
     return os.path.relpath(path, DASHBOARD_DIR)
 
@@ -75,7 +110,7 @@ def sync_curve_asset(source_path: Path, tic: int) -> Path | None:
         return None
 
 
-def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
+def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=60)
     conn.row_factory = sqlite3.Row
     try:
@@ -102,11 +137,30 @@ def load_db_rows() -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]
             ).fetchall()
         except sqlite3.OperationalError:
             matrix_rows = []
+        try:
+            sector_rows = conn.execute(
+                """
+                SELECT TIC, sectors_text, sector_count, previous_sectors_text, previous_sector_count,
+                       new_sectors_text, source_status, last_checked_at, last_new_sector_at
+                  FROM tess_sector_inventory
+                """
+            ).fetchall()
+        except sqlite3.OperationalError:
+            sector_rows = []
     finally:
         conn.close()
     return (
         {int(row["TIC"]): dict(row) for row in candidate_rows},
         {int(row["tic_id"]): dict(row) for row in matrix_rows},
+        {
+            int(row["TIC"]): {
+                **dict(row),
+                "sectors": parse_sector_text(row["sectors_text"]),
+                "previousSectors": parse_sector_text(row["previous_sectors_text"]),
+                "newSectors": parse_sector_text(row["new_sectors_text"]),
+            }
+            for row in sector_rows
+        },
     )
 
 
@@ -158,10 +212,12 @@ def build_candidate(
     row: dict[str, Any],
     db_row: dict[str, Any] | None,
     matrix_row: dict[str, Any] | None,
+    sector_row: dict[str, Any] | None,
     max_distance: float,
 ) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
     matrix = matrix_row or {}
+    sector = sector_row or {}
     tic = safe_int(merged.get("TIC"))
     color = color_for(merged)
     is_violet = clean_text(merged.get("hz_markierung")).upper() == "VIOLETT"
@@ -192,6 +248,9 @@ def build_candidate(
     evidence_score = safe_float(matrix.get("evidence_score"))
     if evidence_score is not None:
         evidence_score = round(evidence_score, 1)
+    observed_sectors = list(sector.get("sectors") or [])
+    previous_sectors = list(sector.get("previousSectors") or [])
+    new_sectors = list(sector.get("newSectors") or [])
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -233,6 +292,14 @@ def build_candidate(
         "secondaryEclipse": clean_text(matrix.get("secondary_eclipse")),
         "periodAliasRisk": clean_text(matrix.get("period_alias_risk")),
         "rotationRisk": clean_text(matrix.get("rotation_risk")),
+        "observedSectors": observed_sectors,
+        "observedSectorCount": safe_int_or_none(sector.get("sector_count")) or len(observed_sectors),
+        "previousSectors": previous_sectors,
+        "previousSectorCount": safe_int_or_none(sector.get("previous_sector_count")) or len(previous_sectors),
+        "newSectors": new_sectors,
+        "sectorInventoryStatus": clean_text(sector.get("source_status")),
+        "sectorLastCheckedAt": clean_text(sector.get("last_checked_at")),
+        "sectorLastNewAt": clean_text(sector.get("last_new_sector_at")),
         "folder": candidate_folder,
         "lightcurveImg": lightcurve_img,
         "lightcurveImgLocal": lightcurve_img_local,
@@ -287,7 +354,7 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
-    db_rows, matrix_rows = load_db_rows()
+    db_rows, matrix_rows, sector_rows = load_db_rows()
     with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
         manifest_rows = list(csv.DictReader(handle))
 
@@ -297,6 +364,7 @@ def main() -> int:
             row,
             db_rows.get(safe_int(row.get("TIC"))),
             matrix_rows.get(safe_int(row.get("TIC"))),
+            sector_rows.get(safe_int(row.get("TIC"))),
             max_distance,
         )
         for row in manifest_rows
