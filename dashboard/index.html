@@ -1651,6 +1651,7 @@
                 </div>
                 <div class="notice" style="margin-top: 10px;">
                   <strong>Aktuelles Land:</strong> <span id="adminCurrentCountry">-</span><br />
+                  <strong>Quelle:</strong> <span id="adminCountrySource">-</span><br />
                   <strong>Hinweis:</strong> Diese Statistik ist clientseitig im Browser gespeichert.
                 </div>
                 <div class="table-wrap" style="margin-top: 10px;">
@@ -1677,7 +1678,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-d";
+      const DASHBOARD_UI_VERSION = "2026-05-31-e";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1710,6 +1711,7 @@
         sessionClosed: false,
         countryCode: "UN",
         countryName: "Unknown",
+        countrySource: "nicht aufgeloest",
         countryResolved: false
       };
 
@@ -2003,6 +2005,7 @@
         adminAvgDuration: document.getElementById("adminAvgDuration"),
         adminLastVisit: document.getElementById("adminLastVisit"),
         adminCurrentCountry: document.getElementById("adminCurrentCountry"),
+        adminCountrySource: document.getElementById("adminCountrySource"),
         adminCountryRows: document.getElementById("adminCountryRows")
       };
 
@@ -2052,6 +2055,61 @@
       function daysDiff(fromDate, toDate) {
         const diff = toDate.getTime() - fromDate.getTime();
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
+
+      function countryNameFromCode(code) {
+        const safeCode = String(code || "").toUpperCase();
+        if (!/^[A-Z]{2}$/.test(safeCode)) return "Unknown";
+        try {
+          const formatter = new Intl.DisplayNames(["de-DE", "en-US"], { type: "region", fallback: "code" });
+          const name = formatter.of(safeCode);
+          return name || safeCode;
+        } catch (_) {
+          return safeCode;
+        }
+      }
+
+      function extractRegionFromLocaleTag(tag) {
+        if (!tag) return null;
+        try {
+          if (typeof Intl.Locale === "function") {
+            const locale = new Intl.Locale(String(tag));
+            const region = (locale.region || locale.maximize().region || "").toUpperCase();
+            if (/^[A-Z]{2}$/.test(region)) return region;
+          }
+        } catch (_) {}
+
+        const cleaned = String(tag).replace(/_/g, "-");
+        const parts = cleaned.split("-");
+        for (let i = parts.length - 1; i >= 0; i -= 1) {
+          const token = String(parts[i] || "").toUpperCase();
+          if (/^[A-Z]{2}$/.test(token)) return token;
+        }
+        return null;
+      }
+
+      function resolveCountryFromLocale() {
+        const localeCandidates = []
+          .concat(Array.isArray(navigator.languages) ? navigator.languages : [])
+          .concat([navigator.language])
+          .filter(Boolean);
+        for (const tag of localeCandidates) {
+          const code = extractRegionFromLocaleTag(tag);
+          if (code) return { code, name: countryNameFromCode(code), source: `browser-locale (${tag})` };
+        }
+        return null;
+      }
+
+      async function fetchJsonWithTimeout(url, timeoutMs = 4500) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        } finally {
+          clearTimeout(timer);
+        }
       }
 
       function loadCollapsedPanelState() {
@@ -2243,6 +2301,7 @@
         els.adminAvgDuration.textContent = formatDuration(avgDuration);
         els.adminLastVisit.textContent = formatDateTime(store.lastVisitAt);
         els.adminCurrentCountry.textContent = `${analytics.countryName} (${analytics.countryCode})`;
+        els.adminCountrySource.textContent = analytics.countrySource || "-";
 
         const rows = Object.values(store.countries)
           .sort((a, b) => (b.views || 0) - (a.views || 0))
@@ -2263,21 +2322,25 @@
 
       async function resolveCountry() {
         try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 4500);
-          const res = await fetch("https://ipapi.co/json/", {
-            signal: controller.signal,
-            cache: "no-store"
-          });
-          clearTimeout(timer);
-          if (!res.ok) throw new Error("ipapi failed");
-          const payload = await res.json();
-          const code = String(payload.country_code || payload.country || "UN").toUpperCase();
-          const name = String(payload.country_name || "Unknown");
-          return { code: code || "UN", name: name || "Unknown" };
-        } catch (_) {
-          return { code: "UN", name: "Unknown" };
-        }
+          const payload = await fetchJsonWithTimeout("https://api.country.is/");
+          const code = String(payload.country || payload.country_code || "").toUpperCase();
+          if (/^[A-Z]{2}$/.test(code)) {
+            return { code, name: countryNameFromCode(code), source: "api.country.is" };
+          }
+        } catch (_) {}
+
+        try {
+          const payload = await fetchJsonWithTimeout("https://ipapi.co/json/");
+          const code = String(payload.country_code || payload.country || "").toUpperCase();
+          const name = String(payload.country_name || "").trim();
+          if (/^[A-Z]{2}$/.test(code)) {
+            return { code, name: name || countryNameFromCode(code), source: "ipapi.co" };
+          }
+        } catch (_) {}
+
+        const localeGuess = resolveCountryFromLocale();
+        if (localeGuess) return localeGuess;
+        return { code: "UN", name: "Unknown", source: "nicht verfuegbar" };
       }
 
       function transferSessionCountry(fromCode, toCode, toName) {
@@ -2288,6 +2351,25 @@
         to.views = (to.views || 0) + 1;
         to.sessions = (to.sessions || 0) + 1;
         saveAnalyticsStore();
+      }
+
+      function migrateUnknownHistory(toCode, toName) {
+        if (!analytics.store || toCode === "UN") return false;
+        const countries = analytics.store.countries || {};
+        const unknown = countries.UN;
+        if (!unknown) return false;
+        const hasOtherHistory = Object.entries(countries).some(([code, item]) => {
+          if (code === "UN") return false;
+          return (item.views || 0) > 0 || (item.sessions || 0) > 0 || (item.totalDurationSeconds || 0) > 0;
+        });
+        if (hasOtherHistory) return false;
+        const target = ensureCountryBucket(toCode, toName || countryNameFromCode(toCode));
+        target.views = (target.views || 0) + (unknown.views || 0);
+        target.sessions = (target.sessions || 0) + (unknown.sessions || 0);
+        target.totalDurationSeconds = (target.totalDurationSeconds || 0) + (unknown.totalDurationSeconds || 0);
+        delete analytics.store.countries.UN;
+        saveAnalyticsStore();
+        return true;
       }
 
       function startAnalyticsTracking() {
@@ -2307,8 +2389,12 @@
         resolveCountry().then((country) => {
           analytics.countryCode = country.code;
           analytics.countryName = country.name;
+          analytics.countrySource = country.source || "unbekannt";
           analytics.countryResolved = true;
-          if (country.code !== "UN") transferSessionCountry("UN", country.code, country.name);
+          if (country.code !== "UN") {
+            const migrated = migrateUnknownHistory(country.code, country.name);
+            if (!migrated) transferSessionCountry("UN", country.code, country.name);
+          }
           renderAdmin();
         });
       }
