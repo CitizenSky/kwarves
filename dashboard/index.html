@@ -1127,6 +1127,62 @@
         color: #12312c;
       }
 
+      .docs-legal {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .docs-legal-card {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .docs-legal-card h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+
+      .docs-legal-card p {
+        margin: 0 0 8px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .docs-legal-card p:last-child {
+        margin-bottom: 0;
+      }
+
+      .site-footer {
+        padding: 14px 28px 22px;
+        border-top: 1px solid var(--line);
+        background: #ffffff;
+      }
+
+      .site-footer-alert {
+        margin: 0 0 8px;
+        color: #654113;
+        font-weight: 760;
+      }
+
+      .site-footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .site-footer-links a {
+        color: #1f4d8a;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .site-footer-links a:hover {
+        text-decoration: underline;
+      }
+
       .table-wrap {
         overflow-x: auto;
       }
@@ -1874,6 +1930,27 @@
             <div class="panel-body">
               <div class="docs-flow" id="docsFlow"></div>
               <div class="docs-grid" id="docsLevels"></div>
+              <div class="docs-legal">
+                <article class="docs-legal-card" id="aboutSection">
+                  <h3>Wissenschaftlicher Hinweis</h3>
+                  <p>Kwarves ist ein unabhängiges Citizen-Science-Projekt zur Analyse öffentlich verfügbarer TESS- und Gaia-Daten.</p>
+                  <p>Die dargestellten Kandidaten, Bewertungen und Klassifizierungen werden automatisiert erzeugt und befinden sich teilweise in einem frühen Forschungsstadium.</p>
+                  <p>Nicht alle verfügbaren Beobachtungen, Follow-up-Messungen, Archivdaten oder wissenschaftlichen Veröffentlichungen werden vollständig berücksichtigt.</p>
+                  <p>Neue Daten können zu einer Neubewertung, Bestätigung oder Ablehnung eines Kandidaten führen.</p>
+                  <p>Die dargestellten Ergebnisse stellen keine Bestätigung eines Exoplaneten dar und erheben keinen Anspruch auf Vollständigkeit oder wissenschaftliche Endgültigkeit.</p>
+                </article>
+                <article class="docs-legal-card" id="impressumSection">
+                  <h3>Impressum</h3>
+                  <p><strong>Verantwortlich für den Inhalt:</strong><br />Konrad Gottschalk</p>
+                  <p>Kwarves ist ein unabhängiges Citizen-Science-Projekt zur Analyse öffentlich verfügbarer astronomischer Daten.</p>
+                  <p><strong>Kontakt:</strong><br />[Projekt-E-Mail]</p>
+                </article>
+                <article class="docs-legal-card" id="privacySection">
+                  <h3>Privacy</h3>
+                  <p>Diese Webseite nutzt ein Dashboard mit lokalen Browser-Statistiken und optional externer Reichweitenmessung.</p>
+                  <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
+                </article>
+              </div>
               <div class="table-wrap docs-table-wrap">
                 <table class="docs-table" aria-label="Skriptuebersicht">
                   <thead>
@@ -1985,13 +2062,22 @@
             </div>
           </section>
         </section>
+        <footer class="site-footer">
+          <p class="site-footer-alert">⚠️ Vorläufige Forschungsergebnisse. Kandidatenbewertungen können sich durch neue TESS-Daten, Follow-up-Beobachtungen oder externe Analysen ändern.</p>
+          <div class="site-footer-links">
+            <a href="#aboutSection" data-doc-anchor="aboutSection">About</a>
+            <a href="#impressumSection" data-doc-anchor="impressumSection">Impressum</a>
+            <a href="#privacySection" data-doc-anchor="privacySection">Privacy</a>
+            <a href="https://github.com/CitizenSky/kwarves" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </div>
+        </footer>
       </main>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-j";
+      const DASHBOARD_UI_VERSION = "2026-05-31-k";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -4011,6 +4097,21 @@
           const target = button.dataset.navTarget;
           setNavButtonActive(target);
           scrollToPanel(target);
+        });
+      });
+
+      document.querySelectorAll("[data-doc-anchor]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const targetId = link.dataset.docAnchor;
+          if (!targetId) return;
+          event.preventDefault();
+          setNavButtonActive("docsPanel");
+          scrollToPanel("docsPanel");
+          window.requestAnimationFrame(() => {
+            const node = document.getElementById(targetId);
+            if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+          history.replaceState(null, "", `#${targetId}`);
         });
       });
 

@@ -8,8 +8,42 @@
     <script>
       window.location.replace("dashboard/index.html");
     </script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Inter, Arial, sans-serif;
+        background: #f4f6f8;
+        color: #14211f;
+      }
+
+      .fallback {
+        max-width: 820px;
+      }
+
+      .footer-note {
+        margin-top: 14px;
+        font-weight: 700;
+        color: #654113;
+      }
+
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+    </style>
   </head>
   <body>
-    <p>Weiterleitung zum Dashboard: <a href="dashboard/index.html">dashboard/index.html</a></p>
+    <div class="fallback">
+      <p>Weiterleitung zum Dashboard: <a href="dashboard/index.html">dashboard/index.html</a></p>
+      <p class="footer-note">⚠️ Vorläufige Forschungsergebnisse. Kandidatenbewertungen können sich durch neue TESS-Daten, Follow-up-Beobachtungen oder externe Analysen ändern.</p>
+      <p class="footer-links">
+        <a href="dashboard/index.html#aboutSection">About</a>
+        <a href="dashboard/index.html#impressumSection">Impressum</a>
+        <a href="dashboard/index.html#privacySection">Privacy</a>
+        <a href="https://github.com/CitizenSky/kwarves">GitHub</a>
+      </p>
+    </div>
   </body>
 </html>
