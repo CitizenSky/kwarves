@@ -638,6 +638,38 @@
         align-content: start;
       }
 
+      .map-selected-section {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .map-selected-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .map-selected-head h3 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .map-selected-head p {
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .map-selected-section .selected-card {
+        padding: 14px;
+      }
+
       .map-stat {
         padding: 11px;
         border: 1px solid var(--line);
@@ -1142,33 +1174,18 @@
             </article>
           </div>
 
-          <div class="grid-2">
-            <section class="panel" id="treePanel">
-              <div class="panel-header">
-                <div>
-                  <h2>Baumstruktur der Entscheidung</h2>
-                  <p class="panel-subtitle">Von der ersten Farbe bis zur naechsten Aktion.</p>
-                </div>
-                <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
-                  <i data-lucide="refresh-cw"></i>
-                </button>
+          <section class="panel" id="treePanel">
+            <div class="panel-header">
+              <div>
+                <h2>Baumstruktur der Entscheidung</h2>
+                <p class="panel-subtitle">Von der ersten Farbe bis zur naechsten Aktion.</p>
               </div>
-              <div class="panel-body tree" id="tree"></div>
-            </section>
-
-            <aside class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Ausgewaehlter Kandidat</h2>
-                  <p class="panel-subtitle">Hier steht die Begruendung in Klartext.</p>
-                </div>
-                <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
-                  <i data-lucide="activity"></i>
-                </button>
-              </div>
-              <div class="panel-body selected-card" id="selectedCard"></div>
-            </aside>
-          </div>
+              <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+            <div class="panel-body tree" id="tree"></div>
+          </section>
 
           <section class="panel" id="mapPanel">
             <div class="panel-header">
@@ -1187,35 +1204,49 @@
                 </button>
               </div>
             </div>
-            <div class="panel-body map-layout">
-              <div class="map-frame mode-2d" id="mapFrame">
-                <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
-                <div id="map3d" aria-label="3D Sternkarte"></div>
-                <div class="map-note">
-                  <span class="legend-item"><span class="dot"></span> Gruen</span>
-                  <span class="legend-item"><span class="dot yellow"></span> Gelb</span>
-                  <span class="legend-item"><span class="dot red"></span> Rot</span>
-                  <span class="legend-item"><span class="dot violet"></span> violetter Ring = HZ</span>
-                  <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
+            <div class="panel-body">
+              <div class="map-layout">
+                <div class="map-frame mode-2d" id="mapFrame">
+                  <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
+                  <div id="map3d" aria-label="3D Sternkarte"></div>
+                  <div class="map-note">
+                    <span class="legend-item"><span class="dot"></span> Gruen</span>
+                    <span class="legend-item"><span class="dot yellow"></span> Gelb</span>
+                    <span class="legend-item"><span class="dot red"></span> Rot</span>
+                    <span class="legend-item"><span class="dot violet"></span> violetter Ring = HZ</span>
+                    <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
+                  </div>
+                </div>
+                <div class="map-side">
+                  <div class="notice">
+                    Lokaler Hinweis: echte RA/Dec stehen in dieser Datenquelle nicht zentral bereit.
+                    Die Karte nutzt deshalb stabile Projektpositionen aus TIC-ID, Entfernung und SNR.
+                  </div>
+                  <div class="map-stat">
+                    <strong id="visibleCount">0</strong>
+                    <span>sichtbare Punkte nach Filter</span>
+                  </div>
+                  <div class="map-stat">
+                    <strong id="lcCount">0</strong>
+                    <span>HZ/gruene Lichtkurven mit PNG</span>
+                  </div>
+                  <div class="map-stat">
+                    <strong id="generatedAt">-</strong>
+                    <span>Datenstand</span>
+                  </div>
                 </div>
               </div>
-              <div class="map-side">
-                <div class="notice">
-                  Lokaler Hinweis: echte RA/Dec stehen in dieser Datenquelle nicht zentral bereit.
-                  Die Karte nutzt deshalb stabile Projektpositionen aus TIC-ID, Entfernung und SNR.
+              <div class="map-selected-section">
+                <div class="map-selected-head">
+                  <div>
+                    <h3>Ausgewaehlter Kandidat</h3>
+                    <p>Hier steht die Begruendung in Klartext.</p>
+                  </div>
+                  <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
+                    <i data-lucide="activity"></i>
+                  </button>
                 </div>
-                <div class="map-stat">
-                  <strong id="visibleCount">0</strong>
-                  <span>sichtbare Punkte nach Filter</span>
-                </div>
-                <div class="map-stat">
-                  <strong id="lcCount">0</strong>
-                  <span>HZ/gruene Lichtkurven mit PNG</span>
-                </div>
-                <div class="map-stat">
-                  <strong id="generatedAt">-</strong>
-                  <span>Datenstand</span>
-                </div>
+                <div class="selected-card" id="selectedCard"></div>
               </div>
             </div>
           </section>
