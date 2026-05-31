@@ -2741,8 +2741,8 @@
       const ADMIN_LOGIN_KEY = "kwarves_admin_logged_in_v1";
       const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
       const ANALYTICS_SELF_FILTER_KEY = "kwarves_analytics_filter_self_v1";
-      const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v2";
-      const TESS_COMPARE_COLLAPSE_KEY = "kwarves_tess_compare_collapsed_v1";
+      const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v3";
+      const TESS_COMPARE_COLLAPSE_KEY = "kwarves_tess_compare_collapsed_v2";
       const GLOBAL_ANALYTICS_CONFIG = {
         provider: "goatcounter",
         endpoint: "https://koni.goatcounter.com/count",
@@ -3469,9 +3469,10 @@
 
       function loadTessCompareCollapsed() {
         try {
-          return localStorage.getItem(TESS_COMPARE_COLLAPSE_KEY) === "1";
+          const value = localStorage.getItem(TESS_COMPARE_COLLAPSE_KEY);
+          return value === null ? true : value === "1";
         } catch (_) {
-          return false;
+          return true;
         }
       }
 
@@ -3554,7 +3555,7 @@
           }
 
           const hasPersistedState = Object.prototype.hasOwnProperty.call(persisted, panelId);
-          const defaultCollapsed = panelId !== "mapPanel";
+          const defaultCollapsed = true;
           const isCollapsed = hasPersistedState ? Boolean(persisted[panelId]) : defaultCollapsed;
           panel.classList.toggle("is-collapsed", isCollapsed);
           collapseButtonState(button, isCollapsed);
