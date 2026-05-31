@@ -655,6 +655,69 @@
         font-size: 12px;
       }
 
+      .docs-flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .docs-step {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fbfa;
+        color: #20433d;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .docs-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .docs-level {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+        display: grid;
+        gap: 6px;
+      }
+
+      .docs-level strong {
+        font-size: 14px;
+      }
+
+      .docs-level p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .docs-table {
+        min-width: 1080px;
+      }
+
+      .docs-table th,
+      .docs-table td {
+        white-space: normal;
+        vertical-align: top;
+        line-height: 1.35;
+      }
+
+      .docs-table .script-id {
+        font-weight: 700;
+        color: #12312c;
+      }
+
       .table-wrap {
         overflow-x: auto;
       }
@@ -924,7 +987,8 @@
 
         .kpis,
         .tree-children,
-        .details-grid {
+        .details-grid,
+        .docs-grid {
           grid-template-columns: minmax(0, 1fr);
         }
 
@@ -981,6 +1045,10 @@
           <button type="button" title="Kandidaten" data-nav-target="tablePanel">
             <i data-lucide="table-2"></i>
             <span>Kandidaten</span>
+          </button>
+          <button type="button" title="Projektlogik" data-nav-target="docsPanel">
+            <i data-lucide="book-open-text"></i>
+            <span>Projektlogik</span>
           </button>
         </nav>
 
@@ -1221,6 +1289,35 @@
               </table>
             </div>
           </section>
+
+          <section class="panel" id="docsPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Projektlogik und Skripte</h2>
+                <p class="panel-subtitle">Was jedes Skript macht, warum es sinnvoll ist und welches Level es bedient.</p>
+              </div>
+              <button class="icon-button" type="button" title="Dokuseite aktualisieren" id="refreshDocs">
+                <i data-lucide="book-open-check"></i>
+              </button>
+            </div>
+            <div class="panel-body">
+              <div class="docs-flow" id="docsFlow"></div>
+              <div class="docs-grid" id="docsLevels"></div>
+              <div class="table-wrap docs-table-wrap">
+                <table class="docs-table" aria-label="Skriptuebersicht">
+                  <thead>
+                    <tr>
+                      <th>Skript</th>
+                      <th>Was macht es?</th>
+                      <th>Warum sinnvoll?</th>
+                      <th>Level / Bereich</th>
+                    </tr>
+                  </thead>
+                  <tbody id="docsScriptRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -1249,12 +1346,244 @@
         sun: "#f4c96d"
       };
 
+      const projectFlowSteps = [
+        "1) Rohdaten sammeln",
+        "2) Level 1: Rohkandidaten + erste Plots",
+        "3) Level 2: planetare Plausibilitaet",
+        "4) Level 3: externe Kataloge + neue Kandidaten",
+        "5) Level 4: TTV und O-C Analyse",
+        "6) Level 5: Detailvalidierung",
+        "7) Level 6: Kandidaten-Dossier und Follow-up",
+        "8) Dashboard + Matrix + Monitoring"
+      ];
+
+      const projectLevels = [
+        {
+          name: "Level 0 - Farbbaum nach Distanz",
+          text: "Ordnerstruktur nach Entfernung (ly) und vorlaeufiger Farbe. Hier liegen Kandidatenpfade, PNG-Lichtkurven und die erste Statuslogik."
+        },
+        {
+          name: "Level 1 - Rohkandidaten",
+          text: "BLS/Transit-Suche, Referenzplots, erste manuelle Sichtung und Prioritaetslisten. Ziel: aus grossen Rohdaten handhabbare Kandidaten machen."
+        },
+        {
+          name: "Level 2 - Planetencheck",
+          text: "Schneller Plausibilitaetscheck mit A/B/C/Unsicher/FP-Klassen. Ziel: offensichtliche Systematiken frueh entfernen."
+        },
+        {
+          name: "Level 3 - Externe Pruefung",
+          text: "Abgleich mit ExoFOP/TOI/anderen Katalogen plus Klasse fuer unbekannte neue Kandidaten. Trennt bekannte Objekte von neuen Chancen."
+        },
+        {
+          name: "Level 4 - TTV / Timing",
+          text: "O-C Kurven, TTV-Prioritaeten, grafische Checks und Rechecks. Wichtig fuer Dynamik, Alias-Risiken und Stabilitaet."
+        },
+        {
+          name: "Level 5 - Detailvalidierung",
+          text: "Odd/Even, Secondary Eclipse, Nachbarstern-Checks, Einzeltransitkontrolle. Hier fallen viele FP/Artefakte final raus."
+        },
+        {
+          name: "Level 6 - Dossier",
+          text: "Berichte, Follow-up Prioritaet, Exportpakete und Rueckstellungen. Das ist die Uebergabe in beobachtbare Actions."
+        },
+        {
+          name: "Dashboard + Candidate Matrix",
+          text: "Konsolidiert Status, Evidence Score, Entscheidungsgrund und naechsten Schritt. Macht die Pipeline nachvollziehbar und steuerbar."
+        }
+      ];
+
+      const projectScripts = [
+        {
+          script: "dashboard/build_dashboard_data.py",
+          does: "Baut das Datenbundle fuer die Live-UI (Kandidaten, Matrix-Felder, Kurvenpfade, Kennzahlen).",
+          why: "Zentrale Quelle fuer Dashboard-Transparenz und konsistente Filter.",
+          level: "Dashboard / alle Level"
+        },
+        {
+          script: "build_dashboard_data.py",
+          does: "Aelterer Builder im Repo-Root fuer statische Dashboard-Daten.",
+          why: "Rueckwaertskompatibel fuer fruehere Ablaufe.",
+          level: "Dashboard (legacy)"
+        },
+        {
+          script: "main/masterscript_v2.py",
+          does: "Orchestriert groessere Pipeline-Laeufe ueber mehrere Verarbeitungsschritte.",
+          why: "Weniger manuelle Einzelstarts, reproduzierbare Runs.",
+          level: "Pipeline-Steuerung"
+        },
+        {
+          script: "main/build_level0_level_tree.py",
+          does: "Erzeugt die Level-0 Baumstruktur und Auswertungsgrundlage.",
+          why: "Saubere Navigations- und Entscheidungsstruktur fuer alle spaeteren Schritte.",
+          level: "Level 0"
+        },
+        {
+          script: "main/apply_ly_folder_color_tags.py",
+          does: "Setzt Farb-/Status-Tags in Distanzordnern.",
+          why: "Schneller visueller Zugriff auf Prioritaet und Risiko.",
+          level: "Level 0"
+        },
+        {
+          script: "main/organize_review_by_distance.py",
+          does: "Ordnet Kandidaten review-freundlich nach Distanzbloecken.",
+          why: "Ergonomische Sichtung statt ungeordneter Massenliste.",
+          level: "Level 0/1"
+        },
+        {
+          script: "main/create_distance_range_archive.py",
+          does: "Bildet Archivstrukturen pro Distanzbereich.",
+          why: "Nachvollziehbarkeit historischer Stufen und Snapshots.",
+          level: "Level 0 Archiv"
+        },
+        {
+          script: "main/remove_red_level0_folders.py",
+          does: "Bereinigt/depriorisiert rot markierte Level-0 Ordner.",
+          why: "Fokus auf hochwertige Kandidaten, weniger Rauschen.",
+          level: "Level 0 Hygiene"
+        },
+        {
+          script: "main/level2_planet_check.py",
+          does: "Fuehrt den planetaren Plausibilitaetscheck fuer Level 2 aus.",
+          why: "Schnelle Trennung planetenartig vs. problematisch.",
+          level: "Level 2"
+        },
+        {
+          script: "main/assess_spc_candidate.py",
+          does: "Bewertet SPC-Reife pro Kandidat.",
+          why: "Objektiviert Gruen/SPC-Entscheidungen.",
+          level: "Level 2/3"
+        },
+        {
+          script: "main/build_candidate_matrix.py",
+          does: "Baut die Kandidaten-Matrix mit Status, Scores und naechsten Schritten.",
+          why: "Nachvollziehbare, automatisierte Entscheidungsschicht.",
+          level: "Matrix / alle Level"
+        },
+        {
+          script: "main/evidence_vetting.py",
+          does: "Sammelt Vetting-Evidenz (Signalqualitaet, Konsistenz, Risiken).",
+          why: "Fundierte Entscheidungen statt Bauchgefuehl.",
+          level: "Level 3-5"
+        },
+        {
+          script: "main/external_catalog_crossmatch.py",
+          does: "Crossmatch gegen externe Kataloge/TOI-Informationen.",
+          why: "Bekannte Funde, FP und neue Kandidaten sauber trennen.",
+          level: "Level 3"
+        },
+        {
+          script: "main/build_green_purple_hz_review.py",
+          does: "Baut Review-Set fuer Gruen/Violett/HZ Kandidaten.",
+          why: "Fokus auf wissenschaftlich interessante Targets.",
+          level: "Level 3/4"
+        },
+        {
+          script: "main/make_new_candidate_shortlist.py",
+          does: "Erstellt priorisierte Shortlist neuer Kandidaten.",
+          why: "Zeit in die besten Folgeziele investieren.",
+          level: "Level 3"
+        },
+        {
+          script: "main/level4_candidate_filter.py",
+          does: "Filtert Kandidaten fuer tieferen Level-4 Check.",
+          why: "Entlastet TTV-Analyse von unpassenden Faellen.",
+          level: "Level 4"
+        },
+        {
+          script: "main/ttv_analyse.py",
+          does: "Berechnet Transit Timing Variation Metriken.",
+          why: "Dynamische Systeme und Alias-Probleme erkennen.",
+          level: "Level 4"
+        },
+        {
+          script: "main/ttv_make_graphics.py",
+          does: "Erstellt O-C/TTV Grafiken fuer die Sichtung.",
+          why: "Komplexe Timingmuster visuell plausibel pruefen.",
+          level: "Level 4"
+        },
+        {
+          script: "main/vet_green_candidate_plots.py",
+          does: "Vetting der gruenen Kandidatenplots.",
+          why: "Gruene Kandidaten vor finalem SPC-Label absichern.",
+          level: "Level 4/5"
+        },
+        {
+          script: "main/run_level5_green_purple_batch.py",
+          does: "Batch-Detailvalidierung fuer gruene/violette Gruppen.",
+          why: "Skaliert Tieftests ueber viele Kandidaten.",
+          level: "Level 5"
+        },
+        {
+          script: "main/advanced_bayesian_vetting.py",
+          does: "Bayesianisches Vetting fuer Kandidatenwahrscheinlichkeiten.",
+          why: "Robustere Priorisierung bei unsicheren Faellen.",
+          level: "Level 5+"
+        },
+        {
+          script: "main/check_new_tess_sectors.py",
+          does: "Prueft neue TESS-Sektoren fuer bestehende Kandidaten.",
+          why: "NEEDS_MORE_DATA Faelle automatisch reaktivieren.",
+          level: "Monitoring"
+        },
+        {
+          script: "main/monitor_insufficient_data.py",
+          does: "Ueberwacht Kandidaten mit unzureichender Datenlage.",
+          why: "Kein relevanter Kandidat geht im Wartestatus verloren.",
+          level: "Monitoring"
+        },
+        {
+          script: "main/fill_level0_combined_pngs.py",
+          does: "Ergaenzt fehlende kombinierte Lichtkurven-PNGs in Level 0.",
+          why: "Vollstaendige visuelle Basis fuer Dashboard und Vetting.",
+          level: "Assets / Level 0"
+        },
+        {
+          script: "main/link_level0_lightcurve_pngs.py",
+          does: "Verknuepft bzw. synchronisiert Lichtkurvenpfade.",
+          why: "Verhindert fehlende Kurven durch Pfaddrift.",
+          level: "Assets / Dashboard"
+        },
+        {
+          script: "main/export_all_reference_combined_plots.py",
+          does: "Exportiert Referenzplots fuer Sammelreviews.",
+          why: "Vergleichbarer Plotstandard ueber alle Kandidaten.",
+          level: "Reporting"
+        },
+        {
+          script: "special/compute_hz.py",
+          does: "Berechnet HZ-Klassen (konservativ/optimistisch).",
+          why: "Violett/HZ-Markierung wissenschaftlich begruenden.",
+          level: "HZ Spezial"
+        },
+        {
+          script: "special/spc_art_vetter.py",
+          does: "Spezialvetting fuer SPC_ART und Artefaktfaelle.",
+          why: "Grenzfaelle systematisch statt ad hoc bewerten.",
+          level: "Spezial / Vetting"
+        },
+        {
+          script: "special/tic13096842_analysis.py",
+          does: "Einzelfall-Deepdive fuer TIC 13096842.",
+          why: "Dokumentiert schwierige Referenzfaelle fuer Methodik.",
+          level: "Case Study"
+        },
+        {
+          script: "special/tic13096842_sector98.py",
+          does: "Sektor-spezifischer Deepdive zu TIC 13096842.",
+          why: "Zeigt, wie sektorale Inkonsistenz untersucht wird.",
+          level: "Case Study"
+        }
+      ];
+
       const els = {
         globalSearch: document.getElementById("globalSearch"),
         curveSearch: document.getElementById("curveSearch"),
         tree: document.getElementById("tree"),
         selectedCard: document.getElementById("selectedCard"),
         rows: document.getElementById("candidateRows"),
+        docsFlow: document.getElementById("docsFlow"),
+        docsLevels: document.getElementById("docsLevels"),
+        docsScriptRows: document.getElementById("docsScriptRows"),
         curveList: document.getElementById("curveList"),
         curveTitle: document.getElementById("curveTitle"),
         curveMeta: document.getElementById("curveMeta"),
@@ -1378,6 +1707,32 @@
           </article>
         `).join("");
         window.lucide?.createIcons();
+      }
+
+      function renderDocs() {
+        els.docsFlow.innerHTML = projectFlowSteps
+          .map((step) => `<span class="docs-step">${step}</span>`)
+          .join("");
+
+        els.docsLevels.innerHTML = projectLevels
+          .map((level) => `
+            <article class="docs-level">
+              <strong>${level.name}</strong>
+              <p>${level.text}</p>
+            </article>
+          `)
+          .join("");
+
+        els.docsScriptRows.innerHTML = projectScripts
+          .map((item) => `
+            <tr>
+              <td><span class="script-id">${item.script}</span></td>
+              <td>${item.does}</td>
+              <td>${item.why}</td>
+              <td>${item.level}</td>
+            </tr>
+          `)
+          .join("");
       }
 
       function selectCandidate(candidate, source = "table") {
@@ -1795,6 +2150,7 @@
       function renderAll() {
         renderKpis();
         renderTree();
+        renderDocs();
         renderSelected();
         renderTable();
         renderCurves(false);
@@ -1952,6 +2308,11 @@
         renderTree();
         window.lucide?.createIcons();
         showToast("Entscheidungsbaum aktualisiert.");
+      });
+
+      document.getElementById("refreshDocs").addEventListener("click", () => {
+        renderDocs();
+        showToast("Projektlogik aktualisiert.");
       });
 
       document.getElementById("showHints").addEventListener("click", () => {
