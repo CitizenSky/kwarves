@@ -5168,6 +5168,26 @@
           ctx.stroke();
         }
 
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const axisTop = 42;
+        const axisBottom = height - 42;
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.16)";
+        ctx.fillStyle = "rgba(255,255,255,0.54)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 7]);
+        ctx.beginPath();
+        ctx.moveTo(centerX, axisTop);
+        ctx.lineTo(centerX, axisBottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = "700 11px Inter, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("N", centerX, axisTop - 12);
+        ctx.fillText("S", centerX, axisBottom + 20);
+        ctx.restore();
+
         candidates.forEach((candidate) => {
           const x = width / 2 + candidate.map.x * width * 0.42;
           const y = height / 2 + candidate.map.y * height * 0.42;
@@ -5199,8 +5219,6 @@
           points2d.push({ x, y, radius: size + 8, candidate });
         });
 
-        const centerX = width / 2;
-        const centerY = height / 2;
         ctx.beginPath();
         ctx.arc(centerX, centerY, 11, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(244, 201, 109, 0.16)";
@@ -5255,6 +5273,23 @@
         referenceGroup.add(sunMesh);
         referenceGroup.add(earthMesh);
         scene.add(referenceGroup);
+
+        const northSouthAxis = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0, -1.25),
+          new THREE.Vector3(0, 0, 1.25)
+        ]);
+        const northSouthLine = new THREE.Line(
+          northSouthAxis,
+          new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.26,
+            dashSize: 0.08,
+            gapSize: 0.08
+          })
+        );
+        northSouthLine.computeLineDistances();
+        scene.add(northSouthLine);
 
         const groups = {};
         ["green", "yellow", "red", "gray"].forEach((key) => {
