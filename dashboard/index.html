@@ -1677,7 +1677,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-c";
+      const DASHBOARD_UI_VERSION = "2026-05-31-d";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1693,7 +1693,7 @@
       const ADMIN_PASSWORD = "starfield";
       const ADMIN_LOGIN_KEY = "kwarves_admin_logged_in_v1";
       const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
-      const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v1";
+      const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v2";
 
       const colors = {
         green: "#24a085",
@@ -2123,7 +2123,9 @@
             actions.appendChild(button);
           }
 
-          const isCollapsed = Boolean(persisted[panelId]);
+          const hasPersistedState = Object.prototype.hasOwnProperty.call(persisted, panelId);
+          const defaultCollapsed = panelId !== "mapPanel";
+          const isCollapsed = hasPersistedState ? Boolean(persisted[panelId]) : defaultCollapsed;
           panel.classList.toggle("is-collapsed", isCollapsed);
           collapseButtonState(button, isCollapsed);
 
