@@ -656,6 +656,10 @@
         background: var(--violet);
       }
 
+      .dot.gray {
+        background: #7a878e;
+      }
+
       .dot.sun {
         background: #f4c96d;
         box-shadow: 0 0 0 2px rgba(244, 201, 109, 0.24);
@@ -665,6 +669,23 @@
         display: grid;
         gap: 10px;
         align-content: start;
+      }
+
+      .map-status {
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .map-status strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .map-status span {
+        color: var(--muted);
+        font-size: 12px;
       }
 
       .map-selected-section {
@@ -816,6 +837,75 @@
       .tess-mini-stat span {
         color: var(--muted);
         font-size: 12px;
+      }
+
+      .coverage-timeline {
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .coverage-timeline h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+
+      .timeline-row {
+        display: grid;
+        gap: 5px;
+        margin-bottom: 8px;
+      }
+
+      .timeline-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .timeline-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .timeline-value {
+        font-size: 14px;
+        font-weight: 780;
+      }
+
+      .sector-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .sector-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .sector-chip.observed {
+        background: #dceaff;
+        color: #214f93;
+      }
+
+      .sector-chip.candidate {
+        background: #d9f0ea;
+        color: #146252;
+      }
+
+      .sector-chip.planned {
+        background: #fff1da;
+        color: #87520d;
+      }
+
+      .sector-chip.background {
+        background: #eef2f1;
+        color: #5f6d69;
       }
 
       .tess-kpis {
@@ -1497,17 +1587,32 @@
                   <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
                   <div id="map3d" aria-label="3D Sternkarte"></div>
                   <div class="map-note">
-                    <span class="legend-item"><span class="dot"></span> Gruen</span>
-                    <span class="legend-item"><span class="dot yellow"></span> Gelb</span>
-                    <span class="legend-item"><span class="dot red"></span> Rot</span>
-                    <span class="legend-item"><span class="dot violet"></span> violetter Ring = HZ</span>
+                    <span class="legend-item"><span class="dot"></span> Gruen = Kandidat</span>
+                    <span class="legend-item"><span class="dot yellow"></span> Gelb = in Pruefung</span>
+                    <span class="legend-item"><span class="dot red"></span> Rot = FP/Rejected</span>
+                    <span class="legend-item"><span class="dot violet"></span> Violett-Ring = HZ-Fokus</span>
+                    <span class="legend-item">Weisser Ring = ausgewaehlt</span>
                     <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
                   </div>
                 </div>
                 <div class="map-side">
                   <div class="notice">
-                    Lokaler Hinweis: echte RA/Dec stehen in dieser Datenquelle nicht zentral bereit.
-                    Die Karte nutzt deshalb stabile Projektpositionen aus TIC-ID, Entfernung und SNR.
+                    Vereinfachte Projekt-Planungsansicht. Zeigt Kandidatenstatus und Recheck-Relevanz - keine exakte Himmelskarte.
+                  </div>
+                  <div class="map-status">
+                    <strong id="mapSelectedTic">-</strong>
+                    <span>Ausgewaehlter Kandidat (weisser Ring/Punkt)</span>
+                  </div>
+                  <div class="map-status">
+                    <strong id="mapObservedSectors">-</strong>
+                    <span>Bisher beobachtete Sektoren</span>
+                  </div>
+                  <div class="map-status">
+                    <strong id="mapNextRecheck">-</strong>
+                    <span>Naechste Beobachtung / Recheck</span>
+                  </div>
+                  <div class="notice mini" id="mapCoverageStatus">
+                    Auswahl zeigt, ob der Kandidat im geplanten TESS-Bereich liegt.
                   </div>
                   <div class="map-stat">
                     <strong id="visibleCount">0</strong>
@@ -1527,7 +1632,7 @@
                 <div class="tess-compare-header">
                   <div>
                     <h3>3D TESS-Sektorenkarte</h3>
-                    <p>Vergleich: aktueller Kandidat vs. bekannte TESS-Sektoren.</p>
+                    <p>Vereinfachte TESS-Planungsansicht. Zeigt, welche Sektoren für Kandidaten-Rechecks relevant sind – keine exakte Himmelskarte.</p>
                   </div>
                   <div class="map-header-group">
                     <button class="small-button" type="button" data-tess-map-mode="2d">
@@ -1545,9 +1650,10 @@
                     <canvas id="tessSector2d" aria-label="2D TESS-Sektorenkarte"></canvas>
                     <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
                     <div class="tess-sector-note">
-                      <span class="legend-item"><span class="dot"></span> Kandidatensektor</span>
-                      <span class="legend-item"><span class="dot blue"></span> Year 8 (S97-107)</span>
-                      <span class="legend-item"><span class="dot yellow"></span> aktuell/geplant</span>
+                      <span class="legend-item"><span class="dot"></span> Gruen = Kandidatensektor</span>
+                      <span class="legend-item"><span class="dot blue"></span> Blau = beobachtet</span>
+                      <span class="legend-item"><span class="dot yellow"></span> Gelb = aktuell/geplant</span>
+                      <span class="legend-item"><span class="dot gray"></span> Grau = Hintergrund</span>
                     </div>
                   </div>
                   <div class="tess-compare-side">
@@ -1571,8 +1677,24 @@
                       <strong id="tessMatchCoverage">-</strong>
                       <span>Kandidaten mit Sektorhistorie</span>
                     </div>
-                    <div class="notice mini">
-                      Geometrie ist eine robuste Missionsansicht (nicht exakte Himmelsprojektion), um Kandidaten-Sektoren schnell mit der TESS-Planung zu matchen.
+                    <div class="coverage-timeline">
+                      <h4>TESS Coverage Timeline</h4>
+                      <div class="timeline-row">
+                        <span class="timeline-label">Bisher beobachtet</span>
+                        <div class="sector-chip-row" id="tessTimelineObserved"></div>
+                      </div>
+                      <div class="timeline-row">
+                        <span class="timeline-label">Geplant</span>
+                        <div class="sector-chip-row" id="tessTimelinePlanned"></div>
+                      </div>
+                      <div class="timeline-row">
+                        <span class="timeline-label">Naechste Beobachtung</span>
+                        <strong class="timeline-value" id="tessTimelineNext">-</strong>
+                      </div>
+                      <div class="timeline-row">
+                        <span class="timeline-label">Status</span>
+                        <strong class="timeline-value" id="tessTimelineStatus">-</strong>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1849,7 +1971,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-h";
+      const DASHBOARD_UI_VERSION = "2026-05-31-i";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -2177,6 +2299,10 @@
         mapCanvas: document.getElementById("starMap2d"),
         mapFrame: document.getElementById("mapFrame"),
         map3d: document.getElementById("map3d"),
+        mapSelectedTic: document.getElementById("mapSelectedTic"),
+        mapObservedSectors: document.getElementById("mapObservedSectors"),
+        mapNextRecheck: document.getElementById("mapNextRecheck"),
+        mapCoverageStatus: document.getElementById("mapCoverageStatus"),
         tessSectorCanvas: document.getElementById("tessSector2d"),
         tessSectorFrame: document.getElementById("tessSectorFrame"),
         tessSector3d: document.getElementById("tessSector3d"),
@@ -2185,6 +2311,10 @@
         tessMatchYear8Overlap: document.getElementById("tessMatchYear8Overlap"),
         tessMatchCurrent: document.getElementById("tessMatchCurrent"),
         tessMatchCoverage: document.getElementById("tessMatchCoverage"),
+        tessTimelineObserved: document.getElementById("tessTimelineObserved"),
+        tessTimelinePlanned: document.getElementById("tessTimelinePlanned"),
+        tessTimelineNext: document.getElementById("tessTimelineNext"),
+        tessTimelineStatus: document.getElementById("tessTimelineStatus"),
         toast: document.getElementById("toast"),
         tessCurrentSector: document.getElementById("tessCurrentSector"),
         tessCurrentWindow: document.getElementById("tessCurrentWindow"),
@@ -2324,6 +2454,20 @@
         return `${shown.join(", ")}${suffix}`;
       }
 
+      function sectorPhase(sector) {
+        const safe = Math.max(1, Math.round(Number(sector) || 1));
+        return ((safe - 1) % 13) + 1;
+      }
+
+      function formatMonthYear(value) {
+        const date = parseIsoDate(value);
+        if (!date || Number.isNaN(date.getTime())) return "-";
+        return new Intl.DateTimeFormat("de-DE", {
+          month: "short",
+          year: "numeric"
+        }).format(date);
+      }
+
       function selectedCandidateSectorInfo() {
         const candidate = state.selected || null;
         const sectors = normalizeSectorList(candidate && candidate.observedSectors);
@@ -2331,6 +2475,60 @@
           candidate,
           sectors,
           sectorSet: new Set(sectors)
+        };
+      }
+
+      function buildCandidateCoverageModel(scheduleState) {
+        const info = selectedCandidateSectorInfo();
+        const candidate = info.candidate;
+        const observed = info.sectors;
+        const observedSet = new Set(observed);
+        const phaseSet = new Set(observed.map((sector) => sectorPhase(sector)));
+        const activeSchedule = scheduleState.schedule.filter((item) => item.phase !== "Abgeschlossen");
+        let planned = activeSchedule.filter((item) => {
+          if (observedSet.has(item.sector)) return true;
+          if (phaseSet.has(sectorPhase(item.sector))) return true;
+          return false;
+        });
+
+        if (!planned.length && !observed.length) {
+          planned = activeSchedule.slice(0, 2);
+        }
+
+        const nextItem = planned[0] || null;
+        const overlapYear8 = observed.filter((sector) => tessYear8SectorSet.has(sector));
+        const inPlannedArea = planned.length > 0 && observed.length > 0;
+
+        let nextObservationText = "Kein passender Year-8-Sektor geplant.";
+        if (nextItem) {
+          if (nextItem.phase === "Laufend") {
+            nextObservationText = `S${nextItem.sector} laeuft jetzt (${formatDateRange(nextItem.start, nextItem.end)}).`;
+          } else {
+            const startsIn = Math.max(0, daysDiff(scheduleState.now, nextItem.startDate));
+            nextObservationText = `S${nextItem.sector} in ${startsIn} Tagen (${formatDate(nextItem.start)}).`;
+          }
+        }
+
+        let statusText = "Kein Kandidat ausgewaehlt.";
+        if (candidate) {
+          if (!observed.length) {
+            statusText = "Noch keine Sektorhistorie hinterlegt. Recheck nach naechstem Sektor-Update.";
+          } else if (inPlannedArea) {
+            statusText = "Recheck moeglich, sobald neue TESS-Daten verfuegbar sind.";
+          } else {
+            statusText = "Aktuell kein direkter Year-8-Match. Kandidat weiter monitoren.";
+          }
+        }
+
+        return {
+          candidate,
+          observed,
+          overlapYear8,
+          planned,
+          nextItem,
+          inPlannedArea,
+          nextObservationText,
+          statusText
         };
       }
 
@@ -2428,7 +2626,8 @@
             draw2dMap();
             resize3d();
             const tessState = buildTessScheduleState();
-            drawTessSector2d(tessState.current, tessState.next);
+            drawTessSector2d(tessState);
+            updateTessSector3dData(tessState);
             resizeTessSector3d();
           });
         }
@@ -2974,47 +3173,87 @@
           .join("");
       }
 
-      function tessSectorVisual(sector, selectedSectorSet, currentSector, nextSector) {
+      function tessSectorVisual(sector, observedSet, plannedSet, currentSector, nextSector) {
         if (sector === currentSector) return "current";
         if (sector === nextSector) return "next";
-        const selected = selectedSectorSet.has(sector);
-        const year8 = tessYear8SectorSet.has(sector);
-        if (selected && year8) return "candidateYear8";
-        if (selected) return "candidate";
-        if (year8) return "year8";
+        const observed = observedSet.has(sector);
+        const planned = plannedSet.has(sector);
+        if (observed && planned) return "candidate";
+        if (planned) return "planned";
+        if (observed) return "observed";
         return "base";
       }
 
       function tessSectorColor(visualType) {
         if (visualType === "current") return "#f2c968";
         if (visualType === "next") return "#e39f3a";
-        if (visualType === "candidateYear8") return "#8f7af2";
         if (visualType === "candidate") return "#2ca98c";
-        if (visualType === "year8") return "#5c8cf6";
+        if (visualType === "planned") return "#efba4a";
+        if (visualType === "observed") return "#5c8cf6";
         return "#5c6872";
       }
 
-      function renderTessSectorSummary(current, next) {
-        const info = selectedCandidateSectorInfo();
-        const candidate = info.candidate;
-        const sectors = info.sectors;
-        const overlap = sectors.filter((sector) => tessYear8SectorSet.has(sector));
+      function renderTessSectorSummary(scheduleState) {
         const withSectorHistory = (data.candidates || []).filter((item) => normalizeSectorList(item.observedSectors).length > 0).length;
+        const coverage = buildCandidateCoverageModel(scheduleState);
+        const candidate = coverage.candidate;
         els.tessMatchSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
-        els.tessMatchSectorList.textContent = sectors.length ? formatSectorList(sectors, 12) : "keine Sektordaten";
-        els.tessMatchYear8Overlap.textContent = overlap.length ? `${overlap.length} (${formatSectorList(overlap, 8)})` : "0";
+        els.tessMatchSectorList.textContent = coverage.observed.length ? formatSectorList(coverage.observed, 12) : "keine Sektordaten";
+        els.tessMatchYear8Overlap.textContent = coverage.overlapYear8.length
+          ? `${coverage.overlapYear8.length} (${formatSectorList(coverage.overlapYear8, 8)})`
+          : "0";
         els.tessMatchCoverage.textContent = `${withSectorHistory}/${formatNumber((data.candidates || []).length)}`;
-        if (current) {
-          els.tessMatchCurrent.textContent = `S${current.sector} (laufend)`;
-        } else if (next) {
-          els.tessMatchCurrent.textContent = `S${next.sector} (naechster)`;
+        if (scheduleState.current) {
+          els.tessMatchCurrent.textContent = `S${scheduleState.current.sector} (laufend)`;
+        } else if (scheduleState.next) {
+          els.tessMatchCurrent.textContent = `S${scheduleState.next.sector} (naechster)`;
         } else {
           els.tessMatchCurrent.textContent = "-";
         }
+
+        const observedHtml = coverage.observed.length
+          ? coverage.observed.map((sector) => `<span class="sector-chip observed">S${sector} ✓</span>`).join("")
+          : '<span class="sector-chip background">keine Daten</span>';
+        els.tessTimelineObserved.innerHTML = observedHtml;
+
+        const plannedHtml = coverage.planned.length
+          ? coverage.planned.slice(0, 6).map((item) => {
+            const cls = coverage.observed.includes(item.sector) ? "candidate" : "planned";
+            return `<span class="sector-chip ${cls}">S${item.sector} - ${formatMonthYear(item.start)}</span>`;
+          }).join("")
+          : '<span class="sector-chip background">kein direkter Year-8 Match</span>';
+        els.tessTimelinePlanned.innerHTML = plannedHtml;
+        els.tessTimelineNext.textContent = coverage.nextObservationText;
+        els.tessTimelineStatus.textContent = coverage.statusText;
+
+        renderMapCoverageSummary(coverage);
       }
 
-      function drawTessSector2d(current, next) {
+      function renderMapCoverageSummary(coverage) {
+        const candidate = coverage.candidate;
+        els.mapSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
+        els.mapObservedSectors.textContent = coverage.observed.length
+          ? formatSectorList(coverage.observed, 10)
+          : "keine Sektordaten";
+        els.mapNextRecheck.textContent = coverage.nextItem
+          ? coverage.nextObservationText
+          : (candidate && candidate.nextRecheck ? `DB-Recheck: ${candidate.nextRecheck}` : "noch offen");
+
+        if (!candidate) {
+          els.mapCoverageStatus.textContent = "Kein Kandidat ausgewaehlt.";
+        } else if (!coverage.observed.length) {
+          els.mapCoverageStatus.textContent = "Noch keine Sektorhistorie fuer diesen Kandidaten. Recheck folgt mit neuen Inventardaten.";
+        } else if (coverage.inPlannedArea) {
+          els.mapCoverageStatus.textContent = "Kandidat liegt im geplanten TESS-Bereich. Neue Daten koennen Recheck ausloesen.";
+        } else {
+          els.mapCoverageStatus.textContent = "Kandidat liegt aktuell ausserhalb des direkten Year-8-Fokus. Monitoring bleibt aktiv.";
+        }
+      }
+
+      function drawTessSector2d(scheduleState) {
         if (!els.tessSectorCanvas) return;
+        const current = scheduleState.current || null;
+        const next = scheduleState.next || null;
         const { ctx, width, height } = setupCanvas(els.tessSectorCanvas);
         tessPoints2d = [];
         ctx.clearRect(0, 0, width, height);
@@ -3033,21 +3272,27 @@
           ctx.stroke();
         }
 
-        const info = selectedCandidateSectorInfo();
+        const coverage = buildCandidateCoverageModel(scheduleState);
         const currentSector = current ? current.sector : null;
         const nextSector = next ? next.sector : null;
+        const observedSet = new Set(coverage.observed);
+        const plannedSet = new Set((coverage.planned || []).map((item) => item.sector));
 
         tessSectorLayout.forEach((entry) => {
-          const visual = tessSectorVisual(entry.sector, info.sectorSet, currentSector, nextSector);
+          const visual = tessSectorVisual(entry.sector, observedSet, plannedSet, currentSector, nextSector);
           const x = width / 2 + entry.x * width * 0.22;
           const y = height / 2 + (entry.z * 0.82 + entry.y * 0.18) * height * 0.28;
-          const radius = visual === "current" ? 5.2 : visual === "candidate" || visual === "candidateYear8" ? 4.3 : 3.3;
+          const radius =
+            visual === "current" ? 5.2 :
+            visual === "candidate" ? 4.7 :
+            visual === "planned" ? 4.1 :
+            visual === "observed" ? 3.9 : 3.3;
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, Math.PI * 2);
           ctx.fillStyle = tessSectorColor(visual);
           ctx.globalAlpha = visual === "base" ? 0.6 : 0.95;
           ctx.fill();
-          if (visual === "current" || visual === "candidateYear8") {
+          if (visual === "current" || visual === "candidate") {
             ctx.beginPath();
             ctx.arc(x, y, radius + 2.2, 0, Math.PI * 2);
             ctx.strokeStyle = "rgba(255,255,255,0.9)";
@@ -3060,7 +3305,7 @@
 
         ctx.fillStyle = "rgba(255,255,255,0.74)";
         ctx.font = "700 12px Inter, system-ui, sans-serif";
-        ctx.fillText("S1-S107: Year-8 blau, Kandidat gruen, laufend gelb", 12, 22);
+        ctx.fillText("Gruen = Kandidatensektor · Blau = beobachtet · Gelb = aktuell/geplant", 12, 22);
       }
 
       function initTessSector3d() {
@@ -3105,18 +3350,22 @@
           rotation: 0
         };
         const tessState = buildTessScheduleState();
-        updateTessSector3dData(tessState.current, tessState.next);
+        updateTessSector3dData(tessState);
         resizeTessSector3d();
         animateTessSector3d();
       }
 
-      function updateTessSector3dData(current, next) {
+      function updateTessSector3dData(scheduleState) {
         if (!tessThree.ready) return;
-        const info = selectedCandidateSectorInfo();
+        const coverage = buildCandidateCoverageModel(scheduleState);
+        const current = scheduleState.current || null;
+        const next = scheduleState.next || null;
         const currentSector = current ? current.sector : null;
         const nextSector = next ? next.sector : null;
+        const observedSet = new Set(coverage.observed);
+        const plannedSet = new Set((coverage.planned || []).map((item) => item.sector));
         tessSectorLayout.forEach((entry) => {
-          const visual = tessSectorVisual(entry.sector, info.sectorSet, currentSector, nextSector);
+          const visual = tessSectorVisual(entry.sector, observedSet, plannedSet, currentSector, nextSector);
           const color = tessSectorColor(visual);
           const mesh = tessThree.meshes.get(entry.sector);
           if (!mesh) return;
@@ -3125,9 +3374,9 @@
           mesh.material.transparent = true;
           const scale =
             visual === "current" ? 1.55 :
-            visual === "candidateYear8" ? 1.42 :
-            visual === "candidate" ? 1.33 :
-            visual === "year8" ? 1.25 : 1;
+            visual === "candidate" ? 1.42 :
+            visual === "planned" ? 1.3 :
+            visual === "observed" ? 1.23 : 1;
           mesh.scale.set(scale, scale, scale);
         });
       }
@@ -3210,9 +3459,10 @@
         }
 
         els.tessUpdatedAt.textContent = `Quellenstand: ${tessMission.sourceCheckedAt} (HEASARC + MIT TESS Year 8).`;
-        renderTessSectorSummary(current, next);
-        drawTessSector2d(current, next);
-        updateTessSector3dData(current, next);
+        const scheduleState = { now, schedule, current, upcoming, completed, next };
+        renderTessSectorSummary(scheduleState);
+        drawTessSector2d(scheduleState);
+        updateTessSector3dData(scheduleState);
       }
 
       function selectCandidate(candidate, source = "table") {
@@ -3345,6 +3595,9 @@
             ctx.strokeStyle = "#ffffff";
             ctx.lineWidth = 2;
             ctx.stroke();
+            ctx.fillStyle = "rgba(255,255,255,0.94)";
+            ctx.font = "700 12px Inter, system-ui, sans-serif";
+            ctx.fillText(`TIC ${candidate.tic}`, Math.min(width - 150, x + size + 10), Math.max(16, y - size - 8));
           }
           ctx.globalAlpha = 1;
           points2d.push({ x, y, radius: size + 8, candidate });
@@ -3710,8 +3963,8 @@
             resizeTessSector3d();
           } else {
             const tessState = buildTessScheduleState();
-            drawTessSector2d(tessState.current, tessState.next);
-            updateTessSector3dData(tessState.current, tessState.next);
+            drawTessSector2d(tessState);
+            updateTessSector3dData(tessState);
           }
         });
       });
@@ -3890,8 +4143,8 @@
           draw2dMap();
           resize3d();
           const tessState = buildTessScheduleState();
-          drawTessSector2d(tessState.current, tessState.next);
-          updateTessSector3dData(tessState.current, tessState.next);
+          drawTessSector2d(tessState);
+          updateTessSector3dData(tessState);
           resizeTessSector3d();
         });
       });
