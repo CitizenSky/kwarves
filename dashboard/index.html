@@ -361,6 +361,14 @@
         overflow: hidden;
       }
 
+      .panel.is-collapsed > :not(.panel-header) {
+        display: none !important;
+      }
+
+      .panel.is-collapsed .panel-header {
+        border-bottom: 0;
+      }
+
       .panel-header {
         display: flex;
         align-items: center;
@@ -380,6 +388,14 @@
         flex-wrap: wrap;
         gap: 8px;
         justify-content: flex-end;
+      }
+
+      .panel-collapse-toggle svg {
+        transition: transform 150ms ease;
+      }
+
+      .panel-collapse-toggle[aria-expanded="false"] svg {
+        transform: rotate(180deg);
       }
 
       .map-header-actions {
@@ -1677,6 +1693,7 @@
       const ADMIN_PASSWORD = "starfield";
       const ADMIN_LOGIN_KEY = "kwarves_admin_logged_in_v1";
       const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
+      const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v1";
 
       const colors = {
         green: "#24a085",
@@ -2035,6 +2052,86 @@
       function daysDiff(fromDate, toDate) {
         const diff = toDate.getTime() - fromDate.getTime();
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
+
+      function loadCollapsedPanelState() {
+        try {
+          const raw = localStorage.getItem(PANEL_COLLAPSE_KEY);
+          if (!raw) return {};
+          const parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (_) {
+          return {};
+        }
+      }
+
+      function saveCollapsedPanelState(stateMap) {
+        try {
+          localStorage.setItem(PANEL_COLLAPSE_KEY, JSON.stringify(stateMap || {}));
+        } catch (_) {}
+      }
+
+      function collapseButtonState(button, collapsed) {
+        if (!button) return;
+        button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        button.title = collapsed ? "Bereich aufklappen" : "Bereich zuklappen";
+      }
+
+      function setPanelCollapsed(panelId, collapsed, store = true) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        panel.classList.toggle("is-collapsed", Boolean(collapsed));
+        const button = document.querySelector(`.panel-collapse-toggle[data-collapse-target="${panelId}"]`);
+        collapseButtonState(button, Boolean(collapsed));
+        if (store) {
+          const panelState = loadCollapsedPanelState();
+          panelState[panelId] = Boolean(collapsed);
+          saveCollapsedPanelState(panelState);
+        }
+        if (!collapsed && panelId === "mapPanel") {
+          window.requestAnimationFrame(() => {
+            draw2dMap();
+            resize3d();
+          });
+        }
+      }
+
+      function initPanelCollapseControls() {
+        const persisted = loadCollapsedPanelState();
+        document.querySelectorAll(".panel[id]").forEach((panel) => {
+          const panelId = panel.id;
+          const header = panel.querySelector(".panel-header");
+          if (!header) return;
+
+          let actions = header.querySelector(".map-header-actions") || header.querySelector(".panel-actions");
+          if (!actions) {
+            actions = document.createElement("div");
+            actions.className = "panel-actions";
+            const moved = Array.from(header.children).slice(1);
+            moved.forEach((item) => actions.appendChild(item));
+            header.appendChild(actions);
+          }
+
+          let button = actions.querySelector(`.panel-collapse-toggle[data-collapse-target="${panelId}"]`);
+          if (!button) {
+            button = document.createElement("button");
+            button.className = "icon-button panel-collapse-toggle";
+            button.type = "button";
+            button.setAttribute("data-collapse-target", panelId);
+            button.setAttribute("aria-controls", panelId);
+            button.innerHTML = '<i data-lucide="chevron-up"></i>';
+            actions.appendChild(button);
+          }
+
+          const isCollapsed = Boolean(persisted[panelId]);
+          panel.classList.toggle("is-collapsed", isCollapsed);
+          collapseButtonState(button, isCollapsed);
+
+          button.addEventListener("click", () => {
+            const nowCollapsed = !panel.classList.contains("is-collapsed");
+            setPanelCollapsed(panelId, nowCollapsed, true);
+          });
+        });
       }
 
       function emptyAnalyticsStore() {
@@ -2851,6 +2948,9 @@
       function scrollToPanel(panelId) {
         const panel = document.getElementById(panelId);
         if (!panel) return;
+        if (panel.classList.contains("is-collapsed")) {
+          setPanelCollapsed(panelId, false, true);
+        }
         panel.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
@@ -3058,6 +3158,7 @@
         finalizeAnalyticsSession();
       });
 
+      initPanelCollapseControls();
       updateDate();
       startAnalyticsTracking();
       state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
