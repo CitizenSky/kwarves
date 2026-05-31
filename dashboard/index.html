@@ -687,6 +687,65 @@
         font-size: 12px;
       }
 
+      .tess-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .tess-kpi {
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .tess-kpi span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tess-kpi strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 20px;
+      }
+
+      .tess-layout {
+        display: grid;
+        gap: 12px;
+      }
+
+      .tess-sources {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tess-source {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fbfa;
+        color: #20433d;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .tess-table th,
+      .tess-table td {
+        white-space: nowrap;
+      }
+
+      .tess-table .wrap-cell {
+        white-space: normal;
+      }
+
       .docs-flow {
         display: flex;
         flex-wrap: wrap;
@@ -1020,7 +1079,8 @@
         .kpis,
         .tree-children,
         .details-grid,
-        .docs-grid {
+        .docs-grid,
+        .tess-kpis {
           grid-template-columns: minmax(0, 1fr);
         }
 
@@ -1069,6 +1129,10 @@
           <button type="button" title="Sternkarte" data-nav-target="mapPanel">
             <i data-lucide="orbit"></i>
             <span>Sternkarte</span>
+          </button>
+          <button type="button" title="TESS Mission" data-nav-target="tessPanel">
+            <i data-lucide="sun-medium"></i>
+            <span>TESS Mission</span>
           </button>
           <button type="button" title="Lichtkurven" data-nav-target="curvesPanel">
             <i data-lucide="activity"></i>
@@ -1251,6 +1315,63 @@
             </div>
           </section>
 
+          <section class="panel" id="tessPanel">
+            <div class="panel-header">
+              <div>
+                <h2>TESS Mission und Sektoren</h2>
+                <p class="panel-subtitle">Live-Orientierung: aktueller Sektor, naechste Planung und Anordnung der Sektoren.</p>
+              </div>
+              <button class="icon-button" type="button" title="TESS-Bereich aktualisieren" id="refreshTess">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+            <div class="panel-body tess-layout">
+              <div class="tess-kpis">
+                <article class="tess-kpi">
+                  <span>Aktueller Sektor</span>
+                  <strong id="tessCurrentSector">-</strong>
+                </article>
+                <article class="tess-kpi">
+                  <span>Zeitfenster</span>
+                  <strong id="tessCurrentWindow">-</strong>
+                </article>
+                <article class="tess-kpi">
+                  <span>Nummerierte Sektoren</span>
+                  <strong id="tessTotalNumbered">-</strong>
+                </article>
+                <article class="tess-kpi">
+                  <span>Prime Mission</span>
+                  <strong id="tessPrimaryCount">-</strong>
+                </article>
+              </div>
+              <div class="notice">
+                <strong>Status heute:</strong> <span id="tessCurrentStatus">-</span><br />
+                <strong>Year 8 Struktur:</strong> <span id="tessYear8Info">-</span><br />
+                <strong>Geometrie:</strong> <span id="tessGeometryInfo">-</span>
+              </div>
+              <div class="table-wrap">
+                <table class="tess-table" aria-label="TESS Sektorplanung">
+                  <thead>
+                    <tr>
+                      <th>Sektor</th>
+                      <th>Start</th>
+                      <th>Ende</th>
+                      <th>Status</th>
+                      <th>Anordnung</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tessScheduleRows"></tbody>
+                </table>
+              </div>
+              <div class="tess-sources">
+                <a class="tess-source" href="https://heasarc.gsfc.nasa.gov/docs/tess/sector.html" target="_blank" rel="noopener noreferrer">HEASARC Sektorzeiten</a>
+                <a class="tess-source" href="https://tess.mit.edu/tess-year-8-observations/" target="_blank" rel="noopener noreferrer">MIT Year 8 Planung</a>
+                <a class="tess-source" href="https://tess.mit.edu/mission-overview/" target="_blank" rel="noopener noreferrer">Mission Overview</a>
+              </div>
+              <div class="mini" id="tessUpdatedAt">Quellenstand: -</div>
+            </div>
+          </section>
+
           <section class="panel" id="curvesPanel">
             <div class="panel-header">
               <div>
@@ -1356,7 +1477,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-a";
+      const DASHBOARD_UI_VERSION = "2026-05-31-b";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -1375,6 +1496,30 @@
         violet: "#806cf0",
         gray: "#a9b4b0",
         sun: "#f4c96d"
+      };
+
+      const tessMission = {
+        sourceCheckedAt: "2026-05-31",
+        sectorDurationDays: 27.4,
+        totalNumberedSectorsPlanned: 107,
+        primaryMissionSectors: 26,
+        year8Description:
+          "Year 8 umfasst S97-S107; S97/98 sind 4-Orbit-Sektoren, danach folgen 9 gedrehte Ueberlappungssektoren.",
+        geometryDescription:
+          "Sektor-Footprint ca. 24x96 Grad; 4 Kameras in Streifenanordnung, Sektorlaenge typischerweise 27 Tage.",
+        year8Sectors: [
+          { sector: 97, start: "2025-09-15", end: "2025-11-09", arrangement: "Suedpol (4 Orbits)" },
+          { sector: 98, start: "2025-11-09", end: "2026-01-05", arrangement: "Suedpol (4 Orbits)" },
+          { sector: 99, start: "2026-01-05", end: "2026-02-02", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 100, start: "2026-02-02", end: "2026-03-01", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 101, start: "2026-03-01", end: "2026-03-27", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 102, start: "2026-03-27", end: "2026-04-21", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 103, start: "2026-04-21", end: "2026-05-17", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 104, start: "2026-05-17", end: "2026-06-13", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 105, start: "2026-06-13", end: "2026-07-11", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 106, start: "2026-07-11", end: "2026-08-09", arrangement: "Suedpol, 40 Grad Roll/Shift" },
+          { sector: 107, start: "2026-08-09", end: "2026-09-07", arrangement: "Suedpol, 40 Grad Roll/Shift" }
+        ]
       };
 
       const projectFlowSteps = [
@@ -1622,7 +1767,16 @@
         mapCanvas: document.getElementById("starMap2d"),
         mapFrame: document.getElementById("mapFrame"),
         map3d: document.getElementById("map3d"),
-        toast: document.getElementById("toast")
+        toast: document.getElementById("toast"),
+        tessCurrentSector: document.getElementById("tessCurrentSector"),
+        tessCurrentWindow: document.getElementById("tessCurrentWindow"),
+        tessTotalNumbered: document.getElementById("tessTotalNumbered"),
+        tessPrimaryCount: document.getElementById("tessPrimaryCount"),
+        tessCurrentStatus: document.getElementById("tessCurrentStatus"),
+        tessYear8Info: document.getElementById("tessYear8Info"),
+        tessGeometryInfo: document.getElementById("tessGeometryInfo"),
+        tessScheduleRows: document.getElementById("tessScheduleRows"),
+        tessUpdatedAt: document.getElementById("tessUpdatedAt")
       };
 
       let toastTimer;
@@ -1646,6 +1800,31 @@
           minimumFractionDigits: digits,
           maximumFractionDigits: digits
         });
+      }
+
+      function parseIsoDate(value, endOfDay = false) {
+        if (!value) return null;
+        const stamp = endOfDay ? "23:59:59Z" : "00:00:00Z";
+        return new Date(`${value}T${stamp}`);
+      }
+
+      function formatDate(value) {
+        const date = parseIsoDate(value);
+        if (!date || Number.isNaN(date.getTime())) return "-";
+        return new Intl.DateTimeFormat("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        }).format(date);
+      }
+
+      function formatDateRange(start, end) {
+        return `${formatDate(start)} - ${formatDate(end)}`;
+      }
+
+      function daysDiff(fromDate, toDate) {
+        const diff = toDate.getTime() - fromDate.getTime();
+        return Math.ceil(diff / (1000 * 60 * 60 * 24));
       }
 
       function showToast(message) {
@@ -1764,6 +1943,75 @@
             </tr>
           `)
           .join("");
+      }
+
+      function renderTess() {
+        const now = new Date();
+        const schedule = tessMission.year8Sectors.map((item) => {
+          const startDate = parseIsoDate(item.start);
+          const endDate = parseIsoDate(item.end, true);
+          let phase = "Abgeschlossen";
+          if (now < startDate) phase = "Geplant";
+          else if (now <= endDate) phase = "Laufend";
+          return { ...item, startDate, endDate, phase };
+        });
+
+        const current = schedule.find((item) => item.phase === "Laufend") || null;
+        const upcoming = schedule.filter((item) => item.phase === "Geplant");
+        const completed = schedule.filter((item) => item.phase === "Abgeschlossen");
+        const next = upcoming[0] || null;
+
+        let statusText = "Kein laufender Sektor im Year-8-Ausschnitt.";
+        if (current) {
+          const daysLeft = Math.max(0, daysDiff(now, current.endDate));
+          statusText = `S${current.sector} laeuft aktuell. Restdauer ca. ${daysLeft} Tage bis ${formatDate(current.end)}.`;
+        } else if (next) {
+          const startsIn = Math.max(0, daysDiff(now, next.startDate));
+          statusText = `Naechster Sektor ist S${next.sector} und startet in ca. ${startsIn} Tagen (${formatDate(next.start)}).`;
+        }
+
+        els.tessCurrentSector.textContent = current ? `S${current.sector}` : (next ? `S${next.sector} (naechster)` : "-");
+        els.tessCurrentWindow.textContent = current ? formatDateRange(current.start, current.end) : (next ? formatDateRange(next.start, next.end) : "-");
+        els.tessTotalNumbered.textContent = `1-${tessMission.totalNumberedSectorsPlanned}`;
+        els.tessPrimaryCount.textContent = `${tessMission.primaryMissionSectors} (13+13)`;
+        els.tessCurrentStatus.textContent = statusText;
+        els.tessYear8Info.textContent = tessMission.year8Description;
+        els.tessGeometryInfo.textContent = tessMission.geometryDescription;
+
+        const rows = [...completed.slice(-2), ...upcoming.slice(0, 4)];
+        if (current) {
+          const currentIndex = schedule.findIndex((item) => item.sector === current.sector);
+          const before = schedule.slice(Math.max(0, currentIndex - 1), currentIndex);
+          const after = schedule.slice(currentIndex + 1, currentIndex + 4);
+          const withCurrent = [...before, current, ...after];
+          els.tessScheduleRows.innerHTML = withCurrent.map((item) => {
+            const statusClass = item.phase === "Laufend" ? "green" : item.phase === "Geplant" ? "yellow" : "gray";
+            return `
+              <tr>
+                <td><strong>S${item.sector}</strong></td>
+                <td>${formatDate(item.start)}</td>
+                <td>${formatDate(item.end)}</td>
+                <td><span class="pill ${statusClass}">${item.phase}</span></td>
+                <td class="wrap-cell">${item.arrangement}</td>
+              </tr>
+            `;
+          }).join("");
+        } else {
+          els.tessScheduleRows.innerHTML = rows.map((item) => {
+            const statusClass = item.phase === "Geplant" ? "yellow" : "gray";
+            return `
+              <tr>
+                <td><strong>S${item.sector}</strong></td>
+                <td>${formatDate(item.start)}</td>
+                <td>${formatDate(item.end)}</td>
+                <td><span class="pill ${statusClass}">${item.phase}</span></td>
+                <td class="wrap-cell">${item.arrangement}</td>
+              </tr>
+            `;
+          }).join("");
+        }
+
+        els.tessUpdatedAt.textContent = `Quellenstand: ${tessMission.sourceCheckedAt} (HEASARC + MIT TESS Year 8).`;
       }
 
       function selectCandidate(candidate, source = "table") {
@@ -2182,6 +2430,7 @@
         renderKpis();
         renderTree();
         renderDocs();
+        renderTess();
         renderSelected();
         renderTable();
         renderCurves(false);
@@ -2346,8 +2595,13 @@
         showToast("Projektlogik aktualisiert.");
       });
 
+      document.getElementById("refreshTess").addEventListener("click", () => {
+        renderTess();
+        showToast("TESS-Sektorstatus aktualisiert.");
+      });
+
       document.getElementById("showHints").addEventListener("click", () => {
-        showToast(`Tipps: Links zum Bereich springen, Karte klicken, Kurven-Icon fuer Lichtkurve, HZ-Fokus fuer violette Kandidaten. UI ${DASHBOARD_UI_VERSION}`);
+        showToast(`Tipps: Links nav nutzen, Karte klicken, TESS-Panel fuer Sektorplanung, HZ-Fokus fuer violette Kandidaten. UI ${DASHBOARD_UI_VERSION}`);
       });
 
       window.addEventListener("resize", () => {
@@ -2361,7 +2615,10 @@
       state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
       state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
       renderAll();
-      setInterval(updateDate, 30000);
+      setInterval(() => {
+        updateDate();
+        renderTess();
+      }, 30000);
     </script>
   </body>
 </html>
