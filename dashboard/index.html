@@ -382,6 +382,19 @@
         justify-content: flex-end;
       }
 
+      .map-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .map-header-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
       .panel-body {
         padding: 16px 18px 18px;
       }
@@ -1186,13 +1199,6 @@
             Lichtkurven-Vetting und interaktiver Sternkarte.
           </p>
             </div>
-            <div class="panel-actions">
-              <button class="small-button active" type="button" data-color-filter="all">Alle</button>
-              <button class="small-button" type="button" data-color-filter="green">Gruen</button>
-              <button class="small-button" type="button" data-color-filter="yellow">Gelb</button>
-              <button class="small-button" type="button" data-color-filter="red">Rot</button>
-              <button class="small-button" type="button" data-color-filter="violet">Violett</button>
-            </div>
           </div>
 
           <div class="kpis" aria-label="Kennzahlen">
@@ -1257,15 +1263,24 @@
                 <h2>2D/3D Sternkarte</h2>
                 <p class="panel-subtitle">Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung/SNR. Klicken waehlt Kandidaten aus.</p>
               </div>
-              <div class="panel-actions">
-                <button class="small-button active" type="button" data-map-mode="2d">
-                  <i data-lucide="map"></i>
-                  2D
-                </button>
-                <button class="small-button" type="button" data-map-mode="3d">
-                  <i data-lucide="box"></i>
-                  3D
-                </button>
+              <div class="map-header-actions">
+                <div class="map-header-group">
+                  <button class="small-button active" type="button" data-map-mode="2d">
+                    <i data-lucide="map"></i>
+                    2D
+                  </button>
+                  <button class="small-button" type="button" data-map-mode="3d">
+                    <i data-lucide="box"></i>
+                    3D
+                  </button>
+                </div>
+                <div class="map-header-group">
+                  <button class="small-button active" type="button" data-color-filter="all">Alle</button>
+                  <button class="small-button" type="button" data-color-filter="green">Gruen</button>
+                  <button class="small-button" type="button" data-color-filter="yellow">Gelb</button>
+                  <button class="small-button" type="button" data-color-filter="red">Rot</button>
+                  <button class="small-button" type="button" data-color-filter="violet">Violett</button>
+                </div>
               </div>
             </div>
             <div class="panel-body">
