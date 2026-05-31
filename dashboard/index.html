@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Astro Dashboard - Farbenbaum</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <link rel="shortcut icon" href="../favicon.svg" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="dashboard-data.js?v=20260531a"></script>
@@ -91,6 +93,12 @@
         border-radius: 8px;
         background: #173b36;
         color: #6fd6ca;
+      }
+
+      .brand-logo {
+        width: 24px;
+        height: 24px;
+        display: block;
       }
 
       .brand strong {
@@ -208,9 +216,26 @@
 
       .lang-switch .small-button {
         min-height: 30px;
-        min-width: 42px;
-        padding: 0 10px;
+        min-width: 62px;
+        padding: 0 8px;
         font-size: 12px;
+      }
+
+      .lang-switch .small-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .lang-flag {
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .lang-code {
+        font-weight: 780;
+        letter-spacing: 0;
       }
 
       .button,
@@ -1511,7 +1536,9 @@
     <div class="app">
       <aside class="sidebar" aria-label="Navigation">
         <div class="brand">
-          <div class="brand-mark"><i data-lucide="git-branch"></i></div>
+          <div class="brand-mark">
+            <img class="brand-logo" src="../favicon.svg" alt="Kwarves Symbol" />
+          </div>
           <div>
             <strong>Astro Dashboard</strong>
             <span>Farbenbaum</span>
@@ -1572,9 +1599,18 @@
           </label>
           <span class="date" id="dateLabel">Heute</span>
           <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache">
-            <button class="small-button active" type="button" data-lang="de">DE</button>
-            <button class="small-button" type="button" data-lang="en">EN</button>
-            <button class="small-button" type="button" data-lang="fr">FR</button>
+            <button class="small-button active" type="button" data-lang="de" aria-label="Deutsch">
+              <span class="lang-flag" aria-hidden="true">🇩🇪</span>
+              <span class="lang-code">DE</span>
+            </button>
+            <button class="small-button" type="button" data-lang="en" aria-label="English">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span class="lang-code">EN</span>
+            </button>
+            <button class="small-button" type="button" data-lang="fr" aria-label="Francais">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span class="lang-code">FR</span>
+            </button>
           </div>
           <button class="icon-button" type="button" title="Hinweise" id="showHints">
             <i data-lucide="bell"></i>
@@ -2114,7 +2150,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-m";
+      const DASHBOARD_UI_VERSION = "2026-05-31-n";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const state = {
         colorFilter: "all",
@@ -4445,8 +4481,16 @@
         const langSwitch = document.getElementById("langSwitch");
         if (langSwitch) {
           langSwitch.setAttribute("aria-label", t("lang_switch_label"));
+          const langTitles = {
+            de: state.lang === "fr" ? "Allemand" : state.lang === "en" ? "German" : "Deutsch",
+            en: state.lang === "fr" ? "Anglais" : state.lang === "en" ? "English" : "Englisch",
+            fr: state.lang === "fr" ? "Francais" : state.lang === "en" ? "French" : "Franzoesisch"
+          };
           langSwitch.querySelectorAll("[data-lang]").forEach((button) => {
             button.classList.toggle("active", button.dataset.lang === state.lang);
+            const targetLang = button.dataset.lang || "de";
+            button.title = langTitles[targetLang] || targetLang.toUpperCase();
+            button.setAttribute("aria-label", langTitles[targetLang] || targetLang.toUpperCase());
           });
         }
 
