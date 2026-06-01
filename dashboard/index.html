@@ -3,7 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Astro Dashboard - Farbenbaum</title>
+    <title>CitizenSky – Exoplanet Candidate Dashboard</title>
+    <meta name="description" content="Independent citizen-science dashboard for screening nearby exoplanet candidates from public TESS and Gaia data, with focus on habitable-zone targets and follow-up prioritization." />
+    <link rel="canonical" href="https://citizensky.github.io/kwarves/dashboard/" />
+    <meta property="og:title" content="CitizenSky – Exoplanet Candidate Dashboard" />
+    <meta property="og:description" content="Independent citizen-science dashboard for screening nearby exoplanet candidates from public TESS and Gaia data, with focus on habitable-zone targets and follow-up prioritization." />
+    <meta property="og:url" content="https://citizensky.github.io/kwarves/dashboard/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
     <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
     <link rel="shortcut icon" href="../favicon.svg" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -334,6 +341,34 @@
         margin-bottom: 0;
         max-width: 820px;
         font-size: 15px;
+      }
+
+      .seo-intro {
+        max-width: 920px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .keyword-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: -8px;
+      }
+
+      .keyword-strip span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fbfa;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 760;
       }
 
       .kpis {
@@ -784,6 +819,7 @@
 
       .panel-body {
         padding: 16px 18px 18px;
+        min-width: 0;
       }
 
       .grid-2 {
@@ -1396,6 +1432,18 @@
         display: grid;
         gap: 12px;
         min-width: 0;
+        overflow: hidden;
+      }
+
+      .admin-layout .notice {
+        overflow: hidden;
+      }
+
+      .admin-layout a,
+      .admin-layout span,
+      .admin-layout p {
+        overflow-wrap: anywhere;
+        word-break: break-word;
       }
 
       .admin-login-card {
@@ -1480,6 +1528,7 @@
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #ffffff;
+        overflow: hidden;
       }
 
       .admin-source-card h3 {
@@ -1496,6 +1545,8 @@
 
       .admin-source-card .button {
         margin-top: 10px;
+        max-width: 100%;
+        white-space: normal;
       }
 
       .admin-table {
@@ -2268,17 +2319,33 @@
         </header>
         <section class="page">
           <div class="title-row">
-          <div>
-          <p class="eyebrow">Exoplanet Candidate Explorer</p>
-
-        <h1>Kwarves</h1>
-
-          <p class="lede">
-            Analyse echter TESS-Daten mit Farbklassifikation,
-            Lichtkurven-Vetting und interaktiver Sternkarte.
-          </p>
+            <div>
+              <p class="eyebrow">Exoplanet Candidate Explorer</p>
+              <h1>CitizenSky Exoplanet Candidate Dashboard</h1>
+              <p class="lede">
+                Analyse echter TESS-Daten mit Farbklassifikation,
+                Lichtkurven-Vetting und interaktiver Sternkarte.
+              </p>
             </div>
           </div>
+
+          <p class="seo-intro">
+            CitizenSky is an independent citizen-science dashboard for screening nearby exoplanet candidates in public TESS and Gaia data. The project focuses on K-dwarf systems, habitable-zone candidates, SPC cases, and follow-up prioritization.
+          </p>
+
+          <section class="keyword-strip" aria-label="Project keywords">
+            <span>Project keywords</span>
+            <span>TESS</span>
+            <span>Gaia DR3</span>
+            <span>TIC</span>
+            <span>exoplanet candidates</span>
+            <span>habitable zone</span>
+            <span>K-dwarfs</span>
+            <span>citizen science</span>
+            <span>BLS</span>
+            <span>TLS</span>
+            <span>follow-up priority</span>
+          </section>
 
           <section class="intro-grid" aria-label="Projektueberblick">
             <article class="intro-panel">
@@ -3089,7 +3156,7 @@
 
       const I18N = {
         de: {
-          app_title: "Astro Dashboard - Farbenbaum",
+          app_title: "CitizenSky – Exoplanet Candidate Dashboard",
           lang_switch_label: "Sprache",
           nav_tree: "Baumstruktur",
           nav_map: "Sternkarte",
@@ -3288,7 +3355,7 @@
           geometry_description: "Sektor-Footprint ca. 24x96 Grad; 4 Kameras in Streifenanordnung, Sektorlaenge typischerweise 27 Tage."
         },
         en: {
-          app_title: "Astro Dashboard - Color Tree",
+          app_title: "CitizenSky – Exoplanet Candidate Dashboard",
           lang_switch_label: "Language",
           nav_tree: "Decision Tree",
           nav_map: "Star Map",
@@ -3487,7 +3554,7 @@
           geometry_description: "Sector footprint about 24x96 deg; 4 cameras in strip layout, typical sector duration about 27 days."
         },
         fr: {
-          app_title: "Tableau Astro - Arbre de Couleurs",
+          app_title: "CitizenSky – Exoplanet Candidate Dashboard",
           lang_switch_label: "Langue",
           nav_tree: "Arbre de Decision",
           nav_map: "Carte Stellaire",
