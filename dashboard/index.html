@@ -5150,7 +5150,7 @@
           }).join("");
         els.adminCountryRows.innerHTML = rows || `<tr><td colspan="5">${t("no_entries")}</td></tr>`;
 
-        const exofopRows = exofopUploadCandidates().map((candidate) => `
+        const exofopRows = exofopUploadCandidates(els.globalSearch.value).map((candidate) => `
           <tr>
             <td data-label="TIC"><strong>TIC ${candidate.tic}</strong></td>
             <td data-label="ExoFOP-Kriterien erfuellt?">
@@ -5662,9 +5662,11 @@
         return "NOT_READY";
       }
 
-      function exofopUploadCandidates() {
+      function exofopUploadCandidates(term = "") {
+        const normalizedTerm = String(term || "").trim().toLowerCase();
         return [...(data.candidates || [])]
           .filter((candidate) => ["READY_FOR_EXOFOP", "EXOFOP_PREP"].includes(exofopReadiness(candidate)))
+          .filter((candidate) => matchesCandidate(candidate, normalizedTerm))
           .sort((a, b) => (
             (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
             || (Number(b.matrixVisibleTransits || 0) - Number(a.matrixVisibleTransits || 0))
@@ -7588,6 +7590,14 @@
       function renderTable() {
         const rows = publicMatrixCandidates();
         const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
+        const term = els.globalSearch.value.trim().toLowerCase();
+        if (!limited.length) {
+          const restrictedHits = term ? exofopUploadCandidates(term) : [];
+          els.rows.innerHTML = restrictedHits.length
+            ? `<tr><td colspan="12">TIC ${restrictedHits.map((candidate) => candidate.tic).join(", TIC ")} liegt im eingeschraenkten ExoFOP Review Bereich.</td></tr>`
+            : `<tr><td colspan="12">${term ? "Keine oeffentlich freigegebenen Kandidaten fuer diese Suche." : "Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten."}</td></tr>`;
+          return;
+        }
         els.rows.innerHTML = limited.map((candidate) => `
           <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
             <td><strong>TIC ${candidate.tic}</strong></td>
@@ -7896,6 +7906,7 @@
 
       els.globalSearch.addEventListener("input", () => {
         renderTable();
+        renderAdmin();
         draw2dMap();
         update3dData();
       });
