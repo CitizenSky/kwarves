@@ -5778,8 +5778,8 @@
         const { ctx, width, height } = setupCanvas(els.mapCanvas);
         const candidates = filteredCandidates();
         const focus = selectedMapFocus(candidates);
-        const focusBaseX = focus ? width / 2 + focus.map.x * width * 0.42 : width / 2;
-        const focusBaseY = focus ? height / 2 + focus.map.y * height * 0.42 : height / 2;
+        const focusBaseX = width / 2;
+        const focusBaseY = height / 2;
         document.getElementById("visibleCount").textContent = formatNumber(candidates.length);
         points2d = [];
         ctx.clearRect(0, 0, width, height);
@@ -5852,16 +5852,18 @@
           points2d.push({ x, y, radius: size + 8, candidate });
         });
 
+        const sunX = focus ? focusBaseX - focus.map.x * width * 0.42 * mapZoom : centerX;
+        const sunY = focus ? focusBaseY - focus.map.y * height * 0.42 * mapZoom : centerY;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 11, 0, Math.PI * 2);
+        ctx.arc(sunX, sunY, 11, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(244, 201, 109, 0.16)";
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 4.5, 0, Math.PI * 2);
+        ctx.arc(sunX, sunY, 4.5, 0, Math.PI * 2);
         ctx.fillStyle = colors.sun;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
+        ctx.arc(sunX, sunY, 7, 0, Math.PI * 2);
         ctx.strokeStyle = "rgba(255, 242, 212, 0.78)";
         ctx.lineWidth = 1.2;
         ctx.stroke();
