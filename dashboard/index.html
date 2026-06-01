@@ -1432,11 +1432,11 @@
         display: grid;
         gap: 12px;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
       }
 
       .admin-layout .notice {
-        overflow: hidden;
+        overflow: visible;
       }
 
       .admin-layout a,
@@ -1551,6 +1551,10 @@
 
       .admin-table {
         min-width: 780px;
+      }
+
+      #adminExofopTable {
+        min-width: 1040px;
       }
 
       .admin-hidden {
@@ -2176,6 +2180,58 @@
           flex: 1 1 180px;
         }
 
+        #adminExofopTable {
+          min-width: 0;
+        }
+
+        #adminExofopTable thead {
+          display: none;
+        }
+
+        #adminExofopTable,
+        #adminExofopTable tbody,
+        #adminExofopTable tr,
+        #adminExofopTable td {
+          display: block;
+          width: 100%;
+        }
+
+        #adminExofopTable tr {
+          margin-bottom: 12px;
+          padding: 10px;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          background: #ffffff;
+          cursor: default;
+        }
+
+        #adminExofopTable td {
+          display: grid;
+          grid-template-columns: minmax(92px, 34%) minmax(0, 1fr);
+          gap: 10px;
+          align-items: start;
+          padding: 8px 0;
+          border-bottom: 1px solid #edf2f0;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+
+        #adminExofopTable td:last-child {
+          border-bottom: 0;
+        }
+
+        #adminExofopTable td::before {
+          content: attr(data-label);
+          color: var(--muted);
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+
+        #adminExofopTable .wrap-cell {
+          min-width: 0;
+        }
+
         .tree-children {
           padding-left: 13px;
         }
@@ -2214,6 +2270,11 @@
 
         .admin-kpis {
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        #adminExofopTable td {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 4px;
         }
 
         .search {
@@ -5044,16 +5105,16 @@
 
         const exofopRows = exofopUploadCandidates().map((candidate) => `
           <tr>
-            <td><strong>TIC ${candidate.tic}</strong></td>
-            <td><span class="pill yellow">${exofopReadiness(candidate)}</span></td>
-            <td>${formatMaybe(candidate.evidenceScore, "-")}</td>
-            <td>${formatMaybe(candidate.matrixClass, candidate.matrixStatus || "-")}</td>
-            <td>${formatFloat(candidate.period, 4)} d</td>
-            <td>${formatFloat(candidate.radius, 2)} R_E</td>
-            <td>${formatMaybe(candidate.matrixVisibleTransits, candidate.visibleTransits)}/${formatMaybe(candidate.matrixTransits, candidate.transits)}</td>
-            <td>${formatFloat(candidate.snr, 2)}</td>
-            <td class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")} ${reasonTagList(candidate.reasonTags || [])}</td>
-            <td class="wrap-cell">${formatMaybe(candidate.nextStep)} ${nextCheckList(candidate.nextChecks || [])}</td>
+            <td data-label="TIC"><strong>TIC ${candidate.tic}</strong></td>
+            <td data-label="Readiness"><span class="pill yellow">${exofopReadiness(candidate)}</span></td>
+            <td data-label="Evidence">${formatMaybe(candidate.evidenceScore, "-")}</td>
+            <td data-label="Status">${formatMaybe(candidate.matrixClass, candidate.matrixStatus || "-")}</td>
+            <td data-label="Periode">${formatFloat(candidate.period, 4)} d</td>
+            <td data-label="Radius">${formatFloat(candidate.radius, 2)} R_E</td>
+            <td data-label="Transits">${formatMaybe(candidate.matrixVisibleTransits, candidate.visibleTransits)}/${formatMaybe(candidate.matrixTransits, candidate.transits)}</td>
+            <td data-label="SNR">${formatFloat(candidate.snr, 2)}</td>
+            <td data-label="Risiko / Grund" class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")} ${reasonTagList(candidate.reasonTags || [])}</td>
+            <td data-label="Naechster Check" class="wrap-cell">${formatMaybe(candidate.nextStep)} ${nextCheckList(candidate.nextChecks || [])}</td>
           </tr>
         `).join("");
         els.adminExofopRows.innerHTML = exofopRows || `<tr><td colspan="10">Keine internen ExoFOP-Prep-Kandidaten.</td></tr>`;
