@@ -24,6 +24,7 @@ SCRIPT_ROOT = PROJECT_ROOT / "scripts"
 DASHBOARD_DIR = SCRIPT_ROOT / "dashboard"
 LIGHTCURVE_WEB_DIR = DASHBOARD_DIR / "lightcurves"
 DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
+VETTING_REPORTS_DIR = PROJECT_ROOT / "vetting_reports"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
 OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
@@ -504,6 +505,21 @@ def load_db_rows() -> tuple[
     )
 
 
+def load_full_vetting_reports() -> dict[int, dict[str, Any]]:
+    reports: dict[int, dict[str, Any]] = {}
+    if not VETTING_REPORTS_DIR.exists():
+        return reports
+    for path in VETTING_REPORTS_DIR.glob("TIC_*/vetting_summary.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        tic = safe_int(payload.get("tic")) or safe_int(path.parent.name.replace("TIC_", ""))
+        if tic:
+            reports[tic] = payload
+    return reports
+
+
 def is_public_green_matrix(matrix: dict[str, Any] | None) -> bool:
     if not matrix:
         return False
@@ -671,6 +687,7 @@ def build_candidate(
     gaia_cache: dict[int, dict[str, float | None]],
     max_distance: float,
     tess_state: dict[str, Any],
+    full_vetting: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
     matrix = matrix_row or {}
@@ -723,6 +740,7 @@ def build_candidate(
     previous_sectors = list(sector.get("previousSectors") or [])
     new_sectors = list(sector.get("newSectors") or [])
     recheck = recheck_model(observed_sectors, tess_state)
+    full_vetting = full_vetting or {}
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -798,6 +816,16 @@ def build_candidate(
         "sectorInventoryStatus": clean_text(sector.get("source_status")),
         "sectorLastCheckedAt": clean_text(sector.get("last_checked_at")),
         "sectorLastNewAt": clean_text(sector.get("last_new_sector_at")),
+        "fullVetting": {
+            "classification": clean_text(full_vetting.get("classification")),
+            "evidence_score": safe_float(full_vetting.get("evidence_score")),
+            "sap_pdcsap_ratio": safe_float(full_vetting.get("sap_pdcsap_ratio")),
+            "rotation_period": safe_float(full_vetting.get("rotation_period")),
+            "odd_even_status": clean_text(full_vetting.get("odd_even_status")),
+            "exofop_readiness": clean_text(full_vetting.get("exofop_readiness")),
+            "report_dir": clean_text(full_vetting.get("report_dir")),
+            "status": clean_text(full_vetting.get("status")),
+        } if full_vetting else None,
         "folder": candidate_folder,
         "lightcurveImg": lightcurve_img,
         "lightcurveImgLocal": lightcurve_img_local,
@@ -878,6 +906,7 @@ def main() -> int:
         gaia_cache.update(fetched_coords)
         save_gaia_cache(gaia_cache)
 
+    full_vetting_reports = load_full_vetting_reports()
     tess_state = build_tess_state()
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates = [
@@ -890,6 +919,7 @@ def main() -> int:
             gaia_cache,
             max_distance,
             tess_state,
+            full_vetting_reports.get(safe_int(row.get("TIC"))),
         )
         for row in manifest_rows
     ]
