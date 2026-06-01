@@ -11,7 +11,7 @@ import re
 import shutil
 import sqlite3
 from collections import Counter
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +26,20 @@ OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
 GAIA_FETCH_BATCH_SIZE = int(os.environ.get("GAIA_FETCH_BATCH_SIZE", "350"))
 GAIA_FETCH_ENABLED = os.environ.get("GAIA_FETCH_ENABLED", "1").strip() not in {"0", "false", "False"}
+
+TESS_SECTOR_SCHEDULE = [
+    {"sector": 97, "start": "2025-09-15", "end": "2025-11-09", "arrangement": "Suedpol (4 Orbits)"},
+    {"sector": 98, "start": "2025-11-09", "end": "2026-01-05", "arrangement": "Suedpol (4 Orbits)"},
+    {"sector": 99, "start": "2026-01-05", "end": "2026-02-02", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 100, "start": "2026-02-02", "end": "2026-03-01", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 101, "start": "2026-03-01", "end": "2026-03-27", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 102, "start": "2026-03-27", "end": "2026-04-21", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 103, "start": "2026-04-21", "end": "2026-05-17", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 104, "start": "2026-05-17", "end": "2026-06-13", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 105, "start": "2026-06-13", "end": "2026-07-11", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 106, "start": "2026-07-11", "end": "2026-08-09", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+    {"sector": 107, "start": "2026-08-09", "end": "2026-09-07", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
+]
 
 
 def clean_text(value: Any) -> str:
@@ -223,6 +237,97 @@ def parse_sector_text(value: Any) -> list[int]:
             sectors.append(number)
             seen.add(number)
     return sectors
+
+
+def parse_date(value: str) -> date:
+    return datetime.strptime(value, "%Y-%m-%d").date()
+
+
+def sector_phase(sector: int) -> int:
+    return ((int(sector) - 1) % 13) + 1
+
+
+def build_tess_state(today: date | None = None) -> dict[str, Any]:
+    today = today or datetime.now().date()
+    sectors: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    next_sector: dict[str, Any] | None = None
+    for item in TESS_SECTOR_SCHEDULE:
+        start = parse_date(item["start"])
+        end = parse_date(item["end"])
+        phase = "completed"
+        if today < start:
+            phase = "planned"
+        elif start <= today <= end:
+            phase = "running"
+        row = {**item, "phase": phase}
+        sectors.append(row)
+        if phase == "running":
+            current = row
+        elif phase == "planned" and next_sector is None:
+            next_sector = row
+    return {
+        "today": today.isoformat(),
+        "sectors": sectors,
+        "currentSector": current,
+        "nextSector": next_sector,
+        "dataReleaseLagDays": 21,
+    }
+
+
+def estimate_data_available(sector: dict[str, Any] | None, lag_days: int = 21) -> str:
+    if not sector:
+        return ""
+    return (parse_date(sector["end"]) + timedelta(days=lag_days)).isoformat()
+
+
+def planned_sectors_for_candidate(observed_sectors: list[int], tess_state: dict[str, Any]) -> list[dict[str, Any]]:
+    observed_set = set(observed_sectors)
+    phase_set = {sector_phase(sector) for sector in observed_set}
+    planned: list[dict[str, Any]] = []
+    for sector in tess_state["sectors"]:
+        sector_id = int(sector["sector"])
+        if sector_id in observed_set or sector_phase(sector_id) in phase_set:
+            planned.append(sector)
+    return planned
+
+
+def recheck_model(observed_sectors: list[int], tess_state: dict[str, Any]) -> dict[str, Any]:
+    planned = planned_sectors_for_candidate(observed_sectors, tess_state)
+    current_sector = tess_state.get("currentSector")
+    current_id = int(current_sector["sector"]) if current_sector else None
+    live = next((item for item in planned if int(item["sector"]) == current_id and item["phase"] == "running"), None)
+    upcoming = [item for item in planned if item["phase"] == "planned"]
+    completed = [item for item in planned if item["phase"] == "completed"]
+    if live:
+        status = "LIVE_NOW"
+        focus = live
+    elif upcoming:
+        status = "UPCOMING"
+        focus = upcoming[0]
+    elif completed:
+        status = "WAITING_DATA"
+        focus = completed[-1]
+    else:
+        status = "NO_PLANNED_RECHECK"
+        focus = None
+    return {
+        "plannedSectors": [int(item["sector"]) for item in planned],
+        "plannedSectorDetails": [
+            {
+                "sector": int(item["sector"]),
+                "start": item["start"],
+                "end": item["end"],
+                "phase": item["phase"],
+            }
+            for item in planned
+        ],
+        "currentSector": int(live["sector"]) if live else None,
+        "nextPlannedSector": int(upcoming[0]["sector"]) if upcoming else None,
+        "latestPlannedSector": int(planned[-1]["sector"]) if planned else None,
+        "recheckStatus": status,
+        "estimatedDataAvailable": estimate_data_available(focus, tess_state.get("dataReleaseLagDays", 21)) if focus else "",
+    }
 
 
 def rel_from_dashboard(path: Path) -> str:
@@ -507,6 +612,7 @@ def build_candidate(
     gaia_row: dict[str, Any] | None,
     gaia_cache: dict[int, dict[str, float | None]],
     max_distance: float,
+    tess_state: dict[str, Any],
 ) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
     matrix = matrix_row or {}
@@ -558,6 +664,7 @@ def build_candidate(
     observed_sectors = list(sector.get("sectors") or [])
     previous_sectors = list(sector.get("previousSectors") or [])
     new_sectors = list(sector.get("newSectors") or [])
+    recheck = recheck_model(observed_sectors, tess_state)
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -614,6 +721,18 @@ def build_candidate(
         "revisitPriority": clean_text(merged.get("revisit_priority")),
         "notes": clean_text(merged.get("notes")),
         "observedSectors": observed_sectors,
+        "plannedSectors": recheck["plannedSectors"],
+        "planned_sectors": recheck["plannedSectors"],
+        "plannedSectorDetails": recheck["plannedSectorDetails"],
+        "currentSector": recheck["currentSector"],
+        "current_sector": recheck["currentSector"],
+        "nextPlannedSector": recheck["nextPlannedSector"],
+        "next_planned_sector": recheck["nextPlannedSector"],
+        "latestPlannedSector": recheck["latestPlannedSector"],
+        "recheckStatus": recheck["recheckStatus"],
+        "recheck_status": recheck["recheckStatus"],
+        "estimatedDataAvailable": recheck["estimatedDataAvailable"],
+        "estimated_data_available": recheck["estimatedDataAvailable"],
         "observedSectorCount": safe_int_or_none(sector.get("sector_count")) or len(observed_sectors),
         "previousSectors": previous_sectors,
         "previousSectorCount": safe_int_or_none(sector.get("previous_sector_count")) or len(previous_sectors),
@@ -699,6 +818,7 @@ def main() -> int:
         gaia_cache.update(fetched_coords)
         save_gaia_cache(gaia_cache)
 
+    tess_state = build_tess_state()
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates = [
         build_candidate(
@@ -709,6 +829,7 @@ def main() -> int:
             local_coord_rows.get(safe_int(row.get("TIC"))),
             gaia_cache,
             max_distance,
+            tess_state,
         )
         for row in manifest_rows
     ]
@@ -733,6 +854,10 @@ def main() -> int:
         "mapAstrometric": sum(1 for candidate in candidates if candidate["mapSource"] == "gaia_dr3"),
         "mapFallback": sum(1 for candidate in candidates if candidate["mapSource"] != "gaia_dr3"),
         "gaiaCacheSize": len(gaia_cache),
+        "recheckLiveNow": sum(1 for candidate in candidates if candidate["recheckStatus"] == "LIVE_NOW"),
+        "recheckUpcoming": sum(1 for candidate in candidates if candidate["recheckStatus"] == "UPCOMING"),
+        "recheckWaitingData": sum(1 for candidate in candidates if candidate["recheckStatus"] == "WAITING_DATA"),
+        "recheckNotPlanned": sum(1 for candidate in candidates if candidate["recheckStatus"] == "NO_PLANNED_RECHECK"),
     }
     summary["mapCoveragePct"] = round(
         100.0 * summary["mapAstrometric"] / max(1, summary["total"]),
@@ -748,6 +873,7 @@ def main() -> int:
     data = {
         "generatedAt": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
         "summary": summary,
+        "tess": tess_state,
         "tree": build_tree(candidates),
         "candidates": candidates,
         "lightcurveCandidates": lightcurve_candidates,

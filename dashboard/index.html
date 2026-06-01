@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="dashboard-data.js?v=20260601d"></script>
+    <script src="dashboard-data.js?v=20260601e"></script>
     <style>
       :root {
         color-scheme: light;
@@ -558,7 +558,7 @@
       }
 
       .timeline-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
       }
 
       .reason-tag-list,
@@ -603,6 +603,37 @@
       .yellow-rules {
         display: grid;
         gap: 8px;
+      }
+
+      .recheck-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 8px;
+        border-radius: 8px;
+        color: #10201e;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .recheck-chip.live {
+        background: #dff5ee;
+        color: #126550;
+      }
+
+      .recheck-chip.upcoming {
+        background: #e6efff;
+        color: #244d9b;
+      }
+
+      .recheck-chip.waiting {
+        background: #fff2c7;
+        color: #69440f;
+      }
+
+      .recheck-chip.none {
+        background: #e8eceb;
+        color: #5c6663;
       }
 
       .matrix-stats {
@@ -3506,6 +3537,15 @@
           { sector: 107, start: "2026-08-09", end: "2026-09-07", arrangement: "Suedpol, 40 Grad Roll/Shift" }
         ]
       };
+      if (data.tess && Array.isArray(data.tess.sectors) && data.tess.sectors.length) {
+        tessMission.sourceCheckedAt = data.tess.today || tessMission.sourceCheckedAt;
+        tessMission.year8Sectors = data.tess.sectors.map((item) => ({
+          sector: item.sector,
+          start: item.start,
+          end: item.end,
+          arrangement: item.arrangement
+        }));
+      }
       const tessYear8SectorSet = new Set(tessMission.year8Sectors.map((item) => item.sector));
       const tessSectorLayout = buildTessSectorLayout(tessMission.totalNumberedSectorsPlanned);
 
@@ -4167,6 +4207,7 @@
         return {
           candidate,
           sectors,
+          plannedSectors: normalizeSectorList(candidate && candidate.plannedSectors),
           sectorSet: new Set(sectors)
         };
       }
@@ -4176,18 +4217,13 @@
         const candidate = info.candidate;
         const observed = info.sectors;
         const observedSet = new Set(observed);
-        const phaseSet = new Set(observed.map((sector) => sectorPhase(sector)));
-        const activeSchedule = scheduleState.schedule.filter((item) => item.phase !== "completed");
-        const hasFutureKnownSectors = activeSchedule.length > 0;
-        let planned = activeSchedule.filter((item) => {
-          if (observedSet.has(item.sector)) return true;
-          if (phaseSet.has(sectorPhase(item.sector))) return true;
-          return false;
-        });
+        const plannedIds = new Set(info.plannedSectors);
+        const planned = scheduleState.schedule.filter((item) => plannedIds.has(item.sector));
+        const hasFutureKnownSectors = scheduleState.schedule.some((item) => item.phase !== "completed");
 
-        const nextItem = planned[0] || null;
+        const nextItem = planned.find((item) => item.phase !== "completed") || planned[planned.length - 1] || null;
         const overlapYear8 = observed.filter((sector) => tessYear8SectorSet.has(sector));
-        const inPlannedArea = planned.length > 0 && observed.length > 0;
+        const inPlannedArea = ["LIVE_NOW", "UPCOMING"].includes(candidate?.recheckStatus || "");
 
         let nextObservationText = t("next_no_sector");
         if (nextItem) {
@@ -4209,18 +4245,21 @@
         let statusText = t("no_candidate_selected");
         let statusKey = "neutral";
         if (candidate) {
-          if (!observed.length) {
+          if (candidate.recheckStatus === "LIVE_NOW") {
+            statusText = `LIVE_NOW · ${t("status_recheck_possible")}`;
+            statusKey = "green";
+          } else if (candidate.recheckStatus === "UPCOMING") {
+            statusText = `UPCOMING · ${t("status_recheck_possible")}`;
+            statusKey = "blue";
+          } else if (candidate.recheckStatus === "WAITING_DATA") {
+            statusText = `WAITING_DATA · ${t("status_waiting_data")}`;
+            statusKey = "yellow";
+          } else if (!observed.length) {
             statusText = t("status_add_sector_data");
             statusKey = "missing";
-          } else if (inPlannedArea) {
-            statusText = t("status_recheck_possible");
-            statusKey = "green";
-          } else if (hasFutureKnownSectors) {
-            statusText = t("status_waiting_data");
-            statusKey = "yellow";
           } else {
-            statusText = t("status_no_recheck");
-            statusKey = "red";
+            statusText = `NO_PLANNED_RECHECK · ${t("status_no_recheck")}`;
+            statusKey = "gray";
           }
         }
 
@@ -4234,7 +4273,8 @@
           hasFutureKnownSectors,
           nextObservationText,
           statusText,
-          statusKey
+          statusKey,
+          estimatedDataAvailable: candidate?.estimatedDataAvailable || ""
         };
       }
 
@@ -5040,6 +5080,17 @@
           : '<span class="mini">Kein naechster Check gesetzt.</span>';
       }
 
+      function recheckChip(candidate) {
+        const status = candidate.recheckStatus || "NO_PLANNED_RECHECK";
+        const cls = {
+          LIVE_NOW: "live",
+          UPCOMING: "upcoming",
+          WAITING_DATA: "waiting",
+          NO_PLANNED_RECHECK: "none"
+        }[status] || "none";
+        return `<span class="recheck-chip ${cls}">${status}</span>`;
+      }
+
       function followupRank(candidate) {
         if (candidate.followupStrength === "STRONG") return 0;
         if (candidate.color === "green") return 1;
@@ -5180,11 +5231,13 @@
       function renderVisitorTimeline() {
         const candidates = data.candidates || [];
         const observed = countWhere(candidates, (c) => Number(c.observedSectorCount || 0) > 0 || Number(c.matrixSectors || 0) > 0);
-        const year8 = countWhere(candidates, (c) => /YEAR_8|YEAR8|PLANNED|NEW_SECTOR/.test(`${c.sectorInventoryStatus} ${c.nextRecheck} ${c.notes}`.toUpperCase()));
+        const year8 = countWhere(candidates, (c) => (c.plannedSectors || []).length > 0);
         const newSectors = countWhere(candidates, (c) => Number(c.newSectors?.length || 0) > 0);
         const cards = [
           ["Vorhandene Sektoren", observed, "Kandidaten mit Sektor-/Matrixdaten"],
-          ["Letzte beobachtete Sektoren", countWhere(candidates, (c) => Number(c.previousSectorCount || 0) > 0), "Archiv-/Bestandsabgleich"],
+          ["LIVE_NOW", data.summary?.recheckLiveNow || 0, "aktueller laufender Sektor"],
+          ["UPCOMING", data.summary?.recheckUpcoming || 0, "kommende Beobachtung geplant"],
+          ["WAITING_DATA", data.summary?.recheckWaitingData || 0, "Datenveroeffentlichung abwarten"],
           ["Year-8 Treffer", year8, "geometrische Recheck-Hinweise"],
           ["Neue Sektoren", newSectors, "spaeter fuer Rechecks nutzbar"]
         ];
@@ -6080,15 +6133,18 @@
           : t("not_computable_missing_history");
         const statusChipClass =
           coverage.statusKey === "green" ? "candidate" :
+          coverage.statusKey === "blue" ? "observed" :
           coverage.statusKey === "yellow" ? "planned" :
-          coverage.statusKey === "red" ? "red" :
+          coverage.statusKey === "gray" ? "background" :
           "background";
         const statusLabel =
           coverage.statusKey === "green" ? t("status_chip_green") :
+          coverage.statusKey === "blue" ? "UPCOMING" :
           coverage.statusKey === "yellow" ? t("status_chip_yellow") :
-          coverage.statusKey === "red" ? t("status_chip_red") :
+          coverage.statusKey === "gray" ? t("status_chip_red") :
           t("status_chip_missing");
-        els.tessTimelineStatus.innerHTML = `<span class="sector-chip ${statusChipClass}">${statusLabel}</span> ${coverage.statusText}`;
+        const availability = coverage.estimatedDataAvailable ? ` · Data ~ ${formatDate(coverage.estimatedDataAvailable)}` : "";
+        els.tessTimelineStatus.innerHTML = `<span class="sector-chip ${statusChipClass}">${statusLabel}</span> ${coverage.statusText}${availability}`;
 
         renderMapCoverageSummary(coverage);
       }
@@ -6111,11 +6167,15 @@
           els.mapCoverageStatus.textContent = t("map_status_green");
           return;
         }
+        if (coverage.statusKey === "blue") {
+          els.mapCoverageStatus.textContent = "Blau: kommende Beobachtung geplant.";
+          return;
+        }
         if (coverage.statusKey === "yellow") {
           els.mapCoverageStatus.textContent = t("map_status_yellow");
           return;
         }
-        if (coverage.statusKey === "red") {
+        if (coverage.statusKey === "gray") {
           els.mapCoverageStatus.textContent = t("map_status_red");
           return;
         }
@@ -6410,6 +6470,10 @@
           <div class="notice matrix-note">
             <strong>Next Check</strong>
             ${nextCheckList(candidate.nextChecks || [])}
+          </div>
+          <div class="notice matrix-note">
+            <strong>TESS Recheck</strong>
+            <span>${recheckChip(candidate)} Beobachtet: ${formatSectorList(candidate.observedSectors, 10)} · aktuell: ${candidate.currentSector ? `S${candidate.currentSector}` : "-"} · naechster Plan: ${candidate.nextPlannedSector ? `S${candidate.nextPlannedSector}` : "-"} · Daten ca.: ${candidate.estimatedDataAvailable ? formatDate(candidate.estimatedDataAvailable) : "-"}</span>
           </div>
           <div class="details-grid">
             <div class="detail"><span>${t("detail_matrix_status")}</span><strong>${matrixStatus}</strong></div>
