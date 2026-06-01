@@ -1573,7 +1573,7 @@
       }
 
       #adminExofopTable {
-        min-width: 1040px;
+        min-width: 360px;
       }
 
       .admin-hidden {
@@ -3234,15 +3234,7 @@
                     <thead>
                       <tr>
                         <th>TIC</th>
-                        <th>Readiness</th>
-                        <th>Evidence</th>
-                        <th>Status</th>
-                        <th>Periode</th>
-                        <th>Radius</th>
-                        <th>Transits</th>
-                        <th>SNR</th>
-                        <th>Risiko / Grund</th>
-                        <th>Naechster Check</th>
+                        <th>ExoFOP-Kriterien erfuellt?</th>
                       </tr>
                     </thead>
                     <tbody id="adminExofopRows"></tbody>
@@ -5161,18 +5153,14 @@
         const exofopRows = exofopUploadCandidates().map((candidate) => `
           <tr>
             <td data-label="TIC"><strong>TIC ${candidate.tic}</strong></td>
-            <td data-label="Readiness"><span class="pill yellow">${exofopReadiness(candidate)}</span></td>
-            <td data-label="Evidence">${formatMaybe(candidate.evidenceScore, "-")}</td>
-            <td data-label="Status">${formatMaybe(candidate.matrixClass, candidate.matrixStatus || "-")}</td>
-            <td data-label="Periode">${formatFloat(candidate.period, 4)} d</td>
-            <td data-label="Radius">${formatFloat(candidate.radius, 2)} R_E</td>
-            <td data-label="Transits">${formatMaybe(candidate.matrixVisibleTransits, candidate.visibleTransits)}/${formatMaybe(candidate.matrixTransits, candidate.transits)}</td>
-            <td data-label="SNR">${formatFloat(candidate.snr, 2)}</td>
-            <td data-label="Risiko / Grund" class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")} ${reasonTagList(candidate.reasonTags || [])}</td>
-            <td data-label="Naechster Check" class="wrap-cell">${formatMaybe(candidate.nextStep)} ${nextCheckList(candidate.nextChecks || [])}</td>
+            <td data-label="ExoFOP-Kriterien erfuellt?">
+              <span class="pill ${exofopCriteriaFulfilled(candidate) ? "green" : "yellow"}">
+                ${exofopCriteriaFulfilled(candidate) ? "Ja" : "Nein - Review offen"}
+              </span>
+            </td>
           </tr>
         `).join("");
-        els.adminExofopRows.innerHTML = exofopRows || `<tr><td colspan="10">Keine internen ExoFOP-Prep-Kandidaten.</td></tr>`;
+        els.adminExofopRows.innerHTML = exofopRows || `<tr><td colspan="2">Keine internen ExoFOP-Prep-Kandidaten.</td></tr>`;
       }
 
       async function resolveCountry() {
@@ -5676,13 +5664,17 @@
 
       function exofopUploadCandidates() {
         return [...(data.candidates || [])]
-          .filter((candidate) => exofopReadiness(candidate) === "EXOFOP_PREP")
+          .filter((candidate) => ["READY_FOR_EXOFOP", "EXOFOP_PREP"].includes(exofopReadiness(candidate)))
           .sort((a, b) => (
             (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
             || (Number(b.matrixVisibleTransits || 0) - Number(a.matrixVisibleTransits || 0))
             || (Number(a.distance || 0) - Number(b.distance || 0))
           ))
           .slice(0, 40);
+      }
+
+      function exofopCriteriaFulfilled(candidate) {
+        return exofopReadiness(candidate) === "READY_FOR_EXOFOP";
       }
 
       function followupRank(candidate) {
