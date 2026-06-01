@@ -4274,6 +4274,11 @@
         });
       }
 
+      function publicMatrixCandidates() {
+        const term = els.globalSearch.value.trim().toLowerCase();
+        return data.candidates.filter((candidate) => candidate.color === "green" && matchesCandidate(candidate, term));
+      }
+
       function renderKpis() {
         document.getElementById("kpiTotal").textContent = formatNumber(data.summary.total);
         document.getElementById("kpiGreen").textContent = formatNumber(data.summary.green);
@@ -4489,8 +4494,8 @@
             curvesSub: "All matching candidates are selectable on the left; the combined curve appears on the right.",
             curveSearch: "Search light curve",
             curveOpenCandidate: "Mark candidate",
-            tableTitle: "Candidate List with Rationale",
-            tableSub: "Sorted by distance; selection syncs tree, map, and light curve.",
+            tableTitle: "Candidate Matrix: Green Candidates",
+            tableSub: "Public matrix view lists green candidates only. Yellow/red evaluations remain in the repository analysis.",
             tableHeaders: ["TIC", "Color", "Status", "Matrix", "Evidence", "Why", "Next step", "HZ", "Distance", "Period", "SNR", "Transits"],
             docsTitle: "Project Logic and Scripts",
             docsSub: "How each level checks candidates, which scripts support it, and why the evidence remains provisional.",
@@ -4588,8 +4593,8 @@
               curvesSub: "Tous les candidats correspondants sont selectionnables a gauche; la courbe combinee apparait a droite.",
               curveSearch: "Rechercher une courbe",
               curveOpenCandidate: "Marquer le candidat",
-              tableTitle: "Liste des Candidats avec Justification",
-              tableSub: "Triee par distance; la selection synchronise arbre, carte et courbe.",
+              tableTitle: "Matrice Candidats: candidats verts",
+              tableSub: "La matrice publique liste seulement les candidats verts. Les evaluations jaunes/rouges restent dans l'analyse du depot.",
               tableHeaders: ["TIC", "Couleur", "Statut", "Matrice", "Evidence", "Pourquoi", "Etape suivante", "HZ", "Distance", "Periode", "SNR", "Transits"],
               docsTitle: "Logique Projet et Scripts",
               docsSub: "Comment chaque niveau verifie les candidats, quels scripts le soutiennent, et pourquoi l'evidence reste provisoire.",
@@ -4686,8 +4691,8 @@
               curvesSub: "Alle passenden Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.",
               curveSearch: "Lichtkurve suchen",
               curveOpenCandidate: "Kandidat markieren",
-              tableTitle: "Kandidatenliste mit Begruendung",
-              tableSub: "Sortiert nach Entfernung; Auswahl synchronisiert Baum, Karte und Lichtkurve.",
+              tableTitle: "Candidate Matrix: gruene Kandidaten",
+              tableSub: "Die oeffentliche Matrix zeigt nur gruene Kandidaten. Gelbe/rote Bewertungen bleiben als Auswertung im Repository.",
               tableHeaders: ["TIC", "Farbe", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
               docsTitle: "Projektlogik und Skripte",
               docsSub: "Wie jedes Level Kandidaten prueft, welche Skripte es stuetzen und warum die Evidenz vorlaeufig bleibt.",
@@ -5614,7 +5619,7 @@
       }
 
       function renderTable() {
-        const rows = filteredCandidates();
+        const rows = publicMatrixCandidates();
         const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
         els.rows.innerHTML = limited.map((candidate) => `
           <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
