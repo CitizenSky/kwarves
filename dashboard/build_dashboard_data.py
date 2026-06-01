@@ -347,6 +347,68 @@ def is_public_green_matrix(matrix: dict[str, Any] | None) -> bool:
     )
 
 
+def yellow_reason_tags(merged: dict[str, Any], matrix: dict[str, Any], is_violet: bool) -> list[str]:
+    tags: list[str] = []
+    period = safe_float(merged.get("best_period")) or safe_float(matrix.get("period_days")) or 0.0
+    snr = safe_float(merged.get("transit_snr")) or safe_float(matrix.get("snr")) or 0.0
+    evidence = safe_float(matrix.get("evidence_score")) or 0.0
+    n_transits = safe_int(matrix.get("n_transits") or merged.get("transit_count"))
+    visible = safe_int(matrix.get("visible_transits") or merged.get("visible_transits"))
+    text = " ".join(
+        clean_text(value).upper()
+        for value in (
+            matrix.get("status"),
+            matrix.get("status_color"),
+            matrix.get("extended_class"),
+            matrix.get("score_interpretation"),
+            matrix.get("decision_reason"),
+            matrix.get("next_step"),
+            merged.get("notes"),
+            merged.get("next_recheck"),
+            merged.get("spc_class"),
+            merged.get("status"),
+        )
+    )
+
+    if n_transits < 5 or visible < 3:
+        tags.append("Y_NTR_LOW")
+    if period >= 40:
+        tags.append("Y_LONG_PERIOD")
+    if clean_text(matrix.get("data_gap_risk")).upper() in {"MEDIUM", "HIGH"} or clean_text(matrix.get("sector_edge_risk")).upper() in {"MEDIUM", "HIGH"}:
+        tags.append("Y_DATA_GAP")
+    if clean_text(matrix.get("rotation_risk")).upper() in {"POSSIBLE", "HIGH"} or "BY_DRA" in text or "ACTIVE" in text or "ROTATION" in text or (is_violet and period >= 80 and n_transits < 5):
+        tags.append("Y_ACTIVITY_RISK")
+    if "ARTIFACT" in text or "SYSTEMATIC" in text or "SPC_ART" in text or clean_text(matrix.get("depth_stability")).upper() == "UNSTABLE" or clean_text(matrix.get("period_alias_risk")).upper() == "HIGH":
+        tags.append("Y_SYSTEMATICS")
+    if clean_text(matrix.get("sap_pdcsap_match")).upper() == "MISMATCH":
+        tags.append("Y_SAP_PDCSAP_MISMATCH")
+    if clean_text(matrix.get("odd_even_result")).upper() in {"UNKNOWN", "BORDERLINE", ""}:
+        tags.append("Y_ODD_EVEN_MISSING")
+    if "RECHECK" in text or "MANUAL" in text or "SPC_ART" in text or "NEEDS_MORE" in text:
+        tags.append("Y_MANUAL_REVIEW")
+    if evidence >= 75 or (is_violet and snr >= 20 and period >= 40):
+        tags.append("Y_STRONG_BUT_UNCONFIRMED")
+
+    return list(dict.fromkeys(tags))
+
+
+def next_checks_for_tags(tags: list[str], matrix: dict[str, Any]) -> list[str]:
+    checks: list[str] = []
+    if "Y_NTR_LOW" in tags or "Y_LONG_PERIOD" in tags or clean_text(matrix.get("status")).upper() == "NEEDS_MORE_DATA":
+        checks.append("More TESS data")
+    if "Y_SAP_PDCSAP_MISMATCH" in tags or clean_text(matrix.get("sap_pdcsap_match")).upper() == "UNKNOWN":
+        checks.append("SAP/PDCSAP comparison")
+    if "Y_ODD_EVEN_MISSING" in tags:
+        checks.append("Odd-even test")
+    if "Y_ACTIVITY_RISK" in tags:
+        checks.append("Rotation/activity check")
+    if "Y_SYSTEMATICS" in tags or "Y_MANUAL_REVIEW" in tags:
+        checks.append("Manual lightcurve review")
+    if "Y_STRONG_BUT_UNCONFIRMED" in tags and "Y_NTR_LOW" not in tags:
+        checks.append("RV follow-up")
+    return list(dict.fromkeys(checks))
+
+
 def color_for(row: dict[str, Any], matrix: dict[str, Any] | None = None) -> str:
     if is_public_green_matrix(matrix):
         return "green"
@@ -477,6 +539,22 @@ def build_candidate(
     evidence_score = safe_float(matrix.get("evidence_score"))
     if evidence_score is not None:
         evidence_score = round(evidence_score, 1)
+    reason_tags = yellow_reason_tags(merged, matrix, is_violet)
+    next_checks = next_checks_for_tags(reason_tags, matrix)
+    followup_strength = (
+        "STRONG"
+        if "Y_STRONG_BUT_UNCONFIRMED" in reason_tags or color == "green"
+        else ("MEDIUM" if evidence_score is not None and evidence_score >= 60 else "LOW")
+    )
+    yellow_summary = (
+        "Gelb: starker HZ-Kandidat, aber Nachpruefung noetig"
+        if color == "yellow" and is_violet and followup_strength == "STRONG"
+        else (
+            "Gelb: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen"
+            if color == "yellow"
+            else ""
+        )
+    )
     observed_sectors = list(sector.get("sectors") or [])
     previous_sectors = list(sector.get("previousSectors") or [])
     new_sectors = list(sector.get("newSectors") or [])
@@ -511,6 +589,10 @@ def build_candidate(
         "matrixClass": clean_text(matrix.get("extended_class")),
         "matrixScoreBand": clean_text(matrix.get("score_interpretation")),
         "evidenceScore": evidence_score,
+        "reasonTags": reason_tags,
+        "nextChecks": next_checks,
+        "followupStrength": followup_strength,
+        "yellowSummary": yellow_summary,
         "decisionReason": clean_text(matrix.get("decision_reason")),
         "nextStep": clean_text(matrix.get("next_step")),
         "matrixTransits": safe_int_or_none(matrix.get("n_transits")),

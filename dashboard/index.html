@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="dashboard-data.js?v=20260601c"></script>
+    <script src="dashboard-data.js?v=20260601d"></script>
     <style>
       :root {
         color-scheme: light;
@@ -559,6 +559,50 @@
 
       .timeline-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .reason-tag-list,
+      .next-check-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .reason-tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 8px;
+        border: 1px solid #e6d4a5;
+        border-radius: 8px;
+        background: #fff8ea;
+        color: #69440f;
+        font-size: 12px;
+        font-weight: 820;
+      }
+
+      .next-check {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 8px;
+        border: 1px solid #cdd9d5;
+        border-radius: 8px;
+        background: #f4f8f7;
+        color: #254c45;
+        font-size: 12px;
+        font-weight: 780;
+      }
+
+      .yellow-reason-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 14px;
+      }
+
+      .yellow-rules {
+        display: grid;
+        gap: 8px;
       }
 
       .matrix-stats {
@@ -1909,6 +1953,10 @@
           grid-template-columns: minmax(0, 1fr);
         }
 
+        .yellow-reason-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .matrix-axis {
           min-height: auto;
           justify-content: start;
@@ -2227,6 +2275,50 @@
               <article class="matrix-cell red"><span>Schlecht + schwach</span><strong>Ignorieren / low priority</strong><p class="mini">Keine belastbare Evidenz.</p></article>
               <article class="matrix-cell yellow"><span>Schlecht + mittel</span><strong>NEEDS_MORE_TESS_DATA</strong><p class="mini">Zu wenig Abdeckung.</p></article>
               <article class="matrix-cell yellow"><span>Schlecht + stark</span><strong>SPC_ART / mehr Daten noetig</strong><p class="mini">Starkes Signal, aber noch nicht sicher.</p></article>
+            </div>
+          </section>
+
+          <section class="panel" id="yellowReasonPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="yellowReasonTitle">Why is this candidate yellow?</h2>
+                <p class="panel-subtitle" id="yellowReasonSub">Gelb bedeutet nicht schlecht: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen.</p>
+              </div>
+            </div>
+            <div class="panel-body yellow-reason-layout">
+              <article class="matrix-stat-box">
+                <h3 id="yellowSelectedTitle">Ausgewaehlter gelber Kandidat</h3>
+                <div id="yellowSelectedReason" class="yellow-rules"></div>
+              </article>
+              <article class="matrix-stat-box">
+                <h3 id="yellowMatrixTitle">Wert vs. Unsicherheitsgrund</h3>
+                <div class="signal-matrix">
+                  <div class="matrix-axis"></div>
+                  <div class="matrix-axis">Datenlage</div>
+                  <div class="matrix-axis">Signalform</div>
+                  <div class="matrix-axis">Aktivitaet</div>
+                  <div class="matrix-axis">Systematik</div>
+                  <div class="matrix-axis">Follow-up offen</div>
+                  <div class="matrix-axis">hoch</div>
+                  <article class="matrix-cell yellow"><strong>HZ_STRONG_FOLLOWUP</strong><p class="mini">Hoher Wert, aber Datenlage unsicher.</p></article>
+                  <article class="matrix-cell yellow"><strong>SPC_ART</strong><p class="mini">Starkes Signal, Form noch nicht final.</p></article>
+                  <article class="matrix-cell yellow"><strong>HZ_ACTIVITY_RECHECK</strong><p class="mini">Aktivitaets-/BY-Dra-Risiko pruefen.</p></article>
+                  <article class="matrix-cell yellow"><strong>SPC_ART</strong><p class="mini">Systematik oder Pipeline-Artefakt offen.</p></article>
+                  <article class="matrix-cell green"><strong>FOLLOWUP_STRONG</strong><p class="mini">Kann trotz Gelb hoch priorisiert sein.</p></article>
+                  <div class="matrix-axis">mittel</div>
+                  <article class="matrix-cell yellow"><strong>HZ_RECHECK</strong><p class="mini">Wenig Transits oder lange Periode.</p></article>
+                  <article class="matrix-cell yellow"><strong>Manual Review</strong><p class="mini">Foldplot und Einzelevents pruefen.</p></article>
+                  <article class="matrix-cell yellow"><strong>Activity Check</strong><p class="mini">Rotation und Sternaktivitaet testen.</p></article>
+                  <article class="matrix-cell yellow"><strong>Systematics Check</strong><p class="mini">SAP/PDCSAP, Apertur und Nachbarn.</p></article>
+                  <article class="matrix-cell yellow"><strong>More TESS</strong><p class="mini">Weitere Abdeckung abwarten.</p></article>
+                  <div class="matrix-axis">niedrig</div>
+                  <article class="matrix-cell red"><strong>LOW_PRIORITY</strong><p class="mini">Mehrere Risiken, schwache Datenlage.</p></article>
+                  <article class="matrix-cell red"><strong>LOW_PRIORITY</strong><p class="mini">Signalform nicht planetar genug.</p></article>
+                  <article class="matrix-cell red"><strong>FP_BYDRA</strong><p class="mini">Aktivitaet dominiert wahrscheinlich.</p></article>
+                  <article class="matrix-cell red"><strong>REJECTED</strong><p class="mini">Artefakt/FP dokumentiert.</p></article>
+                  <article class="matrix-cell yellow"><strong>Archive only</strong><p class="mini">Kein direkter Follow-up-Schritt.</p></article>
+                </div>
+              </article>
             </div>
           </section>
 
@@ -3814,6 +3906,7 @@
         labelLegendRows: document.getElementById("labelLegendRows"),
         topCandidateRows: document.getElementById("topCandidateRows"),
         visitorTimeline: document.getElementById("visitorTimeline"),
+        yellowSelectedReason: document.getElementById("yellowSelectedReason"),
         matrixStats: document.getElementById("matrixStats"),
         selectedCard: document.getElementById("selectedCard"),
         rows: document.getElementById("candidateRows"),
@@ -4923,10 +5016,42 @@
         return candidate.reason || "-";
       }
 
+      const yellowTagLabels = {
+        Y_NTR_LOW: "wenige Transits",
+        Y_LONG_PERIOD: "lange Periode",
+        Y_DATA_GAP: "Datenluecken",
+        Y_ACTIVITY_RISK: "Sternaktivitaet / BY Dra Risiko",
+        Y_SYSTEMATICS: "moegliche Systematik",
+        Y_SAP_PDCSAP_MISMATCH: "SAP/PDCSAP uneinheitlich",
+        Y_ODD_EVEN_MISSING: "Odd-Even noch nicht geprueft",
+        Y_MANUAL_REVIEW: "manuelles Review noetig",
+        Y_STRONG_BUT_UNCONFIRMED: "starkes Signal, aber noch nicht bestaetigt"
+      };
+
+      function reasonTagList(tags = []) {
+        return tags.length
+          ? `<div class="reason-tag-list">${tags.map((tag) => `<span class="reason-tag" title="${yellowTagLabels[tag] || tag}">${tag}</span>`).join("")}</div>`
+          : '<span class="mini">Keine gelben Reason Tags.</span>';
+      }
+
+      function nextCheckList(checks = []) {
+        return checks.length
+          ? `<div class="next-check-list">${checks.map((check) => `<span class="next-check">${check}</span>`).join("")}</div>`
+          : '<span class="mini">Kein naechster Check gesetzt.</span>';
+      }
+
+      function followupRank(candidate) {
+        if (candidate.followupStrength === "STRONG") return 0;
+        if (candidate.color === "green") return 1;
+        if (candidate.followupStrength === "MEDIUM") return 2;
+        return 3;
+      }
+
       function top20Candidates() {
         return [...(data.candidates || [])]
           .sort((a, b) => (
-            (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
+            (followupRank(a) - followupRank(b))
+            || (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
             || (hzPriority(a) - hzPriority(b))
             || (statusPriority(a) - statusPriority(b))
             || (Number(a.distance || 0) - Number(b.distance || 0))
@@ -4978,10 +5103,27 @@
               <td>${formatFloat(candidate.evidenceScore, 0)}</td>
               <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
               <td>${formatMaybe(candidate.matrixSectors ?? candidate.observedSectorCount ?? candidate.cleanSectors)}</td>
-              <td class="wrap-cell">${candidateNotes(candidate)}</td>
+              <td class="wrap-cell">${candidate.followupStrength === "STRONG" ? "FOLLOWUP_STRONG · " : ""}${candidateNotes(candidate)}</td>
             </tr>
           `;
         }).join("");
+      }
+
+      function renderYellowReasonPanel() {
+        const selected = state.selected || top20Candidates()[0] || data.candidates[0];
+        if (!selected) return;
+        const summary = selected.yellowSummary || (
+          selected.color === "yellow" || (selected.reasonTags || []).some((tag) => tag.startsWith("Y_"))
+            ? "Gelb: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen"
+            : "Dieser Kandidat ist aktuell nicht gelb markiert."
+        );
+        els.yellowSelectedReason.innerHTML = `
+          <p>${summary}</p>
+          <div><strong>Follow-up:</strong> ${formatMaybe(selected.followupStrength)}</div>
+          <div><strong>Reason Tags:</strong>${reasonTagList(selected.reasonTags || [])}</div>
+          <div><strong>Next Check:</strong>${nextCheckList(selected.nextChecks || [])}</div>
+          <div class="notice matrix-note"><strong>Warum?</strong><span>${formatMaybe(selected.decisionReason, selected.reason)}</span></div>
+        `;
       }
 
       function numericBucket(value, buckets) {
@@ -5656,6 +5798,30 @@
         setText(".eyebrow", labels.eyebrow);
         setText(".lede", t("lede"));
         setText("#focusHzLabel", t("hz_focus"));
+        const yellowCopy = {
+          de: {
+            title: "Warum ist dieser Kandidat gelb?",
+            sub: "Gelb bedeutet nicht schlecht: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen.",
+            selected: "Ausgewaehlter gelber Kandidat",
+            matrix: "Wert vs. Unsicherheitsgrund"
+          },
+          en: {
+            title: "Why is this candidate yellow?",
+            sub: "Yellow does not mean bad: scientifically interesting, but not clean enough for automatic green.",
+            selected: "Selected yellow candidate",
+            matrix: "Value vs. uncertainty reason"
+          },
+          fr: {
+            title: "Pourquoi ce candidat est-il jaune ?",
+            sub: "Jaune ne signifie pas mauvais : scientifiquement interessant, mais pas assez propre pour le vert automatique.",
+            selected: "Candidat jaune selectionne",
+            matrix: "Valeur vs raison d'incertitude"
+          }
+        }[state.lang] || {};
+        setText("#yellowReasonTitle", yellowCopy.title);
+        setText("#yellowReasonSub", yellowCopy.sub);
+        setText("#yellowSelectedTitle", yellowCopy.selected);
+        setText("#yellowMatrixTitle", yellowCopy.matrix);
         setTitle("#showHints", t("hint_button_title"));
         document.getElementById("globalSearch").placeholder = t("search_placeholder");
         document.getElementById("curveSearch").placeholder = labels.curveSearch;
@@ -6196,6 +6362,7 @@
       function selectCandidate(candidate, source = "table") {
         state.selected = candidate;
         renderSelected();
+        renderYellowReasonPanel();
         renderTable();
         draw2dMap();
         update3dSelection();
@@ -6236,6 +6403,14 @@
           </div>
           <div class="chips">${chips}</div>
           <p>${candidate.reason}</p>
+          <div class="notice matrix-note">
+            <strong>Reason Tags</strong>
+            ${reasonTagList(candidate.reasonTags || [])}
+          </div>
+          <div class="notice matrix-note">
+            <strong>Next Check</strong>
+            ${nextCheckList(candidate.nextChecks || [])}
+          </div>
           <div class="details-grid">
             <div class="detail"><span>${t("detail_matrix_status")}</span><strong>${matrixStatus}</strong></div>
             <div class="detail"><span>${t("detail_matrix_class")}</span><strong>${matrixClass}</strong></div>
@@ -6552,8 +6727,8 @@
             </td>
             <td><span class="pill ${matrixColorClass(candidate)}">${formatMaybe(candidate.matrixStatus)}</span></td>
             <td>${formatMaybe(candidate.evidenceScore)}</td>
-            <td class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")}</td>
-            <td class="wrap-cell">${formatMaybe(candidate.nextStep)}</td>
+            <td class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")} ${reasonTagList(candidate.reasonTags || [])}</td>
+            <td class="wrap-cell">${formatMaybe(candidate.nextStep)} ${nextCheckList(candidate.nextChecks || [])}</td>
             <td>${candidate.hz || "-"}</td>
             <td>${candidate.distance} ly</td>
             <td>${candidate.period} d</td>
@@ -6693,6 +6868,7 @@
         renderLabelLegend();
         renderTopCandidates();
         renderVisitorTimeline();
+        renderYellowReasonPanel();
         renderMatrixStats();
         renderTree();
         renderDocs();
