@@ -5441,7 +5441,7 @@
       }
 
       function publicVisibleCandidates() {
-        return (data.candidates || []).filter((candidate) => exofopReadiness(candidate) !== "EXOFOP_PREP");
+        return data.candidates || [];
       }
 
       function filteredCandidates() {
@@ -5460,7 +5460,7 @@
 
       function publicMatrixCandidates() {
         const term = els.globalSearch.value.trim().toLowerCase();
-        return publicCandidatePool().filter((candidate) => matchesCandidate(candidate, term));
+        return publicVisibleCandidates().filter((candidate) => matchesCandidate(candidate, term));
       }
 
       const labelLegend = [
@@ -6215,8 +6215,8 @@
             curvesSub: "All matching candidates are selectable on the left; the combined curve appears on the right.",
             curveSearch: "Search light curve",
             curveOpenCandidate: "Mark candidate",
-            tableTitle: "Candidate Matrix: Green Candidates",
-            tableSub: "Public matrix view lists green candidates only. Yellow/red evaluations remain in the repository analysis.",
+            tableTitle: "Candidate Matrix",
+            tableSub: "Public matrix view lists candidates by visible risk color. ExoFOP readiness is shown only in the restricted review area.",
             tableHeaders: ["TIC", "Color", "Status", "Matrix", "Evidence", "Why", "Next step", "HZ", "Distance", "Period", "SNR", "Transits"],
             docsTitle: "Project Logic and Scripts",
             docsSub: "How each level checks candidates, which scripts support it, and why the evidence remains provisional.",
@@ -6314,8 +6314,8 @@
               curvesSub: "Tous les candidats correspondants sont selectionnables a gauche; la courbe combinee apparait a droite.",
               curveSearch: "Rechercher une courbe",
               curveOpenCandidate: "Marquer le candidat",
-              tableTitle: "Matrice Candidats: candidats verts",
-              tableSub: "La matrice publique liste seulement les candidats verts. Les evaluations jaunes/rouges restent dans l'analyse du depot.",
+              tableTitle: "Matrice Candidats",
+              tableSub: "La matrice publique liste les candidats par couleur de risque visible. La readiness ExoFOP reste dans la zone restreinte.",
               tableHeaders: ["TIC", "Couleur", "Statut", "Matrice", "Evidence", "Pourquoi", "Etape suivante", "HZ", "Distance", "Periode", "SNR", "Transits"],
               docsTitle: "Logique Projet et Scripts",
               docsSub: "Comment chaque niveau verifie les candidats, quels scripts le soutiennent, et pourquoi l'evidence reste provisoire.",
@@ -6412,8 +6412,8 @@
               curvesSub: "Alle passenden Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.",
               curveSearch: "Lichtkurve suchen",
               curveOpenCandidate: "Kandidat markieren",
-              tableTitle: "Candidate Matrix: gruene Kandidaten",
-              tableSub: "Die oeffentliche Matrix zeigt nur gruene Kandidaten. Gelbe/rote Bewertungen bleiben als Auswertung im Repository.",
+              tableTitle: "Candidate Matrix",
+              tableSub: "Die oeffentliche Matrix zeigt Kandidaten nach sichtbarer Risikofarbe. ExoFOP-Readiness steht nur im eingeschraenkten Review-Bereich.",
               tableHeaders: ["TIC", "Farbe", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
               docsTitle: "Projektlogik und Skripte",
               docsSub: "Wie jedes Level Kandidaten prueft, welche Skripte es stuetzen und warum die Evidenz vorlaeufig bleibt.",
@@ -7592,10 +7592,7 @@
         const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
         const term = els.globalSearch.value.trim().toLowerCase();
         if (!limited.length) {
-          const restrictedHits = term ? exofopUploadCandidates(term) : [];
-          els.rows.innerHTML = restrictedHits.length
-            ? `<tr><td colspan="12">TIC ${restrictedHits.map((candidate) => candidate.tic).join(", TIC ")} liegt im eingeschraenkten ExoFOP Review Bereich.</td></tr>`
-            : `<tr><td colspan="12">${term ? "Keine oeffentlich freigegebenen Kandidaten fuer diese Suche." : "Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten."}</td></tr>`;
+          els.rows.innerHTML = `<tr><td colspan="12">${term ? "Keine Kandidaten fuer diese Suche." : "Keine Kandidaten im aktuellen Filter."}</td></tr>`;
           return;
         }
         els.rows.innerHTML = limited.map((candidate) => `
