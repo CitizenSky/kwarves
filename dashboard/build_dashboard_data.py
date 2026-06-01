@@ -325,7 +325,41 @@ def load_db_rows() -> tuple[
     )
 
 
-def color_for(row: dict[str, Any]) -> str:
+def is_public_green_matrix(matrix: dict[str, Any] | None) -> bool:
+    if not matrix:
+        return False
+    if clean_text(matrix.get("status_color")).upper() == "GREEN":
+        return True
+    extended = clean_text(matrix.get("extended_class")).upper()
+    score = safe_float(matrix.get("evidence_score")) or 0.0
+    return (
+        extended in {"SPC", "SPC_STRONG", "SPC_RV_NEEDED", "SPC_FOLLOWUP_READY"}
+        and score >= 75
+        and safe_int(matrix.get("n_transits")) >= 5
+        and safe_int(matrix.get("visible_transits")) >= 3
+        and clean_text(matrix.get("odd_even_result")).upper() == "OK"
+        and clean_text(matrix.get("secondary_eclipse")).upper() == "NO"
+        and clean_text(matrix.get("sap_pdcsap_match")).upper() != "MISMATCH"
+        and clean_text(matrix.get("transit_shape")).upper() != "V_SHAPE"
+        and clean_text(matrix.get("depth_stability")).upper() != "UNSTABLE"
+        and clean_text(matrix.get("data_gap_risk")).upper() == "LOW"
+        and clean_text(matrix.get("sector_edge_risk")).upper() == "LOW"
+    )
+
+
+def color_for(row: dict[str, Any], matrix: dict[str, Any] | None = None) -> str:
+    if is_public_green_matrix(matrix):
+        return "green"
+
+    matrix_color = clean_text((matrix or {}).get("status_color")).upper()
+    if matrix_color:
+        return {
+            "YELLOW": "yellow",
+            "PURPLE": "yellow",
+            "RED": "red",
+            "GRAY": "gray",
+        }.get(matrix_color, "gray")
+
     mark = clean_text(row.get("markierung")).upper()
     status = clean_text(row.get("status")).upper()
     mark_class = clean_text(row.get("markierungs_klasse")).upper()
@@ -416,7 +450,7 @@ def build_candidate(
     matrix = matrix_row or {}
     sector = sector_row or {}
     tic = safe_int(merged.get("TIC"))
-    color = color_for(merged)
+    color = color_for(merged, matrix)
     is_violet = clean_text(merged.get("hz_markierung")).upper() == "VIOLETT"
     distance = safe_float(merged.get("distance_ly")) or 0.0
     period = safe_float(merged.get("best_period")) or 0.0
@@ -524,9 +558,9 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         {
             "id": "level0",
             "title": "Level 0: erste Farbsortierung",
-            "description": "Die erste Farbe kommt aus dem Level-0-Ordner und sagt: vielversprechend, unklar oder wahrscheinlich raus.",
+            "description": "Die sichtbare Farbe kommt aus der Evidence-Matrix; alte Level-0-Gruenlabels werden nur noch uebernommen, wenn das Vetting sie bestaetigt.",
             "children": [
-                {"label": "Gruen", "count": bucket(colors, "green"), "meaning": "SPC-Kandidat, Signal wirkt brauchbar."},
+                {"label": "Gruen", "count": bucket(colors, "green"), "meaning": "Matrix-bestaetigter SPC-Kandidat mit erfuellten Vetting-Kriterien."},
                 {"label": "Gelb", "count": bucket(colors, "yellow"), "meaning": "Noch nicht genug Daten oder unklare Lage."},
                 {"label": "Rot", "count": bucket(colors, "red"), "meaning": "False Positive, Artefakt oder Systematik-Risiko."},
                 {"label": "Violett", "count": violet, "meaning": "HZ-Ziel oder Top-Tier; liegt als Zusatzfarbe ueber gruen/gelb/rot."},
