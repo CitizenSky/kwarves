@@ -1148,6 +1148,107 @@
         line-height: 1.45;
       }
 
+      .docs-level ul {
+        display: grid;
+        gap: 4px;
+        margin: 2px 0 0;
+        padding-left: 18px;
+        color: #344f4a;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .docs-script-window {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 10px 24px rgba(19, 34, 31, 0.05);
+      }
+
+      .docs-script-window summary {
+        position: sticky;
+        top: 0;
+        z-index: 12;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        min-height: 54px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+        list-style: none;
+      }
+
+      .docs-script-window summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .docs-script-window summary strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .docs-script-window summary span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .docs-script-window summary .docs-script-toggle {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+        color: #20433d;
+        transition: transform 0.16s ease;
+      }
+
+      .docs-script-window[open] .docs-script-toggle {
+        transform: rotate(180deg);
+      }
+
+      .docs-script-window[open] summary {
+        border-bottom: 1px solid var(--line);
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+
+      .docs-script-window[open] .docs-table-wrap {
+        max-height: min(68vh, 720px);
+        overflow: auto;
+        overscroll-behavior: contain;
+      }
+
+      .docs-script-close {
+        position: fixed;
+        right: 14px;
+        bottom: 18px;
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: #10201e;
+        color: #ffffff;
+        box-shadow: 0 14px 32px rgba(16, 32, 30, 0.24);
+        font-weight: 780;
+      }
+
+      .docs-script-window[open] .docs-script-close {
+        display: inline-flex;
+      }
+
       .docs-table {
         min-width: 1080px;
       }
@@ -1511,6 +1612,10 @@
 
         .tess-sector-frame {
           height: 320px;
+        }
+
+        .docs-script-window[open] .docs-table-wrap {
+          max-height: 62vh;
         }
       }
 
@@ -1995,19 +2100,34 @@
             <div class="panel-body">
               <div class="docs-flow" id="docsFlow"></div>
               <div class="docs-grid" id="docsLevels"></div>
-              <div class="table-wrap docs-table-wrap">
-                <table class="docs-table" aria-label="Skriptuebersicht">
-                  <thead>
-                    <tr>
-                      <th>Skript</th>
-                      <th>Was macht es?</th>
-                      <th>Warum sinnvoll?</th>
-                      <th>Level / Bereich</th>
-                    </tr>
-                  </thead>
-                  <tbody id="docsScriptRows"></tbody>
-                </table>
-              </div>
+              <details class="docs-script-window" id="docsScriptsWindow">
+                <summary>
+                  <span>
+                    <strong id="docsScriptsTitle">Python-Skripte</strong>
+                    <span id="docsScriptsSub">Technische Skriptuebersicht antippen zum Aufklappen.</span>
+                  </span>
+                  <span class="docs-script-toggle" aria-hidden="true">
+                    <i data-lucide="chevron-down"></i>
+                  </span>
+                </summary>
+                <div class="table-wrap docs-table-wrap">
+                  <table class="docs-table" aria-label="Skriptuebersicht">
+                    <thead>
+                      <tr>
+                        <th>Skript</th>
+                        <th>Was macht es?</th>
+                        <th>Warum sinnvoll?</th>
+                        <th>Level / Bereich</th>
+                      </tr>
+                    </thead>
+                    <tbody id="docsScriptRows"></tbody>
+                  </table>
+                </div>
+                <button class="docs-script-close" id="docsScriptsClose" type="button">
+                  <i data-lucide="x"></i>
+                  <span id="docsScriptsCloseLabel">Skripte zuklappen</span>
+                </button>
+              </details>
             </div>
           </section>
 
@@ -2808,96 +2928,208 @@
       const tessSectorLayout = buildTessSectorLayout(tessMission.totalNumberedSectorsPlanned);
 
       const projectFlowSteps = [
-        "1) Rohdaten sammeln",
-        "2) Level 1: Rohkandidaten + erste Plots",
+        "1) Level 0: Gaia/TIC-Grunddaten + Farbbaum",
+        "2) Level 1: TESS-Lichtkurven + Rohkandidaten",
         "3) Level 2: planetare Plausibilitaet",
-        "4) Level 3: externe Kataloge + neue Kandidaten",
-        "5) Level 4: TTV und O-C Analyse",
-        "6) Level 5: Detailvalidierung",
+        "4) Level 3: externe Katalogpruefung",
+        "5) Level 4: Timing, TTV und Alias-Kontrolle",
+        "6) Level 5: Detailvalidierung und FP-Tests",
         "7) Level 6: Kandidaten-Dossier und Follow-up",
-        "8) Dashboard + Matrix + Monitoring"
+        "8) Dashboard + Candidate Matrix + Monitoring"
       ];
 
       const projectLevels = [
         {
-          name: "Level 0 - Farbbaum nach Distanz",
-          text: "Ordnerstruktur nach Entfernung (ly) und vorlaeufiger Farbe. Hier liegen Kandidatenpfade, PNG-Lichtkurven und die erste Statuslogik."
+          name: "Level 0 - Farbbäume und Distanzfilter",
+          text: "Aus Gaia- und TIC-Grunddaten entsteht die erste kontrollierte Zielmenge: nahe Sterne werden nach Entfernung, Sternklasse und Datenqualitaet vorsortiert, bevor Transit-Signale ueberhaupt bewertet werden.",
+          details: [
+            "Gaia/TIC-Grunddaten sammeln und Distanzklassen nach Lichtjahren bilden.",
+            "Sternfilter nach Temperatur, Radius, Helligkeit und RUWE anwenden.",
+            "K-, G- und M-Sterne getrennt strukturieren.",
+            "Ordnerstruktur und Farblogik fuer gruen, gelb, rot und HZ/violett erzeugen."
+          ]
         },
         {
           name: "Level 1 - Rohkandidaten",
-          text: "BLS/Transit-Suche, Referenzplots, erste manuelle Sichtung und Prioritaetslisten. Ziel: aus grossen Rohdaten handhabbare Kandidaten machen."
+          text: "TESS-Lichtkurven werden nicht nur nach einzelnen Dips durchsucht, sondern mit systematischen Transit-Suchlaeufen und ersten Qualitaetsplots in messbare Rohkandidaten uebersetzt.",
+          details: [
+            "TESS-Lichtkurven laden und SAP sowie PDCSAP gegenueberstellen.",
+            "BLS/TLS-Transit-Suche auf periodische Signale anwenden.",
+            "Periode, Tiefe, Dauer und SNR berechnen.",
+            "Erste Foldplots und Referenzplots fuer Sichtpruefung erzeugen."
+          ]
         },
         {
-          name: "Level 2 - Planetencheck",
-          text: "Schneller Plausibilitaetscheck mit A/B/C/Unsicher/FP-Klassen. Ziel: offensichtliche Systematiken frueh entfernen."
+          name: "Level 2 - Planetare Plausibilitaet",
+          text: "Die Rohsignale werden gegen einfache planetare Erwartungswerte und Transitgeometrie geprueft. Ziel ist eine fruehe Trennung zwischen plausiblen Transits, Artefakten und unzureichender Datenlage.",
+          details: [
+            "Transitform pruefen, insbesondere U-Shape vs. V-Shape.",
+            "Mindestanzahl sichtbarer Transits verlangen.",
+            "Radiusabschaetzung aus Tiefe und Sternradius ableiten.",
+            "Habitable-Zone-Check berechnen und SPC / SPC_ART / Unsicher vergeben."
+          ]
         },
         {
           name: "Level 3 - Externe Pruefung",
-          text: "Abgleich mit ExoFOP/TOI/anderen Katalogen plus Klasse fuer unbekannte neue Kandidaten. Trennt bekannte Objekte von neuen Chancen."
+          text: "Kandidaten werden gegen externe astronomische Kataloge und Nachbarquellen geprueft. So werden bekannte Objekte, Eclipsing Binaries und moegliche Kontaminationen sichtbar.",
+          details: [
+            "ExoFOP-, TOI- und SIMBAD-Abgleich durchfuehren.",
+            "Bekannte Planeten oder Eclipsing Binaries erkennen.",
+            "Gaia-Nachbarsterne und moegliche Blend-Quellen pruefen.",
+            "Unbekannte Kandidaten von bereits katalogisierten Faellen trennen."
+          ]
         },
         {
           name: "Level 4 - TTV / Timing",
-          text: "O-C Kurven, TTV-Prioritaeten, grafische Checks und Rechecks. Wichtig fuer Dynamik, Alias-Risiken und Stabilitaet."
+          text: "Das Timing prueft, ob ein Signal periodisch stabil ist oder durch Datenfenster, Alias-Loesungen oder Transit-Timing-Variationen erklaert werden koennte.",
+          details: [
+            "O-C Analyse und Transit-Timing-Variationen pruefen.",
+            "Segmentanalyse fuer einzelne Sektoren und Zeitfenster anwenden.",
+            "Periodenstabilitaet und Alias-Risiken bewerten.",
+            "Datenfensterqualitaet, Randlagen und Luecken dokumentieren."
+          ]
         },
         {
           name: "Level 5 - Detailvalidierung",
-          text: "Odd/Even, Secondary Eclipse, Nachbarstern-Checks, Einzeltransitkontrolle. Hier fallen viele FP/Artefakte final raus."
+          text: "In der Detailvalidierung werden klassische False-Positive-Szenarien aktiv gesucht. Ein Kandidat soll mehrere unabhaengige Plausibilitaetstests ueberstehen.",
+          details: [
+            "Odd/Even-Test und Secondary-Eclipse-Suche durchfuehren.",
+            "SAP vs. PDCSAP vergleichen und Aperture-/Nachbarstern-Checks nutzen.",
+            "Rotationsanalyse und Aktivitaetspruefung einbeziehen.",
+            "BY-Dra-Risiko und andere stellare Variabilitaet markieren."
+          ]
         },
         {
-          name: "Level 6 - Dossier",
-          text: "Berichte, Follow-up Prioritaet, Exportpakete und Rueckstellungen. Das ist die Uebergabe in beobachtbare Actions."
+          name: "Level 6 - Kandidaten-Dossier",
+          text: "Am Ende wird kein endgueltiger Planet behauptet, sondern ein nachvollziehbares Kandidaten-Dossier erzeugt: Status, Evidenz, Unsicherheiten und naechste Beobachtungsschritte.",
+          details: [
+            "Evidence Score, SPC-Status, HZ-Klasse und Recheck-Status zusammenfassen.",
+            "RV Needed / Follow-up Ready und naechste TESS-Beobachtung ausweisen.",
+            "Export fuer spaetere Nachpruefung und erneutes Vetting erzeugen.",
+            "Entscheidung offen halten, wenn Datenlage oder externe Evidenz unvollstaendig ist."
+          ]
         },
         {
           name: "Dashboard + Candidate Matrix",
-          text: "Konsolidiert Status, Evidence Score, Entscheidungsgrund und naechsten Schritt. Macht die Pipeline nachvollziehbar und steuerbar."
+          text: "Dashboard und Matrix machen den Zwischenstand sichtbar, nicht die finale Wahrheit. Sie zeigen, warum ein Kandidat weiter verfolgt, beobachtet, zurueckgestellt oder depriorisiert wird.",
+          details: [
+            "Kandidatenstatus, Evidence Score, Transitanzahl, SNR, Radius und HZ-Status anzeigen.",
+            "Recheck-Ampel, naechste Aktion und Datenfenster-Risiken sichtbar machen.",
+            "Vorlaeufigkeit klar markieren: Ergebnisse sind nicht vollstaendig und koennen sich mit neuen Daten aendern.",
+            "Pipeline-Entscheidungen transparent machen, statt nur Lichtkurven-Dips zu sammeln."
+          ]
         }
       ];
 
       const projectFlowStepsI18n = {
         de: projectFlowSteps,
         en: [
-          "1) Collect raw data",
-          "2) Level 1: raw candidates + first plots",
+          "1) Level 0: Gaia/TIC base data + color tree",
+          "2) Level 1: TESS light curves + raw candidates",
           "3) Level 2: planetary plausibility",
-          "4) Level 3: external catalogs + new candidates",
-          "5) Level 4: TTV and O-C analysis",
-          "6) Level 5: detailed validation",
+          "4) Level 3: external catalog checks",
+          "5) Level 4: timing, TTV and alias control",
+          "6) Level 5: detailed validation and FP tests",
           "7) Level 6: candidate dossier and follow-up",
-          "8) Dashboard + matrix + monitoring"
+          "8) Dashboard + Candidate Matrix + monitoring"
         ],
         fr: [
-          "1) Collecte des donnees brutes",
-          "2) Niveau 1: candidats bruts + premiers graphiques",
+          "1) Niveau 0: donnees Gaia/TIC + arbre couleur",
+          "2) Niveau 1: courbes TESS + candidats bruts",
           "3) Niveau 2: plausibilite planetaire",
-          "4) Niveau 3: catalogues externes + nouveaux candidats",
-          "5) Niveau 4: analyse TTV et O-C",
-          "6) Niveau 5: validation detaillee",
+          "4) Niveau 3: verification de catalogues externes",
+          "5) Niveau 4: timing, TTV et controle d'alias",
+          "6) Niveau 5: validation detaillee et tests FP",
           "7) Niveau 6: dossier candidat et suivi",
-          "8) Dashboard + matrice + monitoring"
+          "8) Dashboard + matrice candidats + monitoring"
         ]
       };
 
       const projectLevelsI18n = {
         de: projectLevels,
         en: [
-          { name: "Level 0 - Distance Color Tree", text: "Folder structure by distance (ly) and preliminary color. Candidate paths, PNG light curves, and first status logic live here." },
-          { name: "Level 1 - Raw Candidates", text: "BLS/transit search, reference plots, first manual screening, and priority lists. Goal: turn large raw data into workable candidates." },
-          { name: "Level 2 - Planet Check", text: "Fast plausibility check with A/B/C/uncertain/FP classes. Goal: remove obvious systematics early." },
-          { name: "Level 3 - External Check", text: "Crossmatch with ExoFOP/TOI/other catalogs plus class for unknown new candidates. Separates known objects from new opportunities." },
-          { name: "Level 4 - TTV / Timing", text: "O-C curves, TTV priorities, graphical checks, and rechecks. Important for dynamics, alias risks, and stability." },
-          { name: "Level 5 - Detailed Validation", text: "Odd/even, secondary eclipse, neighboring-star checks, single-transit control. Many FP/artifacts are filtered out here." },
-          { name: "Level 6 - Dossier", text: "Reports, follow-up priority, export packages, and hold decisions. This is the handoff into observable actions." },
-          { name: "Dashboard + Candidate Matrix", text: "Consolidates status, evidence score, decision reason, and next step. Makes the pipeline transparent and controllable." }
+          {
+            name: "Level 0 - Color Trees and Distance Filters",
+            text: "Gaia and TIC base data define the first controlled target set before any transit signal is interpreted.",
+            details: ["Collect Gaia/TIC base data and group distances in light-years.", "Filter stars by temperature, radius, brightness, and RUWE.", "Structure K, G, and M stars separately.", "Create the folder tree and color logic for green, yellow, red, and HZ/purple."]
+          },
+          {
+            name: "Level 1 - Raw Candidates",
+            text: "TESS light curves are converted into measurable raw candidates with systematic transit searches and first quality plots.",
+            details: ["Load TESS light curves and compare SAP with PDCSAP.", "Run BLS/TLS transit searches.", "Calculate period, depth, duration, and SNR.", "Generate first folded plots and reference plots."]
+          },
+          {
+            name: "Level 2 - Planetary Plausibility",
+            text: "Raw signals are checked against basic planetary expectations and transit geometry before they move deeper into the pipeline.",
+            details: ["Check transit shape, especially U-shape versus V-shape.", "Require a minimum number of visible transits.", "Estimate radius from depth and stellar radius.", "Run the habitable-zone check and assign SPC / SPC_ART / uncertain."]
+          },
+          {
+            name: "Level 3 - External Check",
+            text: "Candidates are crossmatched against external catalogs and neighboring sources to identify known objects and contamination risks.",
+            details: ["Crossmatch ExoFOP, TOI, and SIMBAD.", "Recognize known planets or eclipsing binaries.", "Inspect Gaia neighboring stars and possible blend sources.", "Separate unknown candidates from cataloged cases."]
+          },
+          {
+            name: "Level 4 - Timing / TTV",
+            text: "Timing tests evaluate whether a signal is stable, affected by data windows, or consistent with alias solutions or TTVs.",
+            details: ["Run O-C analysis and check transit-timing variations.", "Analyze segments by sector and time window.", "Assess period stability and alias risks.", "Document data-window quality, sector edges, and gaps."]
+          },
+          {
+            name: "Level 5 - Detailed Validation",
+            text: "Classic false-positive scenarios are actively searched for; strong candidates should survive several independent checks.",
+            details: ["Run odd/even tests and secondary-eclipse searches.", "Compare SAP with PDCSAP and inspect aperture/neighboring-star risks.", "Include rotation and stellar-activity analysis.", "Flag BY Dra risk and related stellar variability."]
+          },
+          {
+            name: "Level 6 - Candidate Dossier",
+            text: "The final product is a traceable candidate dossier, not a planet confirmation: status, evidence, uncertainty, and follow-up route.",
+            details: ["Summarize evidence score, SPC status, HZ class, and recheck status.", "Show RV Needed / Follow-up Ready and the next TESS observation.", "Export records for later rechecking and renewed vetting.", "Keep decisions provisional when evidence remains incomplete."]
+          },
+          {
+            name: "Dashboard + Candidate Matrix",
+            text: "The dashboard exposes the provisional state and explains why a candidate is followed, rechecked, paused, or deprioritized.",
+            details: ["Show candidate status, evidence score, transit count, SNR, radius, and HZ status.", "Expose recheck signal, next action, and data-window risks.", "Mark results as provisional and incomplete.", "Make pipeline decisions transparent instead of listing light-curve dips."]
+          }
         ],
         fr: [
-          { name: "Niveau 0 - Arbre couleur par distance", text: "Structure de dossiers par distance (ly) et couleur preliminaire. On y trouve les chemins candidats, les courbes PNG et la premiere logique de statut." },
-          { name: "Niveau 1 - Candidats bruts", text: "Recherche BLS/transit, graphiques de reference, premiere revue manuelle et listes de priorite. Objectif: transformer de grandes donnees brutes en candidats exploitables." },
-          { name: "Niveau 2 - Verification planetaire", text: "Verification rapide de plausibilite avec classes A/B/C/incertain/FP. Objectif: retirer tot les systematiques evidentes." },
-          { name: "Niveau 3 - Verification externe", text: "Croisement avec ExoFOP/TOI/autres catalogues plus classe pour nouveaux candidats inconnus. Separe les objets connus des nouvelles opportunites." },
-          { name: "Niveau 4 - TTV / Timing", text: "Courbes O-C, priorites TTV, controles graphiques et reverifications. Important pour la dynamique, les risques d'alias et la stabilite." },
-          { name: "Niveau 5 - Validation detaillee", text: "Odd/even, eclipse secondaire, controles d'etoiles voisines, verification transit unique. Beaucoup de FP/artefacts sont filtres ici." },
-          { name: "Niveau 6 - Dossier", text: "Rapports, priorite de suivi, paquets export et mises en attente. C'est la transition vers des actions observables." },
-          { name: "Dashboard + Matrice Candidats", text: "Consolide statut, score d'evidence, raison de decision et prochaine etape. Rend le pipeline transparent et pilotable." }
+          {
+            name: "Niveau 0 - Arbres couleur et filtres de distance",
+            text: "Les donnees Gaia et TIC definissent un premier ensemble cible controle avant toute interpretation de transit.",
+            details: ["Collecter les donnees Gaia/TIC et classer les distances en annees-lumiere.", "Filtrer par temperature, rayon, luminosite et RUWE.", "Structurer separement les etoiles K, G et M.", "Creer l'arborescence et la logique couleur vert, jaune, rouge et HZ/violet."]
+          },
+          {
+            name: "Niveau 1 - Candidats bruts",
+            text: "Les courbes TESS sont transformees en candidats mesurables par recherches de transit et premiers graphiques de qualite.",
+            details: ["Charger les courbes TESS et comparer SAP avec PDCSAP.", "Lancer les recherches BLS/TLS.", "Calculer periode, profondeur, duree et SNR.", "Produire les premiers graphiques plies et de reference."]
+          },
+          {
+            name: "Niveau 2 - Plausibilite planetaire",
+            text: "Les signaux bruts sont confrontes aux attentes planetaires simples et a la geometrie de transit.",
+            details: ["Verifier la forme du transit, surtout U-shape vs V-shape.", "Exiger un nombre minimal de transits visibles.", "Estimer le rayon avec profondeur et rayon stellaire.", "Verifier la zone habitable et assigner SPC / SPC_ART / incertain."]
+          },
+          {
+            name: "Niveau 3 - Verification externe",
+            text: "Les candidats sont croises avec des catalogues externes et les sources voisines pour identifier objets connus et contaminations.",
+            details: ["Croiser ExoFOP, TOI et SIMBAD.", "Reconnaitre planetes connues ou binaires a eclipses.", "Verifier les etoiles voisines Gaia et les sources de blend.", "Separer les candidats inconnus des cas catalogues."]
+          },
+          {
+            name: "Niveau 4 - Timing / TTV",
+            text: "Le timing verifie la stabilite du signal et les risques lies aux fenetres de donnees, alias ou TTV.",
+            details: ["Faire l'analyse O-C et verifier les TTV.", "Analyser les segments par secteur et fenetre temporelle.", "Evaluer stabilite de periode et risques d'alias.", "Documenter qualite des fenetres, bords de secteur et lacunes."]
+          },
+          {
+            name: "Niveau 5 - Validation detaillee",
+            text: "Les scenarios classiques de faux positifs sont recherches activement par plusieurs controles independants.",
+            details: ["Faire les tests odd/even et la recherche d'eclipse secondaire.", "Comparer SAP et PDCSAP et verifier aperture/voisins.", "Inclure rotation et activite stellaire.", "Marquer le risque BY Dra et la variabilite stellaire."]
+          },
+          {
+            name: "Niveau 6 - Dossier candidat",
+            text: "Le resultat est un dossier tracable, pas une confirmation: statut, evidence, incertitudes et suite de suivi.",
+            details: ["Resumer evidence score, statut SPC, classe HZ et statut recheck.", "Indiquer RV Needed / Follow-up Ready et la prochaine observation TESS.", "Exporter pour verification ulterieure et nouveau vetting.", "Garder les decisions provisoires si l'evidence est incomplete."]
+          },
+          {
+            name: "Dashboard + Matrice Candidats",
+            text: "Le dashboard montre l'etat provisoire et explique pourquoi un candidat avance, attend, est recontrole ou depriorise.",
+            details: ["Afficher statut, evidence score, nombre de transits, SNR, rayon et HZ.", "Montrer l'alerte recheck, la prochaine action et les risques de fenetre.", "Signaler que les resultats sont provisoires et incomplets.", "Rendre les decisions du pipeline transparentes, pas seulement lister des dips."]
+          }
         ]
       };
 
@@ -4170,6 +4402,7 @@
             <article class="docs-level">
               <strong>${level.name}</strong>
               <p>${level.text}</p>
+              ${level.details ? `<ul>${level.details.map((detail) => `<li>${detail}</li>`).join("")}</ul>` : ""}
             </article>
           `)
           .join("");
@@ -4260,8 +4493,11 @@
             tableSub: "Sorted by distance; selection syncs tree, map, and light curve.",
             tableHeaders: ["TIC", "Color", "Status", "Matrix", "Evidence", "Why", "Next step", "HZ", "Distance", "Period", "SNR", "Transits"],
             docsTitle: "Project Logic and Scripts",
-            docsSub: "What each script does, why it matters, and which level it supports.",
+            docsSub: "How each level checks candidates, which scripts support it, and why the evidence remains provisional.",
             docsRefresh: "Refresh docs",
+            docsScriptsTitle: "Python Scripts",
+            docsScriptsSub: "Technical script overview. Tap to expand; tap the sticky header again to collapse.",
+            docsScriptsClose: "Collapse scripts",
             docsHeaders: ["Script", "What does it do?", "Why useful?", "Level / Area"],
             legalTitle: "Legal and Notes",
             legalSub: "Project status, responsibility, and privacy notes.",
@@ -4356,8 +4592,11 @@
               tableSub: "Triee par distance; la selection synchronise arbre, carte et courbe.",
               tableHeaders: ["TIC", "Couleur", "Statut", "Matrice", "Evidence", "Pourquoi", "Etape suivante", "HZ", "Distance", "Periode", "SNR", "Transits"],
               docsTitle: "Logique Projet et Scripts",
-              docsSub: "Ce que fait chaque script, pourquoi il est utile, et quel niveau il sert.",
+              docsSub: "Comment chaque niveau verifie les candidats, quels scripts le soutiennent, et pourquoi l'evidence reste provisoire.",
               docsRefresh: "Actualiser la doc",
+              docsScriptsTitle: "Scripts Python",
+              docsScriptsSub: "Vue technique des scripts. Toucher pour ouvrir; retoucher l'en-tete fixe pour refermer.",
+              docsScriptsClose: "Refermer les scripts",
               docsHeaders: ["Script", "Que fait-il?", "Pourquoi utile?", "Niveau / Zone"],
               legalTitle: "Mentions Legales et Notes",
               legalSub: "Statut du projet, responsabilite et notes de confidentialite.",
@@ -4451,8 +4690,11 @@
               tableSub: "Sortiert nach Entfernung; Auswahl synchronisiert Baum, Karte und Lichtkurve.",
               tableHeaders: ["TIC", "Farbe", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
               docsTitle: "Projektlogik und Skripte",
-              docsSub: "Was jedes Skript macht, warum es sinnvoll ist und welches Level es bedient.",
+              docsSub: "Wie jedes Level Kandidaten prueft, welche Skripte es stuetzen und warum die Evidenz vorlaeufig bleibt.",
               docsRefresh: "Dokuseite aktualisieren",
+              docsScriptsTitle: "Python-Skripte",
+              docsScriptsSub: "Technische Skriptuebersicht. Antippen zum Oeffnen; den festen Kopf erneut antippen zum Zuklappen.",
+              docsScriptsClose: "Skripte zuklappen",
               docsHeaders: ["Skript", "Was macht es?", "Warum sinnvoll?", "Level / Bereich"],
               legalTitle: "Impressum und Hinweise",
               legalSub: "Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.",
@@ -4644,6 +4886,9 @@
         setText("#docsPanel h2", labels.docsTitle);
         setText("#docsPanel .panel-subtitle", labels.docsSub);
         setTitle("#refreshDocs", labels.docsRefresh);
+        setText("#docsScriptsTitle", labels.docsScriptsTitle);
+        setText("#docsScriptsSub", labels.docsScriptsSub);
+        setText("#docsScriptsCloseLabel", labels.docsScriptsClose);
         document.querySelectorAll("#docsPanel .docs-table thead th").forEach((th, index) => {
           th.textContent = labels.docsHeaders[index] || th.textContent;
         });
@@ -5735,6 +5980,13 @@
       document.getElementById("refreshDocs").addEventListener("click", () => {
         renderDocs();
         showToast(t("toast_docs_updated"));
+      });
+
+      document.getElementById("docsScriptsClose")?.addEventListener("click", () => {
+        const scriptsWindow = document.getElementById("docsScriptsWindow");
+        if (!scriptsWindow) return;
+        scriptsWindow.open = false;
+        scriptsWindow.scrollIntoView({ behavior: "smooth", block: "center" });
       });
 
       document.getElementById("refreshTess").addEventListener("click", () => {

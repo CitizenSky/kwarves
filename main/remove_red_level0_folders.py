@@ -309,7 +309,7 @@ def main() -> None:
         "",
         "- Gruen: `SPC_GREEN_TIC_<TIC>` = SPC-Kandidat.",
         "- Gelb: `YELLOW_INFO_TIC_<TIC>` = mehr Informationen werden benoetigt.",
-        "- Violett: `_HZ_PURPLE_` im Ordnernamen = HZ-Kandidat.",
+        "- Violett: `_HZ_PURPLE_` im Ordnernamen = HZ-Kandidat; `HZ_PURPLE` ist nur der technische Legacy-Code.",
         "",
     ]
     (LEVEL0_ROOT / "README.md").write_text("\n".join(readme_lines), encoding="utf-8")

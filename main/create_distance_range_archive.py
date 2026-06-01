@@ -32,6 +32,9 @@ MAX_DISTANCE_LY = 500
 MANAGED_FINDER_TAGS = {
     "SPC_GREEN\n2",
     "HZ_PURPLE\n3",
+    "VIOLETT_HZ\n3",
+    "Lila\n3",
+    "Purple\n3",
     "INFO_NEEDED_YELLOW\n5",
     "FP_RED\n6",
 }
@@ -486,13 +489,14 @@ def main() -> None:
             (candidate_dir / "VIOLETT_MARKIERT_HZ.md").write_text(
                 "\n".join(
                     [
-                        f"TIC {tic} HZ mark: PURPLE - habitable-zone candidate",
+                        f"TIC {tic} HZ-Markierung: VIOLETT - Habitable-Zone-Kandidat",
                         f"HZ status: {hz_status}",
                         f"Status color: {markierung}",
                         f"Distance range: {range_name}",
                         f"Distance ly: {distance_ly:.6f}",
                         "",
-                        "HZ purple is an additional marker. Green/yellow/red still describe the review status.",
+                        "Violett ist ein zusaetzlicher HZ-Marker. Gruen/gelb/rot beschreiben weiter den Review-Status.",
+                        "Technischer Ordnercode: HZ_PURPLE ist ein Legacy-Name fuer die sichtbare Violett-Markierung.",
                         "Existing project structure was not moved or deleted.",
                         "",
                     ]
@@ -501,7 +505,7 @@ def main() -> None:
             )
         apply_finder_tag(
             candidate_dir,
-            [color_info["finder_tag"], "HZ_PURPLE\n3"] if is_hz else color_info["finder_tag"],
+            [color_info["finder_tag"], "Purple\n3"] if is_hz else color_info["finder_tag"],
         )
 
         artifacts = list(artifact_index.get(tic, []))
@@ -658,7 +662,7 @@ def main() -> None:
         "- Gruen: `SPC_GREEN_TIC_<TIC>` = SPC-Kandidat.",
         "- Gelb: `YELLOW_INFO_TIC_<TIC>` = mehr Informationen werden benoetigt.",
         "- Rot: `RED_FP_TIC_<TIC>` = False Positive / FP.",
-        "- Violett: `_HZ_PURPLE_` im Ordnernamen = HZ-Kandidat.",
+        "- Violett: `_HZ_PURPLE_` im Ordnernamen = HZ-Kandidat; `HZ_PURPLE` ist nur der technische Legacy-Code.",
         "- Kombiniert: z.B. `YELLOW_INFO_HZ_PURPLE_TIC_<TIC>`.",
         "- Auf macOS wurden best-effort Finder-Tags gesetzt.",
         "- Zusaetzlich wurden vorhandene Ordner in `level4_07_SPC_22_final` additiv markiert.",

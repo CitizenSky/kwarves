@@ -25,7 +25,10 @@ TAG_SPECS = {
     "red": ("Rot", 6, 2),
     "yellow": ("Gelb", 5, 3),
     "green": ("Gr\u00fcn", 2, 6),
-    "purple": ("Violett", 3, 5),
+    # Apple stores the default tag names internally in English; iOS/macOS
+    # localize "Purple" to "Lila" in German. A literal "Lila" tag becomes
+    # a custom gray tag in iCloud Files.
+    "purple": ("Purple", 3, 5),
 }
 
 
@@ -46,10 +49,10 @@ def classify(path: Path) -> tuple[str, list[str]]:
         primary = "red"
     elif name.startswith("YELLOW_INFO"):
         primary = "yellow"
-    elif "HZ_PURPLE" in name:
-        primary = "purple"
     elif name.startswith("SPC_GREEN"):
         primary = "green"
+    elif "HZ_PURPLE" in name:
+        primary = "purple"
     else:
         primary = "none"
 
@@ -147,6 +150,7 @@ def apply_root(
     dry_run: bool = False,
     verify_only: bool = False,
     labels_only: bool = False,
+    tags_only: bool = False,
     verify_finder_labels: bool = False,
 ) -> dict[str, object]:
     dirs = candidate_dirs(root)
@@ -162,11 +166,11 @@ def apply_root(
             continue
         if not dry_run and not verify_only and not labels_only:
             set_user_tags(path, tag_keys)
-        if not dry_run and not verify_only:
+        if not dry_run and not verify_only and not tags_only:
             _tag_name, _color_code, finder_label = TAG_SPECS[primary]
             paths_by_label[finder_label].append(path)
 
-    if not dry_run and not verify_only:
+    if not dry_run and not verify_only and not tags_only:
         set_finder_labels(paths_by_label)
 
     missing_tags: list[str] = []
@@ -205,6 +209,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Count folders without changing tags.")
     parser.add_argument("--verify-only", action="store_true", help="Only verify existing tags without changing tags.")
     parser.add_argument("--labels-only", action="store_true", help="Only set Finder color labels; leave UserTags unchanged.")
+    parser.add_argument("--tags-only", action="store_true", help="Only set UserTags; skip Finder label AppleScript.")
     parser.add_argument("--verify-finder-labels", action="store_true", help="Also verify Finder label colors via kMDItemFSLabel.")
     args = parser.parse_args()
 
@@ -221,6 +226,7 @@ def main() -> int:
             dry_run=args.dry_run,
             verify_only=args.verify_only,
             labels_only=args.labels_only,
+            tags_only=args.tags_only,
             verify_finder_labels=args.verify_finder_labels,
         )
         print(f"root={result['root']}")
