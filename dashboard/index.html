@@ -1431,19 +1431,27 @@
       .admin-layout {
         display: grid;
         gap: 12px;
+        width: 100%;
+        max-width: 100%;
         min-width: 0;
-        overflow: visible;
+        overflow-x: hidden;
       }
 
       .admin-layout .notice {
+        max-width: 100%;
         overflow: visible;
       }
 
       .admin-layout a,
       .admin-layout span,
       .admin-layout p {
+        max-width: 100%;
         overflow-wrap: anywhere;
         word-break: break-word;
+      }
+
+      #adminGlobalDashboardLink {
+        word-break: break-all;
       }
 
       .admin-login-card {
@@ -1486,6 +1494,8 @@
         flex-wrap: wrap;
         gap: 8px;
         justify-content: flex-start;
+        max-width: 100%;
+        min-width: 0;
       }
 
       .admin-kpis {
@@ -1523,6 +1533,7 @@
       }
 
       .admin-source-card {
+        max-width: 100%;
         min-width: 0;
         padding: 12px;
         border: 1px solid var(--line);
@@ -1551,6 +1562,14 @@
 
       .admin-table {
         min-width: 780px;
+      }
+
+      .admin-layout .table-wrap {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       #adminExofopTable {
@@ -2177,7 +2196,37 @@
         }
 
         .admin-toolbar .small-button {
-          flex: 1 1 180px;
+          flex: 1 1 100%;
+          width: 100%;
+          min-width: 0;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+
+        #adminStatsWrap {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow-x: hidden;
+        }
+
+        #adminPanel .panel-body {
+          padding-right: 12px;
+          padding-left: 12px;
+        }
+
+        #adminPanel .notice,
+        #adminPanel .admin-source-card,
+        #adminPanel .admin-kpi,
+        #adminPanel .admin-login-card {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        #adminPanel .notice {
+          display: block;
+          white-space: normal;
         }
 
         #adminExofopTable {
@@ -2270,6 +2319,12 @@
 
         .admin-kpis {
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        #adminPanel .panel-header,
+        #adminPanel .panel-body {
+          padding-right: 10px;
+          padding-left: 10px;
         }
 
         #adminExofopTable td {
