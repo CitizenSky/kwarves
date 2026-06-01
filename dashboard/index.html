@@ -1395,6 +1395,7 @@
       .admin-layout {
         display: grid;
         gap: 12px;
+        min-width: 0;
       }
 
       .admin-login-card {
@@ -1436,16 +1437,17 @@
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        justify-content: flex-end;
+        justify-content: flex-start;
       }
 
       .admin-kpis {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(150px, 1fr));
         gap: 10px;
       }
 
       .admin-kpi {
+        min-width: 0;
         padding: 11px;
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -1462,6 +1464,38 @@
         display: block;
         margin-top: 4px;
         font-size: 20px;
+        overflow-wrap: anywhere;
+      }
+
+      .admin-source-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .admin-source-card {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .admin-source-card h3 {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+
+      .admin-source-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .admin-source-card .button {
+        margin-top: 10px;
       }
 
       .admin-table {
@@ -1982,7 +2016,8 @@
         .grid-2,
         .map-layout,
         .tess-compare-layout,
-        .curve-layout {
+        .curve-layout,
+        .admin-source-grid {
           grid-template-columns: minmax(0, 1fr);
         }
 
@@ -2083,7 +2118,11 @@
         .docs-grid,
         .tess-kpis,
         .admin-kpis {
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .admin-toolbar .small-button {
+          flex: 1 1 180px;
         }
 
         .tree-children {
@@ -2120,6 +2159,10 @@
       @media (max-width: 520px) {
         h1 {
           font-size: 31px;
+        }
+
+        .admin-kpis {
+          grid-template-columns: minmax(0, 1fr);
         }
 
         .search {
@@ -2938,6 +2981,20 @@
                   <strong>Dashboard:</strong> <a id="adminGlobalDashboardLink" href="#" target="_blank" rel="noopener noreferrer">oeffnen</a><br />
                   <strong>Eigenfilter:</strong> <span id="adminSelfFilterStatus">Aus</span>
                 </div>
+                <div class="admin-source-grid">
+                  <article class="admin-source-card">
+                    <h3 id="adminGoatTitle">GoatCounter</h3>
+                    <p id="adminGoatText">Quelle der Wahrheit fuer oeffentliche Besucherzahlen. Kann durch uBlock/Consent/Browser-Blocking weniger Aufrufe sehen.</p>
+                    <a class="button" id="adminGoatButton" href="https://koni.goatcounter.com" target="_blank" rel="noopener noreferrer">
+                      <i data-lucide="external-link"></i>
+                      <span id="adminGoatButtonLabel">GoatCounter oeffnen</span>
+                    </a>
+                  </article>
+                  <article class="admin-source-card">
+                    <h3 id="adminLocalTitle">Lokaler Browser-Fallback</h3>
+                    <p id="adminLocalText">Zaehlt nur dieses Geraet und diesen Browser via localStorage. Diese Werte sind nicht mit GoatCounter synchronisiert.</p>
+                  </article>
+                </div>
                 <div class="admin-kpis" style="margin-top: 10px;">
                   <article class="admin-kpi">
                     <span>Seitenaufrufe</span>
@@ -3203,6 +3260,11 @@
           admin_self_filter_off: "Aus",
           admin_self_filter_disable: "Eigene Besuche NICHT zaehlen",
           admin_self_filter_enable: "Eigene Besuche zaehlen",
+          admin_goat_title: "GoatCounter",
+          admin_goat_text: "Quelle der Wahrheit fuer oeffentliche Besucherzahlen. Die Werte koennen niedriger sein, wenn uBlock, Browser-Schutz oder Consent-Blocking das externe Tracking blockieren.",
+          admin_goat_button: "GoatCounter oeffnen",
+          admin_local_title: "Lokaler Browser-Fallback",
+          admin_local_text: "Zaehlt nur dieses Geraet und diesen Browser via localStorage. Diese Werte sind nicht mit GoatCounter synchronisiert und dienen nur als schnelle lokale Kontrolle.",
           table_country_unknown: "Unknown",
           toast_no_curve_for_candidate: "Fuer diesen Kandidaten ist keine HZ/gruene Lichtkurve im Dashboard-Set.",
           toast_filter_hz: "HZ/Violett gefiltert.",
@@ -3397,6 +3459,11 @@
           admin_self_filter_off: "Off",
           admin_self_filter_disable: "Do NOT count own visits",
           admin_self_filter_enable: "Count own visits",
+          admin_goat_title: "GoatCounter",
+          admin_goat_text: "Source of truth for public visitor analytics. Counts may be lower when uBlock, browser protection, or consent blocking prevents external tracking.",
+          admin_goat_button: "Open GoatCounter",
+          admin_local_title: "Local browser fallback",
+          admin_local_text: "Counts only this device and this browser via localStorage. These values are not synchronized with GoatCounter and are only a quick local check.",
           table_country_unknown: "Unknown",
           toast_no_curve_for_candidate: "No HZ/green light curve is available for this candidate in the dashboard set.",
           toast_filter_hz: "Filtered to HZ/violet.",
@@ -3591,6 +3658,11 @@
           admin_self_filter_off: "Off",
           admin_self_filter_disable: "NE PAS compter mes visites",
           admin_self_filter_enable: "Compter mes visites",
+          admin_goat_title: "GoatCounter",
+          admin_goat_text: "Source de reference pour les statistiques publiques. Les valeurs peuvent etre plus basses si uBlock, la protection du navigateur ou le blocage du consentement empeche le tracking externe.",
+          admin_goat_button: "Ouvrir GoatCounter",
+          admin_local_title: "Fallback navigateur local",
+          admin_local_text: "Compte seulement cet appareil et ce navigateur via localStorage. Ces valeurs ne sont pas synchronisees avec GoatCounter et servent uniquement de controle local rapide.",
           table_country_unknown: "Unknown",
           toast_no_curve_for_candidate: "Aucune courbe HZ/verte disponible pour ce candidat dans le set dashboard.",
           toast_filter_hz: "Filtre HZ/violet actif.",
@@ -4158,7 +4230,13 @@
         adminGlobalDashboardLink: document.getElementById("adminGlobalDashboardLink"),
         adminSelfFilterStatus: document.getElementById("adminSelfFilterStatus"),
         adminToggleSelfFilter: document.getElementById("adminToggleSelfFilter"),
-        adminToggleSelfFilterLabel: document.getElementById("adminToggleSelfFilterLabel")
+        adminToggleSelfFilterLabel: document.getElementById("adminToggleSelfFilterLabel"),
+        adminGoatTitle: document.getElementById("adminGoatTitle"),
+        adminGoatText: document.getElementById("adminGoatText"),
+        adminGoatButton: document.getElementById("adminGoatButton"),
+        adminGoatButtonLabel: document.getElementById("adminGoatButtonLabel"),
+        adminLocalTitle: document.getElementById("adminLocalTitle"),
+        adminLocalText: document.getElementById("adminLocalText")
       };
 
       let toastTimer;
@@ -4825,6 +4903,14 @@
         els.adminGlobalDashboardLink.textContent = hasDashboard ? globalAnalytics.dashboardUrl : t("not_set");
         els.adminGlobalDashboardLink.style.pointerEvents = hasDashboard ? "auto" : "none";
         els.adminGlobalDashboardLink.style.opacity = hasDashboard ? "1" : "0.6";
+        els.adminGoatTitle.textContent = t("admin_goat_title");
+        els.adminGoatText.textContent = t("admin_goat_text");
+        els.adminGoatButton.href = hasDashboard ? globalAnalytics.dashboardUrl : "#";
+        els.adminGoatButton.style.pointerEvents = hasDashboard ? "auto" : "none";
+        els.adminGoatButton.style.opacity = hasDashboard ? "1" : "0.6";
+        els.adminGoatButtonLabel.textContent = t("admin_goat_button");
+        els.adminLocalTitle.textContent = t("admin_local_title");
+        els.adminLocalText.textContent = t("admin_local_text");
         els.adminSelfFilterStatus.textContent = analytics.selfFilterEnabled ? t("admin_self_filter_on") : t("admin_self_filter_off");
         els.adminToggleSelfFilterLabel.textContent = analytics.selfFilterEnabled
           ? t("admin_self_filter_disable")
@@ -5876,7 +5962,7 @@
             legalTitle: "Legal and Notes",
             legalSub: "Project status, responsibility, and privacy notes.",
             adminTitle: "Admin Area",
-            adminSub: "Login and page analytics (views, countries, duration).",
+            adminSub: "Login, GoatCounter link, and local browser fallback.",
             adminRefresh: "Refresh admin",
             adminLoginTitle: "Login",
             adminLoginSub: "Access for the admin section.",
@@ -5889,15 +5975,15 @@
             adminDetails: "Details:",
             adminDashboard: "Dashboard:",
             adminSelfFilter: "Self filter:",
-            adminViews: "Page views",
-            adminSessions: "Sessions",
-            adminAvg: "Avg. duration",
-            adminLast: "Last visit",
+            adminViews: "Local views",
+            adminSessions: "Local sessions",
+            adminAvg: "Local avg. duration",
+            adminLast: "Local last visit",
             adminCountry: "Current country:",
             adminSource: "Source:",
             adminNoteLabel: "Note:",
-            adminHint: "This table is the local browser fallback. Use GoatCounter dashboard for global numbers.",
-            adminCountryHeaders: ["Country", "Views", "Sessions", "Total duration", "Avg/session"],
+            adminHint: "Local fallback only. These rows are not GoatCounter data; use GoatCounter for global public analytics.",
+            adminCountryHeaders: ["Country", "Local views", "Local sessions", "Local duration", "Avg/local session"],
             aboutHtml: `
               <h3>Scientific Notice</h3>
               <p>Kwarves is an independent citizen-science project analyzing publicly available TESS and Gaia data.</p>
@@ -5975,7 +6061,7 @@
               legalTitle: "Mentions Legales et Notes",
               legalSub: "Statut du projet, responsabilite et notes de confidentialite.",
               adminTitle: "Zone Admin",
-              adminSub: "Connexion et statistiques de page (vues, pays, duree).",
+              adminSub: "Connexion, lien GoatCounter et fallback local du navigateur.",
               adminRefresh: "Actualiser admin",
               adminLoginTitle: "Connexion",
               adminLoginSub: "Acces a la section admin.",
@@ -5988,15 +6074,15 @@
               adminDetails: "Details:",
               adminDashboard: "Dashboard:",
               adminSelfFilter: "Filtre propre:",
-              adminViews: "Vues de page",
-              adminSessions: "Sessions",
-              adminAvg: "Duree moyenne",
-              adminLast: "Derniere visite",
+              adminViews: "Vues locales",
+              adminSessions: "Sessions locales",
+              adminAvg: "Duree moyenne locale",
+              adminLast: "Derniere visite locale",
               adminCountry: "Pays actuel:",
               adminSource: "Source:",
               adminNoteLabel: "Note:",
-              adminHint: "Ce tableau est le fallback local du navigateur. Pour les chiffres globaux, utilisez le dashboard GoatCounter.",
-              adminCountryHeaders: ["Pays", "Vues", "Sessions", "Duree totale", "Moyenne/session"],
+              adminHint: "Fallback local uniquement. Ces lignes ne sont pas des donnees GoatCounter; utilisez GoatCounter pour les statistiques publiques globales.",
+              adminCountryHeaders: ["Pays", "Vues locales", "Sessions locales", "Duree locale", "Moyenne/session locale"],
               aboutHtml: `
                 <h3>Note Scientifique</h3>
                 <p>Kwarves est un projet citizen-science independant pour l'analyse de donnees TESS et Gaia publiquement disponibles.</p>
@@ -6073,7 +6159,7 @@
               legalTitle: "Impressum und Hinweise",
               legalSub: "Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.",
               adminTitle: "Admin Bereich",
-              adminSub: "Login und Seitenstatistik (Aufrufe, Laender, Aufenthaltsdauer).",
+              adminSub: "Login, GoatCounter-Link und lokaler Browser-Fallback.",
               adminRefresh: "Admin aktualisieren",
               adminLoginTitle: "Login",
               adminLoginSub: "Zugang fuer den Admin-Bereich.",
@@ -6086,15 +6172,15 @@
               adminDetails: "Details:",
               adminDashboard: "Dashboard:",
               adminSelfFilter: "Eigenfilter:",
-              adminViews: "Seitenaufrufe",
-              adminSessions: "Sitzungen",
-              adminAvg: "Durchschn. Dauer",
-              adminLast: "Letzter Besuch",
+              adminViews: "Lokale Aufrufe",
+              adminSessions: "Lokale Sitzungen",
+              adminAvg: "Lokale durchschn. Dauer",
+              adminLast: "Lokaler letzter Besuch",
               adminCountry: "Aktuelles Land:",
               adminSource: "Quelle:",
               adminNoteLabel: "Hinweis:",
-              adminHint: "Diese Tabelle ist der lokale Fallback im Browser. Fuer globale Zahlen bitte GoatCounter-Dashboard nutzen.",
-              adminCountryHeaders: ["Land", "Aufrufe", "Sitzungen", "Gesamtdauer", "Durchschnitt/Sitzung"],
+              adminHint: "Nur lokaler Fallback. Diese Zeilen sind keine GoatCounter-Daten; fuer globale oeffentliche Analytics bitte GoatCounter nutzen.",
+              adminCountryHeaders: ["Land", "Lokale Aufrufe", "Lokale Sitzungen", "Lokale Dauer", "Durchschnitt/lokale Sitzung"],
               aboutHtml: `
                 <h3>Wissenschaftlicher Hinweis</h3>
                 <p>Kwarves ist ein unabhaengiges Citizen-Science-Projekt zur Analyse oeffentlich verfuegbarer TESS- und Gaia-Daten.</p>
