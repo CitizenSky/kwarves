@@ -500,11 +500,16 @@
       }
 
       .chart-card {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        height: 260px;
         min-height: 260px;
+        max-height: 260px;
         padding: 12px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #ffffff;
+        overflow: hidden;
       }
 
       .chart-card h3 {
@@ -514,14 +519,19 @@
       }
 
       .chart-card canvas {
-        width: 100%;
-        height: 205px;
+        display: block;
+        width: 100% !important;
+        height: 205px !important;
+        max-height: 205px !important;
       }
 
       .chart-fallback {
         display: grid;
         gap: 8px;
+        height: 205px;
+        max-height: 205px;
         margin-top: 8px;
+        overflow: auto;
       }
 
       .signal-matrix {
@@ -4539,6 +4549,9 @@
           panelState[panelId] = Boolean(collapsed);
           saveCollapsedPanelState(panelState);
         }
+        if (!collapsed && panelId === "statisticsPanel") {
+          window.requestAnimationFrame(() => renderVisitorCharts());
+        }
         if (!collapsed && panelId === "mapPanel") {
           window.requestAnimationFrame(() => {
             draw2dMap();
@@ -5436,6 +5449,12 @@
       }
 
       function renderVisitorCharts() {
+        const statsPanel = document.getElementById("statisticsPanel");
+        if (statsPanel?.classList.contains("is-collapsed")) {
+          visitorCharts.forEach((chart) => chart.destroy());
+          visitorCharts = [];
+          return;
+        }
         const chartDefs = [
           ["chartEvidence", chartRows(["0-39", "40-59", "60-74", "75-89", "90-100"], (c) => numericBucket(c.evidenceScore, [{ label: "0-39", min: 0, max: 40 }, { label: "40-59", min: 40, max: 60 }, { label: "60-74", min: 60, max: 75 }, { label: "75-89", min: 75, max: 90 }, { label: "90-100", min: 90, max: 101 }]))],
           ["chartTransits", chartRows(["0-2", "3-4", "5-9", "10-19", "20+"], (c) => numericBucket(expectedTransits(c), [{ label: "0-2", min: 0, max: 3 }, { label: "3-4", min: 3, max: 5 }, { label: "5-9", min: 5, max: 10 }, { label: "10-19", min: 10, max: 20 }, { label: "20+", min: 20, max: 9999 }]))],
@@ -5470,6 +5489,7 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              resizeDelay: 120,
               plugins: { legend: { display: false } },
               scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
             }
