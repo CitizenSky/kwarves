@@ -507,23 +507,7 @@ def load_db_rows() -> tuple[
 def is_public_green_matrix(matrix: dict[str, Any] | None) -> bool:
     if not matrix:
         return False
-    if clean_text(matrix.get("status_color")).upper() == "GREEN":
-        return True
-    extended = clean_text(matrix.get("extended_class")).upper()
-    score = safe_float(matrix.get("evidence_score")) or 0.0
-    return (
-        extended in {"SPC", "SPC_STRONG", "SPC_RV_NEEDED", "SPC_FOLLOWUP_READY"}
-        and score >= 75
-        and safe_int(matrix.get("n_transits")) >= 5
-        and safe_int(matrix.get("visible_transits")) >= 3
-        and clean_text(matrix.get("odd_even_result")).upper() == "OK"
-        and clean_text(matrix.get("secondary_eclipse")).upper() == "NO"
-        and clean_text(matrix.get("sap_pdcsap_match")).upper() != "MISMATCH"
-        and clean_text(matrix.get("transit_shape")).upper() != "V_SHAPE"
-        and clean_text(matrix.get("depth_stability")).upper() != "UNSTABLE"
-        and clean_text(matrix.get("data_gap_risk")).upper() == "LOW"
-        and clean_text(matrix.get("sector_edge_risk")).upper() == "LOW"
-    )
+    return clean_text(matrix.get("status_color")).upper() == "GREEN"
 
 
 def yellow_reason_tags(merged: dict[str, Any], matrix: dict[str, Any], is_violet: bool) -> list[str]:

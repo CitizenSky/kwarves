@@ -2270,9 +2270,9 @@
             <i data-lucide="file-text"></i>
             <span>Impressum</span>
           </button>
-          <button type="button" title="Admin" data-nav-target="adminPanel">
+          <button type="button" title="ExoFOP Review" data-nav-target="adminPanel">
             <i data-lucide="shield-check"></i>
-            <span>Admin</span>
+            <span>ExoFOP Review</span>
           </button>
         </nav>
 
@@ -2997,8 +2997,8 @@
           <section class="panel" id="adminPanel">
             <div class="panel-header">
               <div>
-                <h2>Admin Bereich</h2>
-                <p class="panel-subtitle">Login und Seitenstatistik (Aufrufe, Laender, Aufenthaltsdauer).</p>
+                <h2>Restricted ExoFOP Review</h2>
+                <p class="panel-subtitle">Login-geschuetzter Bereich fuer Kandidaten, die fuer eine moegliche ExoFOP-Meldung vorbereitet werden.</p>
               </div>
               <div class="panel-actions">
                 <button class="icon-button" type="button" title="Admin aktualisieren" id="refreshAdmin">
@@ -3009,7 +3009,7 @@
             <div class="panel-body admin-layout">
               <div class="admin-login-card" id="adminLoginCard">
                 <h3>Login</h3>
-                <p class="muted">Zugang fuer den Admin-Bereich.</p>
+                <p class="muted">Zugang fuer ExoFOP-Review, Upload-Vorbereitung und interne Statistik.</p>
                 <form class="admin-form" id="adminLoginForm">
                   <label for="adminUserInput">
                     <span id="adminUserLabel">Benutzername</span>
@@ -3086,7 +3086,7 @@
                   <strong>Hinweis:</strong> Diese Tabelle ist der lokale Fallback im Browser. Fuer globale Zahlen bitte GoatCounter-Dashboard nutzen.
                 </div>
                 <div class="table-wrap" style="margin-top: 10px;">
-                  <table class="admin-table" aria-label="Laenderstatistik">
+                  <table class="admin-table" id="adminCountryTable" aria-label="Laenderstatistik">
                     <thead>
                       <tr>
                         <th>Land</th>
@@ -3097,6 +3097,39 @@
                       </tr>
                     </thead>
                     <tbody id="adminCountryRows"></tbody>
+                  </table>
+                </div>
+                <div class="notice" style="margin-top: 14px;">
+                  <strong>ExoFOP Upload Candidates:</strong>
+                  <span>Eingeschraenkte Vorbereitungsliste. Diese Kandidaten sind starke Review-Faelle, aber noch keine bestaetigten Planeten und nicht Teil der oeffentlichen Bestliste.</span>
+                </div>
+                <div class="admin-source-grid">
+                  <article class="admin-source-card">
+                    <h3>Warum gelistet?</h3>
+                    <p>Aufgenommen werden gelbe Kandidaten mit starkem Evidence Score und Matrixklasse SPC_FOLLOWUP_READY/SPC_RV_NEEDED/SPC_STRONG, solange kein EB_RISK, REJECTED oder IGNORE vorliegt.</p>
+                  </article>
+                  <article class="admin-source-card">
+                    <h3>Was fehlt noch?</h3>
+                    <p>Vor einer externen Meldung muessen SAP/PDCSAP, Odd/Even, Secondary Eclipse, Aktivitaet/Systematik und Einzeltransite manuell geprueft werden.</p>
+                  </article>
+                </div>
+                <div class="table-wrap" style="margin-top: 10px;">
+                  <table class="admin-table" id="adminExofopTable" aria-label="ExoFOP Upload Candidates">
+                    <thead>
+                      <tr>
+                        <th>TIC</th>
+                        <th>Readiness</th>
+                        <th>Evidence</th>
+                        <th>Status</th>
+                        <th>Periode</th>
+                        <th>Radius</th>
+                        <th>Transits</th>
+                        <th>SNR</th>
+                        <th>Risiko / Grund</th>
+                        <th>Naechster Check</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminExofopRows"></tbody>
                   </table>
                 </div>
               </div>
@@ -3165,7 +3198,7 @@
           nav_table: "Kandidaten",
           nav_docs: "Projektlogik",
           nav_impressum: "Impressum",
-          nav_admin: "Admin",
+          nav_admin: "ExoFOP Review",
           sidebar_rule_title: "Leseregel",
           sidebar_rule_text: "Violett ist ein Zusatzmarker fuer HZ/Top-Tier. Ein Kandidat kann also gruen und violett sein.",
           refresh_data: "Daten neu bauen",
@@ -3364,7 +3397,7 @@
           nav_table: "Candidates",
           nav_docs: "Project Logic",
           nav_impressum: "Legal",
-          nav_admin: "Admin",
+          nav_admin: "ExoFOP Review",
           sidebar_rule_title: "Reading Rule",
           sidebar_rule_text: "Violet is an extra marker for HZ/top-tier. A candidate can be green and violet at the same time.",
           refresh_data: "Rebuild Data",
@@ -3563,7 +3596,7 @@
           nav_table: "Candidats",
           nav_docs: "Logique Projet",
           nav_impressum: "Mentions Legales",
-          nav_admin: "Admin",
+          nav_admin: "ExoFOP Review",
           sidebar_rule_title: "Regle de Lecture",
           sidebar_rule_text: "Le violet est un marqueur supplementaire pour HZ/top-tier. Un candidat peut etre vert et violet en meme temps.",
           refresh_data: "Reconstruire les Donnees",
@@ -4303,7 +4336,8 @@
         adminGoatButton: document.getElementById("adminGoatButton"),
         adminGoatButtonLabel: document.getElementById("adminGoatButtonLabel"),
         adminLocalTitle: document.getElementById("adminLocalTitle"),
-        adminLocalText: document.getElementById("adminLocalText")
+        adminLocalText: document.getElementById("adminLocalText"),
+        adminExofopRows: document.getElementById("adminExofopRows")
       };
 
       let toastTimer;
@@ -5007,6 +5041,22 @@
             `;
           }).join("");
         els.adminCountryRows.innerHTML = rows || `<tr><td colspan="5">${t("no_entries")}</td></tr>`;
+
+        const exofopRows = exofopUploadCandidates().map((candidate) => `
+          <tr>
+            <td><strong>TIC ${candidate.tic}</strong></td>
+            <td><span class="pill yellow">${exofopReadiness(candidate)}</span></td>
+            <td>${formatMaybe(candidate.evidenceScore, "-")}</td>
+            <td>${formatMaybe(candidate.matrixClass, candidate.matrixStatus || "-")}</td>
+            <td>${formatFloat(candidate.period, 4)} d</td>
+            <td>${formatFloat(candidate.radius, 2)} R_E</td>
+            <td>${formatMaybe(candidate.matrixVisibleTransits, candidate.visibleTransits)}/${formatMaybe(candidate.matrixTransits, candidate.transits)}</td>
+            <td>${formatFloat(candidate.snr, 2)}</td>
+            <td class="wrap-cell">${formatMaybe(candidate.decisionReason, candidate.reason || "-")} ${reasonTagList(candidate.reasonTags || [])}</td>
+            <td class="wrap-cell">${formatMaybe(candidate.nextStep)} ${nextCheckList(candidate.nextChecks || [])}</td>
+          </tr>
+        `).join("");
+        els.adminExofopRows.innerHTML = exofopRows || `<tr><td colspan="10">Keine internen ExoFOP-Prep-Kandidaten.</td></tr>`;
       }
 
       async function resolveCountry() {
@@ -5286,9 +5336,13 @@
         ].join(" ").toLowerCase().includes(term);
       }
 
+      function publicVisibleCandidates() {
+        return (data.candidates || []).filter((candidate) => exofopReadiness(candidate) !== "EXOFOP_PREP");
+      }
+
       function filteredCandidates() {
         const term = els.globalSearch.value.trim().toLowerCase();
-        return data.candidates.filter((candidate) => {
+        return publicVisibleCandidates().filter((candidate) => {
           const matchesColor =
             state.colorFilter === "all" ||
             (state.colorFilter === "violet" ? candidate.isViolet : candidate.color === state.colorFilter);
@@ -5296,9 +5350,13 @@
         });
       }
 
+      function publicCandidatePool() {
+        return (data.candidates || []).filter((candidate) => candidate.color === "green");
+      }
+
       function publicMatrixCandidates() {
         const term = els.globalSearch.value.trim().toLowerCase();
-        return data.candidates.filter((candidate) => candidate.color === "green" && matchesCandidate(candidate, term));
+        return publicCandidatePool().filter((candidate) => matchesCandidate(candidate, term));
       }
 
       const labelLegend = [
@@ -5486,6 +5544,31 @@
         return `<span class="recheck-chip ${cls}">${status}</span>`;
       }
 
+      function exofopReadiness(candidate) {
+        const text = matrixText(candidate);
+        if (candidate.color === "green" && /SPC|RV_NEEDED|FOLLOWUP/.test(text)) return "READY_FOR_EXOFOP";
+        if (
+          candidate.color === "yellow" &&
+          candidate.followupStrength === "STRONG" &&
+          /SPC_FOLLOWUP_READY|SPC_RV_NEEDED|SPC_STRONG/.test(text) &&
+          !/EB_RISK|REJECTED|IGNORE/.test(text)
+        ) {
+          return "EXOFOP_PREP";
+        }
+        return "NOT_READY";
+      }
+
+      function exofopUploadCandidates() {
+        return [...(data.candidates || [])]
+          .filter((candidate) => exofopReadiness(candidate) === "EXOFOP_PREP")
+          .sort((a, b) => (
+            (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
+            || (Number(b.matrixVisibleTransits || 0) - Number(a.matrixVisibleTransits || 0))
+            || (Number(a.distance || 0) - Number(b.distance || 0))
+          ))
+          .slice(0, 40);
+      }
+
       function followupRank(candidate) {
         if (candidate.followupStrength === "STRONG") return 0;
         if (candidate.color === "green") return 1;
@@ -5494,7 +5577,7 @@
       }
 
       function top20Candidates() {
-        return [...(data.candidates || [])]
+        return [...publicCandidatePool()]
           .sort((a, b) => (
             (followupRank(a) - followupRank(b))
             || (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
@@ -5506,7 +5589,7 @@
       }
 
       function renderVisitorKpis() {
-        const candidates = data.candidates || [];
+        const candidates = publicVisibleCandidates();
         const tess = countWhere(candidates, (candidate) => expectedTransits(candidate) > 0 || Number(candidate.matrixSectors || 0) > 0);
         const spcStrong = countWhere(candidates, (candidate) => candidate.color === "green" || /SPC_STRONG|SPC_RV_NEEDED|SPC_FOLLOWUP_READY/.test(matrixText(candidate)));
         const recheck = countWhere(candidates, (candidate) => /NEEDS_MORE|SPC_ART|ACTIVE|ARTIFACT|RECHECK|EB_RISK/.test(matrixText(candidate)));
@@ -5554,7 +5637,12 @@
       }
 
       function renderTopCandidates() {
-        els.topCandidateRows.innerHTML = top20Candidates().map((candidate, index) => {
+        const rows = top20Candidates();
+        if (!rows.length) {
+          els.topCandidateRows.innerHTML = `<tr><td colspan="12">Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.</td></tr>`;
+          return;
+        }
+        els.topCandidateRows.innerHTML = rows.map((candidate, index) => {
           const rowClass = expectedTransits(candidate) < 5 ? "yellow" : matrixColorClass(candidate);
           return `
             <tr data-profile-tic="${candidate.tic}">
@@ -5576,7 +5664,7 @@
       }
 
       function renderYellowReasonPanel() {
-        const selected = state.selected || top20Candidates()[0] || data.candidates[0];
+        const selected = state.selected || top20Candidates()[0] || publicCandidatePool()[0];
         if (!selected) return;
         const summary = selected.yellowSummary || (
           selected.color === "yellow" || (selected.reasonTags || []).some((tag) => tag.startsWith("Y_"))
@@ -5598,7 +5686,7 @@
       }
 
       function chartRows(labels, picker) {
-        return countBuckets(data.candidates || [], labels, picker);
+        return countBuckets(publicVisibleCandidates(), labels, picker);
       }
 
       function renderVisitorCharts() {
@@ -5651,32 +5739,32 @@
       }
 
       function renderVisitorTimeline() {
-        const candidates = data.candidates || [];
+        const candidates = publicVisibleCandidates();
         const observed = countWhere(candidates, (c) => Number(c.observedSectorCount || 0) > 0 || Number(c.matrixSectors || 0) > 0);
         const year8 = countWhere(candidates, (c) => (c.plannedSectors || []).length > 0);
         const newSectors = countWhere(candidates, (c) => Number(c.newSectors?.length || 0) > 0);
         const timelineCopy = {
           de: [
             ["Vorhandene Sektoren", observed, "Kandidaten mit Sektor-/Matrixdaten"],
-            ["LIVE_NOW", data.summary?.recheckLiveNow || 0, "aktueller laufender Sektor"],
-            ["UPCOMING", data.summary?.recheckUpcoming || 0, "kommende Beobachtung geplant"],
-            ["WAITING_DATA", data.summary?.recheckWaitingData || 0, "Datenveroeffentlichung abwarten"],
+            ["LIVE_NOW", countWhere(candidates, (c) => c.recheckStatus === "LIVE_NOW"), "aktueller laufender Sektor"],
+            ["UPCOMING", countWhere(candidates, (c) => c.recheckStatus === "UPCOMING"), "kommende Beobachtung geplant"],
+            ["WAITING_DATA", countWhere(candidates, (c) => c.recheckStatus === "WAITING_DATA"), "Datenveroeffentlichung abwarten"],
             ["Year-8-Treffer", year8, "geometrische Recheck-Hinweise"],
             ["Neue Sektoren", newSectors, "spaeter fuer Rechecks nutzbar"]
           ],
           en: [
             ["Existing sectors", observed, "candidates with sector/matrix data"],
-            ["LIVE_NOW", data.summary?.recheckLiveNow || 0, "current running sector"],
-            ["UPCOMING", data.summary?.recheckUpcoming || 0, "upcoming observation planned"],
-            ["WAITING_DATA", data.summary?.recheckWaitingData || 0, "waiting for data release"],
+            ["LIVE_NOW", countWhere(candidates, (c) => c.recheckStatus === "LIVE_NOW"), "current running sector"],
+            ["UPCOMING", countWhere(candidates, (c) => c.recheckStatus === "UPCOMING"), "upcoming observation planned"],
+            ["WAITING_DATA", countWhere(candidates, (c) => c.recheckStatus === "WAITING_DATA"), "waiting for data release"],
             ["Year-8 hits", year8, "geometric recheck hints"],
             ["New sectors", newSectors, "usable for later rechecks"]
           ],
           fr: [
             ["Secteurs existants", observed, "candidats avec donnees secteur/matrice"],
-            ["LIVE_NOW", data.summary?.recheckLiveNow || 0, "secteur actuellement en cours"],
-            ["UPCOMING", data.summary?.recheckUpcoming || 0, "observation a venir planifiee"],
-            ["WAITING_DATA", data.summary?.recheckWaitingData || 0, "attente publication donnees"],
+            ["LIVE_NOW", countWhere(candidates, (c) => c.recheckStatus === "LIVE_NOW"), "secteur actuellement en cours"],
+            ["UPCOMING", countWhere(candidates, (c) => c.recheckStatus === "UPCOMING"), "observation a venir planifiee"],
+            ["WAITING_DATA", countWhere(candidates, (c) => c.recheckStatus === "WAITING_DATA"), "attente publication donnees"],
             ["Hits Year-8", year8, "indices geometriques de recheck"],
             ["Nouveaux secteurs", newSectors, "utilisables pour rechecks ulterieurs"]
           ]
@@ -5688,7 +5776,7 @@
       }
 
       function renderMatrixStats() {
-        const candidates = data.candidates || [];
+        const candidates = publicCandidatePool();
         const statusLabels = ["SPC_STRONG", "SPC", "SPC_ART", "NEEDS_MORE_DATA", "EB_RISK", "REJECTED", "IGNORE"];
         const hzLabels = ["ZU_HEISS", "OPT_HZ_INNEN", "KONSERVATIVE_HZ", "OPT_HZ_AUSSEN", "ZU_KALT"];
         const distanceRows = countBuckets(candidates, ["0-25 ly", "25-50 ly", "50-75 ly", "75-100 ly", "100-150 ly", "150-200 ly"], (candidate) => {
@@ -5802,12 +5890,13 @@
       }
 
       function renderKpis() {
+        const publicRows = publicVisibleCandidates();
         document.getElementById("kpiTotal").textContent = formatNumber(data.summary.total);
-        document.getElementById("kpiGreen").textContent = formatNumber(data.summary.green);
-        document.getElementById("kpiYellow").textContent = formatNumber(data.summary.yellow);
-        document.getElementById("kpiRed").textContent = formatNumber(data.summary.red);
-        document.getElementById("kpiViolet").textContent = formatNumber(data.summary.violet);
-        document.getElementById("lcCount").textContent = formatNumber(data.summary.lightcurves);
+        document.getElementById("kpiGreen").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "green"));
+        document.getElementById("kpiYellow").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "yellow"));
+        document.getElementById("kpiRed").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "red"));
+        document.getElementById("kpiViolet").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.isViolet));
+        document.getElementById("lcCount").textContent = formatNumber(countWhere(data.lightcurveCandidates || [], (candidate) => exofopReadiness(candidate) !== "EXOFOP_PREP"));
         document.getElementById("generatedAt").textContent = new Date(data.generatedAt).toLocaleTimeString(currentLocale(), {
           hour: "2-digit",
           minute: "2-digit"
@@ -6028,11 +6117,11 @@
             docsHeaders: ["Script", "What does it do?", "Why useful?", "Level / Area"],
             legalTitle: "Legal and Notes",
             legalSub: "Project status, responsibility, and privacy notes.",
-            adminTitle: "Admin Area",
-            adminSub: "Login, GoatCounter link, and local browser fallback.",
+            adminTitle: "Restricted ExoFOP Review",
+            adminSub: "Login-protected candidate list for possible ExoFOP upload preparation.",
             adminRefresh: "Refresh admin",
             adminLoginTitle: "Login",
-            adminLoginSub: "Access for the admin section.",
+            adminLoginSub: "Access for ExoFOP review, upload preparation, and internal statistics.",
             adminUser: "Username",
             adminPass: "Password",
             adminLoginBtn: "Login",
@@ -6127,11 +6216,11 @@
               docsHeaders: ["Script", "Que fait-il?", "Pourquoi utile?", "Niveau / Zone"],
               legalTitle: "Mentions Legales et Notes",
               legalSub: "Statut du projet, responsabilite et notes de confidentialite.",
-              adminTitle: "Zone Admin",
-              adminSub: "Connexion, lien GoatCounter et fallback local du navigateur.",
+              adminTitle: "Review ExoFOP restreint",
+              adminSub: "Liste protegee pour preparer de possibles depots ExoFOP.",
               adminRefresh: "Actualiser admin",
               adminLoginTitle: "Connexion",
-              adminLoginSub: "Acces a la section admin.",
+              adminLoginSub: "Acces au review ExoFOP, a la preparation d'upload et aux statistiques internes.",
               adminUser: "Nom d'utilisateur",
               adminPass: "Mot de passe",
               adminLoginBtn: "Connexion",
@@ -6225,11 +6314,11 @@
               docsHeaders: ["Skript", "Was macht es?", "Warum sinnvoll?", "Level / Bereich"],
               legalTitle: "Impressum und Hinweise",
               legalSub: "Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.",
-              adminTitle: "Admin Bereich",
-              adminSub: "Login, GoatCounter-Link und lokaler Browser-Fallback.",
+              adminTitle: "Restricted ExoFOP Review",
+              adminSub: "Login-geschuetzte Kandidatenliste fuer moegliche ExoFOP-Upload-Vorbereitung.",
               adminRefresh: "Admin aktualisieren",
               adminLoginTitle: "Login",
-              adminLoginSub: "Zugang fuer den Admin-Bereich.",
+              adminLoginSub: "Zugang fuer ExoFOP-Review, Upload-Vorbereitung und interne Statistik.",
               adminUser: "Benutzername",
               adminPass: "Passwort",
               adminLoginBtn: "Login",
@@ -6657,7 +6746,7 @@
           els.adminCurrentCountry = document.getElementById("adminCurrentCountry");
           els.adminCountrySource = document.getElementById("adminCountrySource");
         }
-        document.querySelectorAll("#adminStatsWrap .admin-table thead th").forEach((th, index) => {
+        document.querySelectorAll("#adminCountryTable thead th").forEach((th, index) => {
           th.textContent = labels.adminCountryHeaders[index] || th.textContent;
         });
 
@@ -7045,7 +7134,7 @@
       }
 
       function renderSelected() {
-        const candidate = state.selected || data.priorityCandidates[0] || data.candidates[0];
+        const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
         if (!candidate) return;
         state.selected = candidate;
         const matrixStatus = formatMaybe(candidate.matrixStatus);
@@ -7911,7 +8000,7 @@
       setupGlobalAnalytics();
       updateDate();
       startAnalyticsTracking();
-      state.selected = data.priorityCandidates[0] || data.candidates[0] || null;
+      state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
       state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
       renderAll();
       if (state.tessMapMode === "3d") {
