@@ -3542,6 +3542,11 @@
         if (els.mapZoomValue) els.mapZoomValue.textContent = `${mapZoom.toFixed(1)}x`;
       }
 
+      function selectedMapFocus(candidates = data.candidates || []) {
+        if (!state.selected) return null;
+        return candidates.find((candidate) => candidate.tic === state.selected.tic) || null;
+      }
+
       function applyMapZoom(value) {
         mapZoom = clampMapZoom(value);
         updateMapZoomLabel();
@@ -5772,6 +5777,9 @@
         // Candidate map coordinates are Gaia RA/Dec based when available (fallback: heuristic).
         const { ctx, width, height } = setupCanvas(els.mapCanvas);
         const candidates = filteredCandidates();
+        const focus = selectedMapFocus(candidates);
+        const focusBaseX = focus ? width / 2 + focus.map.x * width * 0.42 : width / 2;
+        const focusBaseY = focus ? height / 2 + focus.map.y * height * 0.42 : height / 2;
         document.getElementById("visibleCount").textContent = formatNumber(candidates.length);
         points2d = [];
         ctx.clearRect(0, 0, width, height);
@@ -5785,7 +5793,7 @@
         ctx.lineWidth = 1;
         for (let r = 70 * mapZoom; r < Math.min(width, height) * 0.9; r += 70 * mapZoom) {
           ctx.beginPath();
-          ctx.arc(width / 2, height / 2, r, 0, Math.PI * 2);
+          ctx.arc(focusBaseX, focusBaseY, r, 0, Math.PI * 2);
           ctx.stroke();
         }
 
@@ -5810,8 +5818,12 @@
         ctx.restore();
 
         candidates.forEach((candidate) => {
-          const x = width / 2 + candidate.map.x * width * 0.42 * mapZoom;
-          const y = height / 2 + candidate.map.y * height * 0.42 * mapZoom;
+          const x = focus
+            ? focusBaseX + (candidate.map.x - focus.map.x) * width * 0.42 * mapZoom
+            : width / 2 + candidate.map.x * width * 0.42 * mapZoom;
+          const y = focus
+            ? focusBaseY + (candidate.map.y - focus.map.y) * height * 0.42 * mapZoom
+            : height / 2 + candidate.map.y * height * 0.42 * mapZoom;
           const size = Math.max(2.2, Math.min(7.5, 2.2 + candidate.snr / 22));
           const fill = colors[candidate.color] || colors.gray;
           if (candidate.isViolet) {
@@ -5940,6 +5952,14 @@
         animate3d();
       }
 
+      function map3dPosition(candidate) {
+        return {
+          x: candidate.map.x * 1.85,
+          y: candidate.map.y * 1.85,
+          z: (candidate.map.z - 0.45) * 2.4
+        };
+      }
+
       function update3dData() {
         if (!state.sceneReady) return;
         const candidates = filteredCandidates();
@@ -5947,9 +5967,10 @@
           const subset = candidates.filter((candidate) => candidate.color === key);
           const positions = new Float32Array(subset.length * 3);
           subset.forEach((candidate, index) => {
-            positions[index * 3] = candidate.map.x * 1.85;
-            positions[index * 3 + 1] = candidate.map.y * 1.85;
-            positions[index * 3 + 2] = (candidate.map.z - 0.45) * 2.4;
+            const position = map3dPosition(candidate);
+            positions[index * 3] = position.x;
+            positions[index * 3 + 1] = position.y;
+            positions[index * 3 + 2] = position.z;
           });
           three.groups[key].geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
           three.groups[key].geometry.computeBoundingSphere();
@@ -5959,16 +5980,25 @@
 
       function update3dSelection() {
         if (!state.sceneReady || !state.selected) return;
-        three.selectedMesh.position.set(
-          state.selected.map.x * 1.85,
-          state.selected.map.y * 1.85,
-          (state.selected.map.z - 0.45) * 2.4
-        );
+        const position = map3dPosition(state.selected);
+        three.selectedMesh.position.set(position.x, position.y, position.z);
+        update3dCameraZoom();
       }
 
       function update3dCameraZoom() {
         if (!state.sceneReady || !three.camera) return;
+        const focus = selectedMapFocus();
+        const zoomFocus = Math.max(0, Math.min(1, (mapZoom - 1) / 4));
+        const target = new THREE.Vector3(0, 0, 0);
+        if (focus && three.selectedMesh) {
+          three.scene.updateMatrixWorld();
+          three.selectedMesh.getWorldPosition(target);
+          target.multiplyScalar(zoomFocus);
+        }
+        three.camera.position.x = target.x;
+        three.camera.position.y = target.y;
         three.camera.position.z = 4.8 / Math.sqrt(mapZoom);
+        three.camera.lookAt(target);
         three.camera.updateProjectionMatrix();
       }
 
@@ -5989,6 +6019,7 @@
           const orbit = three.rotation * 3.4;
           three.earthMesh.position.set(Math.cos(orbit) * 0.173, 0, Math.sin(orbit) * 0.173);
         }
+        update3dCameraZoom();
         three.renderer.render(three.scene, three.camera);
         requestAnimationFrame(animate3d);
       }
