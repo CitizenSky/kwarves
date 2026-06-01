@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="dashboard-data.js?v=20260601e"></script>
+    <script src="dashboard-notifications.js?v=20260601a"></script>
     <style>
       :root {
         color-scheme: light;
@@ -1857,6 +1858,105 @@
         transform: translateY(0);
       }
 
+      .notification-panel {
+        position: fixed;
+        top: 74px;
+        right: 18px;
+        z-index: 30;
+        display: none;
+        width: min(420px, calc(100vw - 28px));
+        max-height: min(680px, calc(100vh - 96px));
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: var(--shadow);
+      }
+
+      .notification-panel.open {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+      }
+
+      .notification-header,
+      .notification-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .notification-header strong {
+        font-size: 15px;
+      }
+
+      .notification-summary {
+        align-items: flex-start;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .notification-list {
+        overflow: auto;
+        padding: 8px 10px 10px;
+      }
+
+      .notification-item {
+        display: grid;
+        gap: 7px;
+        width: 100%;
+        padding: 12px 8px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: transparent;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .notification-item:last-child {
+        border-bottom: 0;
+      }
+
+      .notification-item strong {
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .notification-item p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .notification-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        display: none;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--red);
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 18px;
+      }
+
+      .notification-badge.show {
+        display: inline-block;
+      }
+
+      .icon-button {
+        position: relative;
+      }
+
       @media (max-width: 1240px) {
         .kpis,
         .visitor-kpis,
@@ -2106,6 +2206,7 @@
           </div>
           <button class="icon-button" type="button" title="Hinweise" id="showHints">
             <i data-lucide="bell"></i>
+            <span class="notification-badge" id="notificationBadge" aria-hidden="true"></span>
           </button>
           <button class="button primary" id="focusHz" type="button">
             <i data-lucide="target"></i>
@@ -2884,10 +2985,21 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <section class="notification-panel" id="notificationPanel" aria-live="polite" aria-label="Dashboard Hinweise">
+      <div class="notification-header">
+        <strong id="notificationTitle">Dashboard Hinweise</strong>
+        <button class="icon-button" type="button" id="closeNotifications" title="Schliessen">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="notification-summary" id="notificationSummary"></div>
+      <div class="notification-list" id="notificationList"></div>
+    </section>
 
     <script>
       const DASHBOARD_UI_VERSION = "2026-05-31-o";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
+      const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
       const state = {
         colorFilter: "all",
         curveFilter: "all",
@@ -2925,6 +3037,14 @@
           refresh_data: "Daten neu bauen",
           search_placeholder: "Suche: TIC, Farbe, HZ, Status",
           hint_button_title: "Hinweise",
+          notifications_title: "Dashboard Hinweise",
+          notifications_empty: "Keine neuen Neubewertungen im letzten automatischen Lauf.",
+          notifications_summary: "{total} Hinweise aus dem letzten automatischen Lauf. LIVE_NOW: {live}, UPCOMING: {upcoming}, WAITING_DATA: {waiting}.",
+          notifications_updated: "Aktualisiert: {date}",
+          notification_change_count: "{count} Bewertungsfelder geaendert",
+          notification_new_sectors: "Neue Sektoren: {sectors}",
+          notification_recheck_line: "Recheck: {status} · aktueller Sektor: {current} · naechster Plan: {next} · Daten ca.: {date}",
+          toast_notifications: "{count} Dashboard-Hinweise geoeffnet.",
           hz_focus: "HZ Fokus",
           lede: "Analyse echter TESS-Daten mit Farbklassifikation, Lichtkurven-Vetting und interaktiver Sternkarte.",
           kpi_total: "Alle Kandidaten",
@@ -3111,6 +3231,14 @@
           refresh_data: "Rebuild Data",
           search_placeholder: "Search: TIC, color, HZ, status",
           hint_button_title: "Hints",
+          notifications_title: "Dashboard alerts",
+          notifications_empty: "No new revaluations in the latest automatic run.",
+          notifications_summary: "{total} alerts from the latest automatic run. LIVE_NOW: {live}, UPCOMING: {upcoming}, WAITING_DATA: {waiting}.",
+          notifications_updated: "Updated: {date}",
+          notification_change_count: "{count} rating fields changed",
+          notification_new_sectors: "New sectors: {sectors}",
+          notification_recheck_line: "Recheck: {status} · current sector: {current} · next planned: {next} · data approx.: {date}",
+          toast_notifications: "{count} dashboard alerts opened.",
           hz_focus: "HZ Focus",
           lede: "Analysis of real TESS data with color classification, light-curve vetting, and an interactive star map.",
           kpi_total: "All Candidates",
@@ -3297,6 +3425,14 @@
           refresh_data: "Reconstruire les Donnees",
           search_placeholder: "Recherche: TIC, couleur, HZ, statut",
           hint_button_title: "Astuces",
+          notifications_title: "Alertes dashboard",
+          notifications_empty: "Aucune nouvelle reevaluation lors du dernier lancement automatique.",
+          notifications_summary: "{total} alertes du dernier lancement automatique. LIVE_NOW: {live}, UPCOMING: {upcoming}, WAITING_DATA: {waiting}.",
+          notifications_updated: "Mis a jour: {date}",
+          notification_change_count: "{count} champs d'evaluation modifies",
+          notification_new_sectors: "Nouveaux secteurs: {sectors}",
+          notification_recheck_line: "Recheck: {status} · secteur actuel: {current} · prochain planifie: {next} · donnees env.: {date}",
+          toast_notifications: "{count} alertes dashboard ouvertes.",
           hz_focus: "Focus HZ",
           lede: "Analyse de vraies donnees TESS avec classification couleur, vetting des courbes de lumiere et carte stellaire interactive.",
           kpi_total: "Tous les Candidats",
@@ -3979,6 +4115,11 @@
         tessTimelinePlanned: document.getElementById("tessTimelinePlanned"),
         tessTimelineNext: document.getElementById("tessTimelineNext"),
         tessTimelineStatus: document.getElementById("tessTimelineStatus"),
+        notificationBadge: document.getElementById("notificationBadge"),
+        notificationPanel: document.getElementById("notificationPanel"),
+        notificationTitle: document.getElementById("notificationTitle"),
+        notificationSummary: document.getElementById("notificationSummary"),
+        notificationList: document.getElementById("notificationList"),
         toast: document.getElementById("toast"),
         tessCurrentSector: document.getElementById("tessCurrentSector"),
         tessCurrentWindow: document.getElementById("tessCurrentWindow"),
@@ -4838,6 +4979,70 @@
         els.toast.classList.add("show");
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2400);
+      }
+
+      function formatNotificationValue(value, fallback = "-") {
+        if (value === undefined || value === null || value === "") return fallback;
+        return value;
+      }
+
+      function notificationSeverityClass(item) {
+        if (item.severity === "high") return "red";
+        if (item.severity === "medium") return "yellow";
+        return "gray";
+      }
+
+      function renderNotificationBadge() {
+        const count = Number(notifications.total || notifications.items?.length || 0);
+        if (!els.notificationBadge) return;
+        els.notificationBadge.textContent = count > 99 ? "99+" : String(count);
+        els.notificationBadge.classList.toggle("show", count > 0);
+      }
+
+      function renderNotifications() {
+        const items = notifications.items || [];
+        const counts = notifications.counts || {};
+        els.notificationTitle.textContent = t("notifications_title");
+        els.notificationSummary.innerHTML = `
+          <span>${items.length
+            ? t("notifications_summary", {
+              total: formatNumber(notifications.total || items.length),
+              live: formatNumber(counts.liveNow || 0),
+              upcoming: formatNumber(counts.upcoming || 0),
+              waiting: formatNumber(counts.waitingData || 0)
+            })
+            : t("notifications_empty")}</span>
+          <span>${t("notifications_updated", { date: notifications.generatedAt ? formatDateTime(notifications.generatedAt) : "-" })}</span>
+        `;
+        els.notificationList.innerHTML = items.length ? items.map((item) => {
+          const changed = item.changes?.length || 0;
+          const sectors = (item.newSectors || []).map((sector) => `S${sector}`).join(", ");
+          const recheckLine = t("notification_recheck_line", {
+            status: item.recheckStatus || "-",
+            current: item.currentSector ? `S${item.currentSector}` : "-",
+            next: item.nextPlannedSector ? `S${item.nextPlannedSector}` : "-",
+            date: item.estimatedDataAvailable ? formatDate(item.estimatedDataAvailable) : "-"
+          });
+          return `
+            <button class="notification-item" type="button" data-notification-tic="${item.tic}">
+              <strong>TIC ${item.tic} <span class="pill ${notificationSeverityClass(item)}">${item.recheckStatus || item.type}</span></strong>
+              <p>${item.summary || recheckLine}</p>
+              <p>${recheckLine}</p>
+              <p>${changed ? t("notification_change_count", { count: changed }) : ""}${sectors ? ` · ${t("notification_new_sectors", { sectors })}` : ""}</p>
+            </button>
+          `;
+        }).join("") : `<div class="notification-item"><p>${t("notifications_empty")}</p></div>`;
+        renderNotificationBadge();
+      }
+
+      function openNotifications() {
+        renderNotifications();
+        els.notificationPanel.classList.add("open");
+        showToast(t("toast_notifications", { count: formatNumber(notifications.total || notifications.items?.length || 0) }));
+      }
+
+      function closeNotifications() {
+        els.notificationPanel.classList.remove("open");
       }
 
       function colorClass(candidate) {
@@ -6941,6 +7146,7 @@
         renderSelected();
         renderTable();
         renderCurves(false);
+        renderNotificationBadge();
         draw2dMap();
         update3dData();
         renderVisitorCharts();
@@ -7128,6 +7334,17 @@
         if (candidate) selectCandidate(candidate, "stats");
       });
 
+      els.notificationList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-notification-tic]");
+        if (!button) return;
+        const candidate = data.candidates.find((item) => item.tic === Number(button.dataset.notificationTic));
+        if (candidate) {
+          selectCandidate(candidate, "notification");
+          closeNotifications();
+          scrollToPanel("mapPanel");
+        }
+      });
+
       els.mapCanvas.addEventListener("click", (event) => {
         const rect = els.mapCanvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -7258,7 +7475,13 @@
       });
 
       document.getElementById("showHints").addEventListener("click", () => {
-        showToast(t("toast_hints", { version: DASHBOARD_UI_VERSION }));
+        openNotifications();
+      });
+
+      document.getElementById("closeNotifications").addEventListener("click", closeNotifications);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeNotifications();
       });
 
       window.addEventListener("resize", () => {
