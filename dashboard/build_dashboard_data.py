@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import csv
+import argparse
 import json
 import math
 import os
 import re
 import shutil
 import sqlite3
+import subprocess
+import sys
 from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -26,6 +29,9 @@ OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
 GAIA_FETCH_BATCH_SIZE = int(os.environ.get("GAIA_FETCH_BATCH_SIZE", "350"))
 GAIA_FETCH_ENABLED = os.environ.get("GAIA_FETCH_ENABLED", "1").strip() not in {"0", "false", "False"}
+AUTO_TESS_UPDATE_ENABLED = os.environ.get("KWARVES_AUTO_TESS_UPDATE", "1").strip() not in {"0", "false", "False"}
+AUTO_TESS_MAX_AGE_HOURS = float(os.environ.get("KWARVES_AUTO_TESS_MAX_AGE_HOURS", "18"))
+AUTO_TESS_SLEEP = float(os.environ.get("KWARVES_AUTO_TESS_SLEEP", "0.2"))
 
 TESS_SECTOR_SCHEDULE = [
     {"sector": 97, "start": "2025-09-15", "end": "2025-11-09", "arrangement": "Suedpol (4 Orbits)"},
@@ -40,6 +46,16 @@ TESS_SECTOR_SCHEDULE = [
     {"sector": 106, "start": "2026-07-11", "end": "2026-08-09", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
     {"sector": 107, "start": "2026-08-09", "end": "2026-09-07", "arrangement": "Suedpol, 40 Grad Roll/Shift"},
 ]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build dashboard-data.js with optional automatic TESS refresh and matrix rebuild.")
+    parser.add_argument("--no-auto-update", action="store_true", help="Skip automatic TESS sector refresh and matrix rebuild.")
+    parser.add_argument("--force-auto-update", action="store_true", help="Run TESS refresh even when inventory is still fresh.")
+    parser.add_argument("--auto-update-limit", type=int, default=None, help="Limit candidates checked against MAST during automatic refresh.")
+    parser.add_argument("--auto-update-sleep", type=float, default=AUTO_TESS_SLEEP, help="Delay between MAST queries during automatic refresh.")
+    parser.add_argument("--no-sector-mark", action="store_true", help="Record new sectors but do not mark candidates RECHECK_NEW_SECTOR.")
+    return parser.parse_args()
 
 
 def clean_text(value: Any) -> str:
@@ -237,6 +253,64 @@ def parse_sector_text(value: Any) -> list[int]:
             sectors.append(number)
             seen.add(number)
     return sectors
+
+
+def table_exists(conn: sqlite3.Connection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return bool(row)
+
+
+def sector_inventory_is_stale(max_age_hours: float = AUTO_TESS_MAX_AGE_HOURS) -> bool:
+    if not DB_PATH.exists():
+        return False
+    try:
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=30)
+        try:
+            if not table_exists(conn, "tess_sector_inventory"):
+                return True
+            row = conn.execute("SELECT MAX(last_checked_at) FROM tess_sector_inventory").fetchone()
+            stamp = clean_text(row[0] if row else "")
+            if not stamp:
+                return True
+            last = datetime.fromisoformat(stamp)
+            return (datetime.now() - last).total_seconds() > max_age_hours * 3600
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"[auto-update] could not inspect tess_sector_inventory: {exc}")
+        return False
+
+
+def run_command(command: list[str], label: str) -> None:
+    print(f"[auto-update] {label}: {' '.join(command)}")
+    subprocess.run(command, cwd=SCRIPT_ROOT, check=True)
+
+
+def run_auto_update(args: argparse.Namespace) -> bool:
+    if args.no_auto_update or not AUTO_TESS_UPDATE_ENABLED:
+        print("[auto-update] skipped")
+        return False
+    if not args.force_auto_update and not sector_inventory_is_stale():
+        print("[auto-update] tess_sector_inventory fresh; rebuilding dashboard only")
+        return False
+
+    sector_cmd = [
+        sys.executable,
+        str(SCRIPT_ROOT / "main" / "check_new_tess_sectors.py"),
+        "--sleep",
+        str(args.auto_update_sleep),
+    ]
+    if args.auto_update_limit:
+        sector_cmd.extend(["--limit", str(args.auto_update_limit)])
+    if args.no_sector_mark:
+        sector_cmd.append("--no-mark")
+
+    run_command(sector_cmd, "refresh TESS sector inventory")
+    run_command([sys.executable, str(SCRIPT_ROOT / "main" / "build_candidate_matrix.py")], "rebuild candidate matrix")
+    return True
 
 
 def parse_date(value: str) -> date:
@@ -794,6 +868,8 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
+    args = parse_args()
+    auto_updated = run_auto_update(args)
     db_rows, matrix_rows, sector_rows, local_coord_rows = load_db_rows()
     with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
         manifest_rows = list(csv.DictReader(handle))
@@ -854,6 +930,7 @@ def main() -> int:
         "mapAstrometric": sum(1 for candidate in candidates if candidate["mapSource"] == "gaia_dr3"),
         "mapFallback": sum(1 for candidate in candidates if candidate["mapSource"] != "gaia_dr3"),
         "gaiaCacheSize": len(gaia_cache),
+        "autoTessUpdateRan": auto_updated,
         "recheckLiveNow": sum(1 for candidate in candidates if candidate["recheckStatus"] == "LIVE_NOW"),
         "recheckUpcoming": sum(1 for candidate in candidates if candidate["recheckStatus"] == "UPCOMING"),
         "recheckWaitingData": sum(1 for candidate in candidates if candidate["recheckStatus"] == "WAITING_DATA"),
