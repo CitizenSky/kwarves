@@ -656,6 +656,44 @@
         opacity: 0;
       }
 
+      .map-zoom-controls {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        z-index: 4;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(14, 23, 25, 0.82);
+        color: #f5fbf9;
+        backdrop-filter: blur(12px);
+      }
+
+      .map-zoom-controls button {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: inherit;
+      }
+
+      .map-zoom-controls button:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .map-zoom-value {
+        min-width: 48px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 780;
+      }
+
       .map-note {
         display: flex;
         flex-wrap: wrap;
@@ -1826,6 +1864,18 @@
                   <div class="map-frame mode-2d" id="mapFrame">
                     <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
                     <div id="map3d" aria-label="3D Sternkarte"></div>
+                    <div class="map-zoom-controls" aria-label="Sternkarte Zoom">
+                      <button type="button" title="Herauszoomen" data-map-zoom="out">
+                        <i data-lucide="minus"></i>
+                      </button>
+                      <span class="map-zoom-value" id="mapZoomValue">1.0x</span>
+                      <button type="button" title="Hineinzoomen" data-map-zoom="in">
+                        <i data-lucide="plus"></i>
+                      </button>
+                      <button type="button" title="Zoom zuruecksetzen" data-map-zoom="reset">
+                        <i data-lucide="rotate-ccw"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="map-note">
                     <span class="legend-item"><span class="dot"></span> Gruen = Kandidat</span>
@@ -3332,6 +3382,7 @@
         mapCanvas: document.getElementById("starMap2d"),
         mapFrame: document.getElementById("mapFrame"),
         map3d: document.getElementById("map3d"),
+        mapZoomValue: document.getElementById("mapZoomValue"),
         mapSelectedTic: document.getElementById("mapSelectedTic"),
         mapObservedSectors: document.getElementById("mapObservedSectors"),
         mapNextRecheck: document.getElementById("mapNextRecheck"),
@@ -3386,6 +3437,22 @@
       let three = {};
       let tessPoints2d = [];
       let tessThree = { ready: false };
+      let mapZoom = 1;
+
+      function clampMapZoom(value) {
+        return Math.max(0.75, Math.min(5, Number(value) || 1));
+      }
+
+      function updateMapZoomLabel() {
+        if (els.mapZoomValue) els.mapZoomValue.textContent = `${mapZoom.toFixed(1)}x`;
+      }
+
+      function applyMapZoom(value) {
+        mapZoom = clampMapZoom(value);
+        updateMapZoomLabel();
+        draw2dMap();
+        update3dCameraZoom();
+      }
 
       function normalizeLanguage(lang) {
         const safe = String(lang || "").trim().toLowerCase();
@@ -5415,7 +5482,7 @@
 
         ctx.strokeStyle = "rgba(255,255,255,0.08)";
         ctx.lineWidth = 1;
-        for (let r = 70; r < Math.min(width, height) * 0.52; r += 70) {
+        for (let r = 70 * mapZoom; r < Math.min(width, height) * 0.9; r += 70 * mapZoom) {
           ctx.beginPath();
           ctx.arc(width / 2, height / 2, r, 0, Math.PI * 2);
           ctx.stroke();
@@ -5442,8 +5509,8 @@
         ctx.restore();
 
         candidates.forEach((candidate) => {
-          const x = width / 2 + candidate.map.x * width * 0.42;
-          const y = height / 2 + candidate.map.y * height * 0.42;
+          const x = width / 2 + candidate.map.x * width * 0.42 * mapZoom;
+          const y = height / 2 + candidate.map.y * height * 0.42 * mapZoom;
           const size = Math.max(2.2, Math.min(7.5, 2.2 + candidate.snr / 22));
           const fill = colors[candidate.color] || colors.gray;
           if (candidate.isViolet) {
@@ -5566,6 +5633,7 @@
 
         three = { renderer, scene, camera, groups, selectedMesh, earthMesh, rotation: 0 };
         state.sceneReady = true;
+        update3dCameraZoom();
         update3dData();
         resize3d();
         animate3d();
@@ -5595,6 +5663,12 @@
           state.selected.map.y * 1.85,
           (state.selected.map.z - 0.45) * 2.4
         );
+      }
+
+      function update3dCameraZoom() {
+        if (!state.sceneReady || !three.camera) return;
+        three.camera.position.z = 4.8 / Math.sqrt(mapZoom);
+        three.camera.updateProjectionMatrix();
       }
 
       function resize3d() {
@@ -5766,6 +5840,7 @@
       }
 
       function renderAll() {
+        updateMapZoomLabel();
         renderKpis();
         renderTree();
         renderDocs();
@@ -5859,6 +5934,21 @@
           }
         });
       });
+
+      document.querySelectorAll("[data-map-zoom]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const action = button.dataset.mapZoom;
+          if (action === "in") applyMapZoom(mapZoom * 1.25);
+          if (action === "out") applyMapZoom(mapZoom / 1.25);
+          if (action === "reset") applyMapZoom(1);
+        });
+      });
+
+      els.mapFrame.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const direction = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+        applyMapZoom(mapZoom * direction);
+      }, { passive: false });
 
       document.querySelectorAll("[data-tess-map-mode]").forEach((button) => {
         button.addEventListener("click", () => {
