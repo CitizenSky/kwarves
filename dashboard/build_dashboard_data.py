@@ -258,7 +258,7 @@ def load_db_rows() -> tuple[
         candidate_rows = conn.execute(
             """
             SELECT TIC, gaia_id, status, spc_class, is_fp, hz_class, hz_status, distance_ly,
-                   best_period, planet_radius_earth, transit_snr, transit_count,
+                   teff, stellar_radius, best_period, planet_radius_earth, transit_snr, transit_count,
                    visible_transits, clean_sector_count, sector_count,
                    revisit_priority, next_recheck, notes
               FROM candidates_v2
@@ -493,6 +493,8 @@ def build_candidate(
         "hzMarkierung": clean_text(merged.get("hz_markierung")),
         "hz": clean_text(merged.get("hz_status") or merged.get("hz_class")),
         "distance": round(distance, 2),
+        "teff": round(safe_float(merged.get("teff")) or 0.0, 0),
+        "starRadius": round(safe_float(merged.get("stellar_radius")) or 0.0, 3),
         "period": round(period, 4),
         "radius": round(safe_float(merged.get("planet_radius_earth")) or 0.0, 2),
         "snr": round(snr, 2),

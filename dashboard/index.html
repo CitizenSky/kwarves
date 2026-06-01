@@ -8,7 +8,8 @@
     <link rel="shortcut icon" href="../favicon.svg" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script src="dashboard-data.js?v=20260601b"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="dashboard-data.js?v=20260601c"></script>
     <style>
       :root {
         color-scheme: light;
@@ -393,6 +394,171 @@
         color: var(--muted);
         font-size: 13px;
         font-weight: 760;
+      }
+
+      .intro-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+        gap: 14px;
+      }
+
+      .intro-panel,
+      .disclaimer-box {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .intro-panel h2 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        line-height: 1.05;
+      }
+
+      .intro-claim {
+        margin: 0 0 12px;
+        color: #254c45;
+        font-size: 16px;
+        font-weight: 820;
+      }
+
+      .intro-panel p,
+      .disclaimer-box p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .visitor-kpis,
+      .method-steps,
+      .chart-grid,
+      .signal-matrix,
+      .timeline-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .visitor-kpis {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .visitor-kpi,
+      .method-step,
+      .matrix-cell,
+      .timeline-card {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fbfa;
+      }
+
+      .visitor-kpi span,
+      .method-step span,
+      .matrix-cell span,
+      .timeline-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 820;
+      }
+
+      .visitor-kpi strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .method-steps {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+      }
+
+      .method-step strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 14px;
+      }
+
+      .legend-table,
+      .top-table {
+        min-width: 1040px;
+      }
+
+      .top-table tr[data-profile-tic] {
+        cursor: pointer;
+      }
+
+      .top-table tr[data-profile-tic]:hover {
+        background: #f3f8f6;
+      }
+
+      .chart-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .chart-card {
+        min-height: 260px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .chart-card h3 {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .chart-card canvas {
+        width: 100%;
+        height: 205px;
+      }
+
+      .chart-fallback {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .signal-matrix {
+        grid-template-columns: 110px repeat(3, minmax(0, 1fr));
+      }
+
+      .matrix-axis {
+        display: grid;
+        place-items: center;
+        min-height: 84px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        text-align: center;
+      }
+
+      .matrix-cell strong {
+        display: block;
+        margin: 4px 0 5px;
+      }
+
+      .matrix-cell.green {
+        border-color: rgba(22, 132, 111, 0.32);
+        background: #eef8f5;
+      }
+
+      .matrix-cell.yellow {
+        border-color: rgba(189, 116, 23, 0.32);
+        background: #fff8ea;
+      }
+
+      .matrix-cell.red {
+        border-color: rgba(191, 62, 54, 0.32);
+        background: #fff1ef;
+      }
+
+      .timeline-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
       .matrix-stats {
@@ -1617,8 +1783,15 @@
       }
 
       @media (max-width: 1240px) {
-        .kpis {
+        .kpis,
+        .visitor-kpis,
+        .chart-grid {
           grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .intro-grid,
+        .method-steps {
+          grid-template-columns: minmax(0, 1fr);
         }
 
         .grid-2,
@@ -1713,6 +1886,10 @@
         }
 
         .kpis,
+        .visitor-kpis,
+        .method-steps,
+        .chart-grid,
+        .timeline-grid,
         .matrix-stat-kpis,
         .matrix-stat-grid,
         .matrix-followup-grid,
@@ -1726,6 +1903,16 @@
 
         .tree-children {
           padding-left: 13px;
+        }
+
+        .signal-matrix {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .matrix-axis {
+          min-height: auto;
+          justify-content: start;
+          padding: 6px 0;
         }
 
         .map-frame {
@@ -1860,6 +2047,33 @@
             </div>
           </div>
 
+          <section class="intro-grid" aria-label="Projektueberblick">
+            <article class="intro-panel">
+              <p class="eyebrow">Citizen-science Exoplanet Screening</p>
+              <h2>CitizenSky / Kwarves</h2>
+              <p class="intro-claim">Independent citizen-science dashboard for TESS/Gaia based exoplanet candidate screening.</p>
+              <p>
+                Wir analysieren oeffentlich verfuegbare Gaia- und TESS-Daten, filtern nahe K-Zwerge
+                und bewerten moegliche Transit-Kandidaten nach Datenqualitaet, Signalstabilitaet
+                und Habitable-Zone-Kontext. Die Matrix zeigt nicht nur Lichtkurven-Dips, sondern
+                eine mehrstufige Vorpruefung gegen Artefakte, schwache Datenfenster und EB-Risiken.
+              </p>
+            </article>
+            <aside class="disclaimer-box">
+              <p><strong>Transparenz:</strong> CitizenSky/Kwarves is an independent citizen-science project. Results are preliminary automated screenings based on public Gaia and TESS data. Candidate classifications are not confirmed planets. The analysis is incomplete and requires manual vetting, additional data, and professional follow-up.</p>
+            </aside>
+          </section>
+
+          <section class="panel" id="visitorStatusPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Projektstatus</h2>
+                <p class="panel-subtitle">Schneller Einstieg: Datenbasis, Kandidatenlage und Recheck-Bedarf.</p>
+              </div>
+            </div>
+            <div class="panel-body visitor-kpis" id="visitorKpis"></div>
+          </section>
+
           <div class="kpis" aria-label="Kennzahlen">
             <article class="card">
               <div class="card-top">
@@ -1902,6 +2116,135 @@
               <span class="metric-line"><i data-lucide="sun-medium"></i> HZ/Top-Tier</span>
             </article>
           </div>
+
+          <section class="panel" id="methodPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Methodik</h2>
+                <p class="panel-subtitle">Von Gaia-Sternparametern bis zur vorlaeufigen SPC/SPC_ART-Klassifikation.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="method-steps">
+                <article class="method-step"><span>1</span><strong>Gaia DR3</strong><p class="mini">Sternparameter, Distanz und Astrometrie.</p></article>
+                <article class="method-step"><span>2</span><strong>K-Zwerg Filter</strong><p class="mini">Nahe K-, G- und M-Sterne strukturieren.</p></article>
+                <article class="method-step"><span>3</span><strong>TESS Sectors</strong><p class="mini">Lichtkurven und Datenfenster pruefen.</p></article>
+                <article class="method-step"><span>4</span><strong>BLS/TLS Search</strong><p class="mini">Periodische Transit-Signale suchen.</p></article>
+                <article class="method-step"><span>5</span><strong>Evidence Score</strong><p class="mini">Datenlage und Signalqualitaet bewerten.</p></article>
+                <article class="method-step"><span>6</span><strong>SPC / SPC_ART</strong><p class="mini">Starke Kandidaten von Artefakt-Risiken trennen.</p></article>
+                <article class="method-step"><span>7</span><strong>HZ Review</strong><p class="mini">Habitable-Zone-Kontext und Follow-up priorisieren.</p></article>
+              </div>
+              <div class="notice" style="margin-top: 12px;">
+                Gaia liefert Sternparameter und Distanz. TESS liefert Lichtkurven/Sektoren. BLS/TLS sucht periodische Transit-Signale.
+                Der Evidence Score bewertet Datenlage und Signalqualitaet. SPC bedeutet starker Planetenkandidat; SPC_ART bedeutet starker Kandidat mit Artefakt- oder Systematikverdacht.
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="labelLegendPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Kandidatenlabels</h2>
+                <p class="panel-subtitle">Kurze Leseregel fuer die wichtigsten Kwarves-Statuswerte.</p>
+              </div>
+            </div>
+            <div class="panel-body table-wrap">
+              <table class="legend-table" aria-label="Kandidatenlabels">
+                <thead><tr><th>Label</th><th>Bedeutung</th></tr></thead>
+                <tbody id="labelLegendRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel" id="topCandidatesPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Top-20 Kandidaten</h2>
+                <p class="panel-subtitle">Sortiert nach Evidence Score, HZ-Prioritaet und Follow-up-Reife. Klick bereitet ein Kandidatenprofil vor.</p>
+              </div>
+            </div>
+            <div class="panel-body table-wrap">
+              <table class="top-table" aria-label="Top-20 Kandidaten">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>TIC</th>
+                    <th>Distance ly</th>
+                    <th>Teff</th>
+                    <th>Radius star</th>
+                    <th>Period days</th>
+                    <th>Rp Earth radii</th>
+                    <th>HZ class</th>
+                    <th>Evidence score</th>
+                    <th>Label</th>
+                    <th>Sectors</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="topCandidateRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel" id="statisticsPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Statistik-Plots</h2>
+                <p class="panel-subtitle">Verteilungen aus den vorhandenen Matrix- und Kandidatenfeldern.</p>
+              </div>
+            </div>
+            <div class="panel-body chart-grid">
+              <article class="chart-card"><h3>Evidence Score</h3><canvas id="chartEvidence"></canvas></article>
+              <article class="chart-card"><h3>Transitanzahl</h3><canvas id="chartTransits"></canvas></article>
+              <article class="chart-card"><h3>Distanz</h3><canvas id="chartDistance"></canvas></article>
+              <article class="chart-card"><h3>HZ-Klassen</h3><canvas id="chartHz"></canvas></article>
+              <article class="chart-card"><h3>Label-Verteilung</h3><canvas id="chartLabels"></canvas></article>
+              <article class="chart-card"><h3>TESS-Sektoren</h3><canvas id="chartSectors"></canvas></article>
+            </div>
+          </section>
+
+          <section class="panel" id="signalMatrixPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Datenlage vs. Signal</h2>
+                <p class="panel-subtitle">Warum starke Signale trotzdem gelb bleiben koennen, wenn die Datenlage unsicher ist.</p>
+              </div>
+            </div>
+            <div class="panel-body signal-matrix">
+              <div class="matrix-axis"></div>
+              <div class="matrix-axis">Signal schwach</div>
+              <div class="matrix-axis">Signal mittel</div>
+              <div class="matrix-axis">Signal stark</div>
+              <div class="matrix-axis">Daten gut</div>
+              <article class="matrix-cell yellow"><span>Gute Daten + schwach</span><strong>Beobachten / Recheck</strong><p class="mini">Signal reicht noch nicht fuer Follow-up.</p></article>
+              <article class="matrix-cell yellow"><span>Gute Daten + mittel</span><strong>SPC_ART / Review</strong><p class="mini">Manuelle Pruefung entscheidet.</p></article>
+              <article class="matrix-cell green"><span>Gute Daten + stark</span><strong>SPC / Follow-up</strong><p class="mini">Beste oeffentliche Kandidatenliste.</p></article>
+              <div class="matrix-axis">Daten mittel</div>
+              <article class="matrix-cell yellow"><span>Mittel + schwach</span><strong>Low Recheck</strong><p class="mini">Neue Sektoren koennen helfen.</p></article>
+              <article class="matrix-cell yellow"><span>Mittel + mittel</span><strong>SPC_ART</strong><p class="mini">Artefakt- oder Systematikrisiko offen.</p></article>
+              <article class="matrix-cell yellow"><span>Mittel + stark</span><strong>SPC_ART / mehr Daten</strong><p class="mini">Nicht gruen ohne stabile Datenlage.</p></article>
+              <div class="matrix-axis">Daten schlecht</div>
+              <article class="matrix-cell red"><span>Schlecht + schwach</span><strong>Ignorieren / low priority</strong><p class="mini">Keine belastbare Evidenz.</p></article>
+              <article class="matrix-cell yellow"><span>Schlecht + mittel</span><strong>NEEDS_MORE_TESS_DATA</strong><p class="mini">Zu wenig Abdeckung.</p></article>
+              <article class="matrix-cell yellow"><span>Schlecht + stark</span><strong>SPC_ART / mehr Daten noetig</strong><p class="mini">Starkes Signal, aber noch nicht sicher.</p></article>
+            </div>
+          </section>
+
+          <section class="panel" id="observationTimelinePanel">
+            <div class="panel-header">
+              <div>
+                <h2>TESS Observation Timeline</h2>
+                <p class="panel-subtitle">Vorbereitung fuer Sektorverlauf, Year-8 Treffer und Recheck-Planung.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="timeline-grid" id="visitorTimeline"></div>
+              <div class="notice" style="margin-top: 12px;">
+                Year-8 hit does not mean the target was not observed for eight years. It means the candidate position overlaps with expected or planned Year-8 TESS coverage geometry and should be checked against official sector products.
+                Die Geometrie ist aktuell eine robuste Missionsansicht, aber keine exakte Himmelsprojektion.
+              </div>
+            </div>
+          </section>
 
           <section class="panel" id="matrixStatsPanel">
             <div class="panel-header">
@@ -2404,11 +2747,14 @@
         </section>
         <footer class="site-footer">
           <p class="site-footer-alert">⚠️ Vorläufige Forschungsergebnisse. Kandidatenbewertungen können sich durch neue TESS-Daten, Follow-up-Beobachtungen oder externe Analysen ändern.</p>
+          <p class="mini">Independent citizen-science project. No official NASA/ESA affiliation. Data sources: Gaia DR3, TESS/MAST. Keine kommerzielle Nutzung; Forschungs- und Lernprojekt.</p>
           <div class="site-footer-links">
             <a href="#aboutSection" data-doc-anchor="aboutSection" data-panel-target="impressumPanel">About</a>
             <a href="#impressumSection" data-doc-anchor="impressumSection" data-panel-target="impressumPanel">Impressum</a>
             <a href="#privacySection" data-doc-anchor="privacySection" data-panel-target="impressumPanel">Privacy</a>
             <a href="https://github.com/CitizenSky/kwarves" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://mast.stsci.edu/" target="_blank" rel="noopener noreferrer">TESS/MAST</a>
+            <a href="https://www.cosmos.esa.int/web/gaia/dr3" target="_blank" rel="noopener noreferrer">Gaia DR3</a>
           </div>
         </footer>
       </main>
@@ -3464,6 +3810,10 @@
         globalSearch: document.getElementById("globalSearch"),
         curveSearch: document.getElementById("curveSearch"),
         tree: document.getElementById("tree"),
+        visitorKpis: document.getElementById("visitorKpis"),
+        labelLegendRows: document.getElementById("labelLegendRows"),
+        topCandidateRows: document.getElementById("topCandidateRows"),
+        visitorTimeline: document.getElementById("visitorTimeline"),
         matrixStats: document.getElementById("matrixStats"),
         selectedCard: document.getElementById("selectedCard"),
         rows: document.getElementById("candidateRows"),
@@ -3533,6 +3883,7 @@
       let tessPoints2d = [];
       let tessThree = { ready: false };
       let mapZoom = 1;
+      let visitorCharts = [];
 
       function clampMapZoom(value) {
         return Math.max(0.75, Math.min(5, Number(value) || 1));
@@ -4446,6 +4797,17 @@
         return data.candidates.filter((candidate) => candidate.color === "green" && matchesCandidate(candidate, term));
       }
 
+      const labelLegend = [
+        ["SPC", "Strong Planet Candidate"],
+        ["SPC_ART", "Strong Planet Candidate with artifact/systematics concern"],
+        ["HZ_RECHECK", "Candidate in/near HZ, needs recheck"],
+        ["SPC_RV_NEEDED", "Strong candidate, radial velocity follow-up needed"],
+        ["EB_RISK", "Possible eclipsing binary risk"],
+        ["FP_BYDRA", "Likely false positive due to BY Dra / stellar activity"],
+        ["REJECTED", "Rejected candidate"],
+        ["NEEDS_MORE_TESS_DATA", "Not enough TESS coverage yet"]
+      ];
+
       function matrixText(candidate) {
         return [
           candidate.status,
@@ -4536,6 +4898,157 @@
 
       function candidateChip(candidate) {
         return `<button class="chip" type="button" data-stat-tic="${candidate.tic}">TIC ${candidate.tic} · ${formatMaybe(candidate.evidenceScore, 0)}</button>`;
+      }
+
+      function hzPriority(candidate) {
+        return candidate.isViolet ? 0 : (candidate.hz && candidate.hz !== "ZU_HEISS" ? 1 : 2);
+      }
+
+      function statusPriority(candidate) {
+        const label = `${candidate.matrixClass} ${candidate.matrixStatus} ${candidate.status}`.toUpperCase();
+        if (label.includes("SPC_RV_NEEDED") || label.includes("SPC_STRONG")) return 0;
+        if (label.includes("SPC_FOLLOWUP_READY") || label.includes("SPC")) return 1;
+        if (label.includes("NEEDS_MORE")) return 2;
+        return 3;
+      }
+
+      function candidateLabel(candidate) {
+        return candidate.matrixClass || candidate.matrixStatus || candidate.status || candidate.markierungsKlasse || "UNKNOWN";
+      }
+
+      function candidateNotes(candidate) {
+        if (candidate.color !== "green" && expectedTransits(candidate) < 5) return "Recheck: weniger als 5 Transits";
+        if (candidate.nextStep) return candidate.nextStep;
+        if (candidate.decisionReason) return candidate.decisionReason;
+        return candidate.reason || "-";
+      }
+
+      function top20Candidates() {
+        return [...(data.candidates || [])]
+          .sort((a, b) => (
+            (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
+            || (hzPriority(a) - hzPriority(b))
+            || (statusPriority(a) - statusPriority(b))
+            || (Number(a.distance || 0) - Number(b.distance || 0))
+          ))
+          .slice(0, 20);
+      }
+
+      function renderVisitorKpis() {
+        const candidates = data.candidates || [];
+        const tess = countWhere(candidates, (candidate) => expectedTransits(candidate) > 0 || Number(candidate.matrixSectors || 0) > 0);
+        const spcStrong = countWhere(candidates, (candidate) => candidate.color === "green" || /SPC_STRONG|SPC_RV_NEEDED|SPC_FOLLOWUP_READY/.test(matrixText(candidate)));
+        const recheck = countWhere(candidates, (candidate) => /NEEDS_MORE|SPC_ART|ACTIVE|ARTIFACT|RECHECK|EB_RISK/.test(matrixText(candidate)));
+        const cards = [
+          ["Sterne analysiert", data.summary?.total || candidates.length, "Gaia/TIC Manifest"],
+          ["Sterne mit TESS-Daten", tess, "Sektor- oder Transitdaten"],
+          ["Kandidaten gesamt", candidates.length, "Matrix-Eintraege"],
+          ["SPC / Strong Planet Candidates", spcStrong, "streng priorisiert"],
+          ["HZ-Kandidaten", data.summary?.violet || countWhere(candidates, (c) => c.isViolet), "violett/HZ-Kontext"],
+          ["Recheck / Artefaktverdacht", recheck, "gelb/unsicher"]
+        ];
+        els.visitorKpis.innerHTML = cards.map(([label, value, note]) => `
+          <article class="visitor-kpi">
+            <span>${label}</span>
+            <strong>${formatNumber(value)}</strong>
+            <span>${note}</span>
+          </article>
+        `).join("");
+      }
+
+      function renderLabelLegend() {
+        els.labelLegendRows.innerHTML = labelLegend.map(([label, meaning]) => `
+          <tr><td><strong>${label}</strong></td><td>${meaning}</td></tr>
+        `).join("");
+      }
+
+      function renderTopCandidates() {
+        els.topCandidateRows.innerHTML = top20Candidates().map((candidate, index) => {
+          const rowClass = expectedTransits(candidate) < 5 ? "yellow" : matrixColorClass(candidate);
+          return `
+            <tr data-profile-tic="${candidate.tic}">
+              <td>${index + 1}</td>
+              <td><strong>TIC ${candidate.tic}</strong></td>
+              <td>${formatFloat(candidate.distance, 2)}</td>
+              <td>${formatFloat(candidate.teff, 0)}</td>
+              <td>${formatFloat(candidate.starRadius, 2)}</td>
+              <td>${formatFloat(candidate.period, 4)}</td>
+              <td>${formatFloat(candidate.radius, 2)}</td>
+              <td>${formatMaybe(candidate.hz)}</td>
+              <td>${formatFloat(candidate.evidenceScore, 0)}</td>
+              <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
+              <td>${formatMaybe(candidate.matrixSectors ?? candidate.observedSectorCount ?? candidate.cleanSectors)}</td>
+              <td class="wrap-cell">${candidateNotes(candidate)}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      function numericBucket(value, buckets) {
+        const number = Number(value || 0);
+        return buckets.find((bucket) => number >= bucket.min && number < bucket.max)?.label || buckets[buckets.length - 1].label;
+      }
+
+      function chartRows(labels, picker) {
+        return countBuckets(data.candidates || [], labels, picker);
+      }
+
+      function renderVisitorCharts() {
+        const chartDefs = [
+          ["chartEvidence", chartRows(["0-39", "40-59", "60-74", "75-89", "90-100"], (c) => numericBucket(c.evidenceScore, [{ label: "0-39", min: 0, max: 40 }, { label: "40-59", min: 40, max: 60 }, { label: "60-74", min: 60, max: 75 }, { label: "75-89", min: 75, max: 90 }, { label: "90-100", min: 90, max: 101 }]))],
+          ["chartTransits", chartRows(["0-2", "3-4", "5-9", "10-19", "20+"], (c) => numericBucket(expectedTransits(c), [{ label: "0-2", min: 0, max: 3 }, { label: "3-4", min: 3, max: 5 }, { label: "5-9", min: 5, max: 10 }, { label: "10-19", min: 10, max: 20 }, { label: "20+", min: 20, max: 9999 }]))],
+          ["chartDistance", chartRows(["0-25", "25-50", "50-75", "75-100", "100-150", "150+"], (c) => numericBucket(c.distance, [{ label: "0-25", min: 0, max: 25 }, { label: "25-50", min: 25, max: 50 }, { label: "50-75", min: 50, max: 75 }, { label: "75-100", min: 75, max: 100 }, { label: "100-150", min: 100, max: 150 }, { label: "150+", min: 150, max: 9999 }]))],
+          ["chartHz", chartRows(["ZU_HEISS", "OPT_HZ_INNEN", "KONSERVATIVE_HZ", "OPT_HZ_AUSSEN", "ZU_KALT"], (c) => c.hz || "ZU_HEISS")],
+          ["chartLabels", chartRows(["SPC_STRONG", "SPC", "SPC_ART", "NEEDS_MORE_DATA", "EB_RISK", "REJECTED", "IGNORE"], matrixStatusBucket)],
+          ["chartSectors", chartRows(["0", "1", "2", "3-4", "5+"], (c) => numericBucket(c.matrixSectors ?? c.observedSectorCount ?? 0, [{ label: "0", min: 0, max: 1 }, { label: "1", min: 1, max: 2 }, { label: "2", min: 2, max: 3 }, { label: "3-4", min: 3, max: 5 }, { label: "5+", min: 5, max: 9999 }]))]
+        ];
+        document.querySelectorAll(".chart-fallback").forEach((node) => node.remove());
+        if (!window.Chart) {
+          chartDefs.forEach(([id, rows]) => {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+            const wrap = document.createElement("div");
+            wrap.className = "chart-fallback";
+            wrap.innerHTML = renderStatRows(rows);
+            canvas.replaceWith(wrap);
+          });
+          return;
+        }
+        visitorCharts.forEach((chart) => chart.destroy());
+        visitorCharts = [];
+        chartDefs.forEach(([id, rows]) => {
+          const canvas = document.getElementById(id);
+          if (!canvas) return;
+          visitorCharts.push(new Chart(canvas, {
+            type: "bar",
+            data: {
+              labels: rows.map((row) => row.label),
+              datasets: [{ data: rows.map((row) => row.count), backgroundColor: "#16846f", borderRadius: 5 }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+          }));
+        });
+      }
+
+      function renderVisitorTimeline() {
+        const candidates = data.candidates || [];
+        const observed = countWhere(candidates, (c) => Number(c.observedSectorCount || 0) > 0 || Number(c.matrixSectors || 0) > 0);
+        const year8 = countWhere(candidates, (c) => /YEAR_8|YEAR8|PLANNED|NEW_SECTOR/.test(`${c.sectorInventoryStatus} ${c.nextRecheck} ${c.notes}`.toUpperCase()));
+        const newSectors = countWhere(candidates, (c) => Number(c.newSectors?.length || 0) > 0);
+        const cards = [
+          ["Vorhandene Sektoren", observed, "Kandidaten mit Sektor-/Matrixdaten"],
+          ["Letzte beobachtete Sektoren", countWhere(candidates, (c) => Number(c.previousSectorCount || 0) > 0), "Archiv-/Bestandsabgleich"],
+          ["Year-8 Treffer", year8, "geometrische Recheck-Hinweise"],
+          ["Neue Sektoren", newSectors, "spaeter fuer Rechecks nutzbar"]
+        ];
+        els.visitorTimeline.innerHTML = cards.map(([label, value, note]) => `
+          <article class="timeline-card"><span>${label}</span><strong>${formatNumber(value)}</strong><p class="mini">${note}</p></article>
+        `).join("");
       }
 
       function renderMatrixStats() {
@@ -6176,6 +6689,10 @@
       function renderAll() {
         updateMapZoomLabel();
         renderKpis();
+        renderVisitorKpis();
+        renderLabelLegend();
+        renderTopCandidates();
+        renderVisitorTimeline();
         renderMatrixStats();
         renderTree();
         renderDocs();
@@ -6186,6 +6703,7 @@
         renderCurves(false);
         draw2dMap();
         update3dData();
+        renderVisitorCharts();
         window.lucide?.createIcons();
       }
 
@@ -6341,6 +6859,16 @@
         if (!row) return;
         const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.tic));
         if (candidate) selectCandidate(candidate);
+      });
+
+      els.topCandidateRows.addEventListener("click", (event) => {
+        const row = event.target.closest("tr[data-profile-tic]");
+        if (!row) return;
+        const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.profileTic));
+        if (candidate) {
+          selectCandidate(candidate, "profile");
+          scrollToPanel("mapPanel");
+        }
       });
 
       els.curveList.addEventListener("click", (event) => {
