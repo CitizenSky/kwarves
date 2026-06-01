@@ -21,14 +21,16 @@
     <style>
       :root {
         color-scheme: light;
-        --bg: #f4f6f8;
+        --bg: #f6f8f5;
         --surface: #ffffff;
-        --soft: #edf4f2;
+        --soft: #eaf5f1;
         --ink: #14211f;
-        --heading: #082f27;
+        --heading: #0b3b32;
         --muted: #66736f;
         --line: #d9e1de;
-        --green: #16846f;
+        --green: #147a68;
+        --gold: #b88220;
+        --aqua: #2c8f9c;
         --yellow: #bd7417;
         --red: #bf3e36;
         --violet: #6956c5;
@@ -298,6 +300,8 @@
         align-items: end;
         justify-content: space-between;
         gap: 18px;
+        padding: 14px 0 16px 16px;
+        border-left: 4px solid var(--green);
       }
 
       h1,
@@ -334,7 +338,7 @@
 
       .eyebrow {
         margin-bottom: 8px;
-        color: #0b5f5a;
+        color: #0f6c60;
         font-size: 12px;
         font-weight: 850;
         text-transform: uppercase;
@@ -380,6 +384,12 @@
         font-weight: 760;
       }
 
+      .keyword-strip span:first-child {
+        border-color: #ead9ac;
+        background: #fff8e8;
+        color: #765116;
+      }
+
       .kpis {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -402,6 +412,23 @@
         gap: 12px;
         min-height: 122px;
         padding: 16px;
+        border-top: 3px solid var(--green);
+      }
+
+      .kpis .card:nth-child(2) {
+        border-top-color: var(--green);
+      }
+
+      .kpis .card:nth-child(3) {
+        border-top-color: var(--gold);
+      }
+
+      .kpis .card:nth-child(4) {
+        border-top-color: var(--red);
+      }
+
+      .kpis .card:nth-child(5) {
+        border-top-color: var(--violet);
       }
 
       .card-top {
@@ -425,6 +452,21 @@
         border-radius: 8px;
         background: var(--soft);
         color: var(--green);
+      }
+
+      .kpis .card:nth-child(3) .icon-box {
+        background: #fff4dc;
+        color: var(--gold);
+      }
+
+      .kpis .card:nth-child(4) .icon-box {
+        background: #fdecea;
+        color: var(--red);
+      }
+
+      .kpis .card:nth-child(5) .icon-box {
+        background: #f0edff;
+        color: var(--violet);
       }
 
       .big-number {
@@ -454,6 +496,15 @@
         border-radius: 8px;
         background: var(--surface);
         box-shadow: var(--shadow);
+      }
+
+      .intro-panel {
+        border-top: 3px solid var(--green);
+      }
+
+      .disclaimer-box {
+        border-top: 3px solid var(--gold);
+        background: #fffdf7;
       }
 
       .intro-panel h2 {
@@ -496,7 +547,7 @@
         padding: 12px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #f8fbfa;
+        background: #fbfdfc;
       }
 
       .visitor-kpi span,
