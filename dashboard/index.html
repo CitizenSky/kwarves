@@ -583,6 +583,10 @@
         min-width: 1040px;
       }
 
+      .top-table {
+        min-width: 760px;
+      }
+
       .top-table tr[data-profile-tic] {
         cursor: pointer;
       }
@@ -613,8 +617,10 @@
 
       .followup-list {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 8px;
+        max-height: 360px;
+        overflow: auto;
       }
 
       .followup-item {
@@ -623,8 +629,8 @@
         gap: 8px 10px;
         align-items: center;
         width: 100%;
-        min-height: 64px;
-        padding: 10px 12px;
+        min-height: 56px;
+        padding: 9px 10px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #fffdf2;
@@ -652,6 +658,44 @@
 
       .chart-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .compact-hidden {
+        display: none;
+      }
+
+      .status-overview {
+        display: grid;
+        gap: 14px;
+      }
+
+      .decision-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+
+      .decision-card {
+        display: grid;
+        gap: 6px;
+        min-height: 92px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+      }
+
+      .decision-card strong {
+        color: var(--heading);
+        font-size: 14px;
+      }
+
+      .decision-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 680;
+        line-height: 1.45;
       }
 
       .chart-card {
@@ -2615,11 +2659,31 @@
           <section class="panel" id="visitorStatusPanel">
             <div class="panel-header">
               <div>
-                <h2 id="visitorStatusTitle">Projektstatus</h2>
-                <p class="panel-subtitle" id="visitorStatusSub">Schneller Einstieg: Datenbasis, Kandidatenlage und Recheck-Bedarf.</p>
+                <h2 id="visitorStatusTitle">Projektstatus & Kurzlogik</h2>
+                <p class="panel-subtitle" id="visitorStatusSub">Kandidatenlage, Farbcode und Follow-up-Regeln auf einen Blick.</p>
               </div>
             </div>
-            <div class="panel-body visitor-kpis" id="visitorKpis"></div>
+            <div class="panel-body status-overview">
+              <div class="visitor-kpis" id="visitorKpis"></div>
+              <div class="decision-strip" id="decisionSummary">
+                <article class="decision-card">
+                  <strong>Orange</strong>
+                  <p>Normale Recheck-Kandidaten: wissenschaftlich interessant, aber noch nicht Follow-up-ready.</p>
+                </article>
+                <article class="decision-card">
+                  <strong>Gelb / SPC Prep</strong>
+                  <p>Interne Follow-up-Kandidaten. Weiter verfolgen, aber nicht automatisch ExoFOP-ready.</p>
+                </article>
+                <article class="decision-card">
+                  <strong>Violett</strong>
+                  <p>HZ-Fokus als Zusatzmarker. Violett ersetzt keine Ampelfarbe.</p>
+                </article>
+                <article class="decision-card">
+                  <strong>ExoFOP</strong>
+                  <p>Upload erst bei strenger gruener Freigabe; orange/gelb bleiben intern.</p>
+                </article>
+              </div>
+            </div>
           </section>
 
           <div class="kpis" aria-label="Kennzahlen">
@@ -2673,7 +2737,7 @@
             </article>
           </div>
 
-          <section class="panel" id="methodPanel">
+          <section class="panel compact-hidden" id="methodPanel">
             <div class="panel-header">
               <div>
                 <h2 id="methodTitle">Methodik</h2>
@@ -2697,7 +2761,7 @@
             </div>
           </section>
 
-          <section class="panel" id="labelLegendPanel">
+          <section class="panel compact-hidden" id="labelLegendPanel">
             <div class="panel-header">
               <div>
                 <h2 id="labelLegendTitle">Kandidatenlabels</h2>
@@ -2726,15 +2790,11 @@
                     <th>Rank</th>
                     <th>TIC</th>
                     <th>Distance ly</th>
-                    <th>Teff</th>
-                    <th>Radius star</th>
                     <th>Period days</th>
-                    <th>Rp Earth radii</th>
                     <th>HZ class</th>
-                    <th>Evidence score</th>
+                    <th>Evidence</th>
                     <th>Label</th>
-                    <th>Sectors</th>
-                    <th>Notes</th>
+                    <th>Next step</th>
                   </tr>
                 </thead>
                 <tbody id="topCandidateRows"></tbody>
@@ -2752,7 +2812,7 @@
             </div>
           </section>
 
-          <section class="panel" id="statisticsPanel">
+          <section class="panel compact-hidden" id="statisticsPanel">
             <div class="panel-header">
               <div>
                 <h2 id="statisticsTitle">Statistik-Plots</h2>
@@ -2769,7 +2829,7 @@
             </div>
           </section>
 
-          <section class="panel" id="signalMatrixPanel">
+          <section class="panel compact-hidden" id="signalMatrixPanel">
             <div class="panel-header">
               <div>
                 <h2 id="signalMatrixTitle">Datenlage vs. Signal</h2>
@@ -2796,7 +2856,7 @@
             </div>
           </section>
 
-          <section class="panel" id="yellowReasonPanel">
+          <section class="panel compact-hidden" id="yellowReasonPanel">
             <div class="panel-header">
               <div>
                 <h2 id="yellowReasonTitle">Why is this candidate yellow?</h2>
@@ -2840,7 +2900,7 @@
             </div>
           </section>
 
-          <section class="panel" id="observationTimelinePanel">
+          <section class="panel compact-hidden" id="observationTimelinePanel">
             <div class="panel-header">
               <div>
                 <h2 id="observationTimelineTitle">TESS-Beobachtungsplan</h2>
@@ -2856,7 +2916,7 @@
             </div>
           </section>
 
-          <section class="panel" id="matrixStatsPanel">
+          <section class="panel compact-hidden" id="matrixStatsPanel">
             <div class="panel-header">
               <div>
                 <h2>Matrix-Statistiken</h2>
@@ -2866,7 +2926,7 @@
             <div class="panel-body matrix-stats" id="matrixStats"></div>
           </section>
 
-          <section class="panel" id="treePanel">
+          <section class="panel compact-hidden" id="treePanel">
             <div class="panel-header">
               <div>
                 <h2>Baumstruktur der Entscheidung</h2>
@@ -5977,7 +6037,7 @@
       function renderTopCandidates() {
         const rows = top20Candidates();
         if (!rows.length) {
-          els.topCandidateRows.innerHTML = `<tr><td colspan="12">Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.</td></tr>`;
+          els.topCandidateRows.innerHTML = `<tr><td colspan="8">Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.</td></tr>`;
           renderFollowupCandidates();
           return;
         }
@@ -5988,14 +6048,10 @@
               <td>${index + 1}</td>
               <td><strong>TIC ${candidate.tic}</strong></td>
               <td>${formatFloat(candidate.distance, 2)}</td>
-              <td>${formatFloat(candidate.teff, 0)}</td>
-              <td>${formatFloat(candidate.starRadius, 2)}</td>
               <td>${formatFloat(candidate.period, 4)}</td>
-              <td>${formatFloat(candidate.radius, 2)}</td>
               <td>${formatMaybe(candidate.hz)}</td>
               <td>${formatFloat(candidate.evidenceScore, 0)}</td>
               <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
-              <td>${formatMaybe(candidate.matrixSectors ?? candidate.observedSectorCount ?? candidate.cleanSectors)}</td>
               <td class="wrap-cell">${candidate.followupStrength === "STRONG" ? "FOLLOWUP_STRONG · " : ""}${candidateNotes(candidate)}</td>
             </tr>
           `;
@@ -6744,8 +6800,14 @@
             introClaim: "Independent citizen-science dashboard for TESS/Gaia based exoplanet candidate screening.",
             introText: "We analyze publicly available Gaia and TESS data, filter nearby K dwarfs, and rate possible transit candidates by data quality, signal stability, and habitable-zone context. The matrix does not just collect light-curve dips; it performs multi-stage pre-vetting against artifacts, weak observing windows, and eclipsing-binary risks.",
             disclaimer: "<strong>Transparency:</strong> CitizenSky/Kwarves is an independent citizen-science project. Results are preliminary automated screenings based on public Gaia and TESS data. Candidate classifications are not confirmed planets. The analysis is incomplete and requires manual vetting, additional data, and professional follow-up.",
-            statusTitle: "Project Status",
-            statusSub: "Fast orientation: data basis, candidate state, and recheck demand.",
+            statusTitle: "Project Status & Short Logic",
+            statusSub: "Candidate state, color code, and follow-up rules at a glance.",
+            decisionCards: [
+              ["Orange", "Ordinary recheck candidates: interesting, but not follow-up-ready yet."],
+              ["Yellow / SPC Prep", "Internal follow-up candidates. Track actively, but not automatically ExoFOP-ready."],
+              ["Violet", "HZ focus as an additional marker. Violet does not replace the traffic-light color."],
+              ["ExoFOP", "Upload only after strict green release; orange and yellow remain internal."]
+            ],
             methodTitle: "Methodology",
             methodSub: "From Gaia stellar parameters to provisional SPC/SPC_ART classification.",
             methodNotice: "Gaia provides stellar parameters and distance. TESS provides light curves and sector windows. BLS/TLS searches for periodic transit signals. The Evidence Score rates data coverage and signal quality. SPC means strong planet candidate; SPC_ART means strong candidate with artifact or systematics concern.",
@@ -6762,8 +6824,8 @@
             labelSub: "Short reading guide for the most important Kwarves status values.",
             labelHeaders: ["Label", "Meaning"],
             topTitle: "Top Candidates",
-            topSub: "Sorted by Evidence Score, HZ priority, and follow-up readiness. Click prepares a candidate profile.",
-            topHeaders: ["Rank", "TIC", "Distance ly", "Teff", "Star radius", "Period days", "Rp Earth radii", "HZ class", "Evidence score", "Label", "Sectors", "Notes"],
+            topSub: "Compact decision list. Details open in the candidate profile.",
+            topHeaders: ["Rank", "TIC", "Distance ly", "Period days", "HZ class", "Evidence", "Label", "Next step"],
             statsTitle: "Statistics Plots",
             statsSub: "Distributions from existing matrix and candidate fields.",
             chartTitles: ["Evidence Score", "Transit count", "Distance", "HZ classes", "Label distribution", "TESS sectors"],
@@ -6786,8 +6848,14 @@
               introClaim: "Dashboard citizen-science independant pour la preselection de candidats exoplanetes avec TESS/Gaia.",
               introText: "Nous analysons des donnees Gaia et TESS publiques, filtrons des naines K proches et evaluons les candidats de transit possibles selon la qualite des donnees, la stabilite du signal et le contexte de zone habitable. La matrice ne collecte pas seulement des creux de courbe de lumiere; elle applique un pre-vetting multi-etapes contre les artefacts, les fenetres d'observation faibles et les risques de binaires a eclipses.",
               disclaimer: "<strong>Transparence:</strong> CitizenSky/Kwarves est un projet citizen-science independant. Les resultats sont des screenings automatises preliminaires bases sur les donnees publiques Gaia et TESS. Les classifications ne sont pas des planetes confirmees. L'analyse est incomplete et requiert un vetting manuel, des donnees supplementaires et un suivi professionnel.",
-              statusTitle: "Statut du projet",
-              statusSub: "Orientation rapide: base de donnees, etat des candidats et besoin de reverification.",
+              statusTitle: "Statut du projet & logique courte",
+              statusSub: "Etat des candidats, code couleur et regles de suivi en bref.",
+              decisionCards: [
+                ["Orange", "Candidats de reverification ordinaires: interessants, mais pas encore prets pour le suivi."],
+                ["Jaune / SPC Prep", "Candidats internes de suivi. A suivre activement, mais pas automatiquement ExoFOP-ready."],
+                ["Violet", "Focus HZ comme marqueur additionnel. Violet ne remplace pas la couleur principale."],
+                ["ExoFOP", "Depot seulement apres validation verte stricte; orange et jaune restent internes."]
+              ],
               methodTitle: "Methodologie",
               methodSub: "Des parametres stellaires Gaia a la classification provisoire SPC/SPC_ART.",
               methodNotice: "Gaia fournit les parametres stellaires et la distance. TESS fournit les courbes de lumiere et les fenetres de secteurs. BLS/TLS cherche des signaux de transit periodiques. L'Evidence Score evalue la couverture de donnees et la qualite du signal. SPC signifie candidat planetaire fort; SPC_ART signifie candidat fort avec suspicion d'artefact ou de systematique.",
@@ -6804,8 +6872,8 @@
               labelSub: "Guide court pour les principaux statuts Kwarves.",
               labelHeaders: ["Label", "Signification"],
               topTitle: "Top candidats",
-              topSub: "Trie par Evidence Score, priorite HZ et maturite de suivi. Un clic prepare un profil candidat.",
-              topHeaders: ["Rang", "TIC", "Distance al", "Teff", "Rayon etoile", "Periode jours", "Rp rayons Terre", "Classe HZ", "Evidence score", "Label", "Secteurs", "Notes"],
+              topSub: "Liste compacte pour decider. Les details s'ouvrent dans le profil candidat.",
+              topHeaders: ["Rang", "TIC", "Distance al", "Periode jours", "Classe HZ", "Evidence", "Label", "Prochaine etape"],
               statsTitle: "Graphiques statistiques",
               statsSub: "Distributions issues des champs matrice et candidats existants.",
               chartTitles: ["Evidence Score", "Nombre de transits", "Distance", "Classes HZ", "Distribution labels", "Secteurs TESS"],
@@ -6827,8 +6895,14 @@
               introClaim: "Unabhaengiges Citizen-Science-Dashboard fuer die TESS/Gaia-basierte Vorpruefung von Exoplaneten-Kandidaten.",
               introText: "Wir analysieren oeffentlich verfuegbare Gaia- und TESS-Daten, filtern nahe K-Zwerge und bewerten moegliche Transit-Kandidaten nach Datenqualitaet, Signalstabilitaet und Habitable-Zone-Kontext. Die Matrix sammelt nicht nur Lichtkurven-Dips, sondern nutzt eine mehrstufige Vorpruefung gegen Artefakte, schwache Datenfenster und EB-Risiken.",
               disclaimer: "<strong>Transparenz:</strong> CitizenSky/Kwarves ist ein unabhaengiges Citizen-Science-Projekt. Ergebnisse sind vorlaeufige automatisierte Screenings auf Basis oeffentlicher Gaia- und TESS-Daten. Kandidatenklassifikationen sind keine bestaetigten Planeten. Die Analyse ist unvollstaendig und erfordert manuelles Vetting, weitere Daten und professionelles Follow-up.",
-              statusTitle: "Projektstatus",
-              statusSub: "Schneller Einstieg: Datenbasis, Kandidatenlage und Recheck-Bedarf.",
+              statusTitle: "Projektstatus & Kurzlogik",
+              statusSub: "Kandidatenlage, Farbcode und Follow-up-Regeln auf einen Blick.",
+              decisionCards: [
+                ["Orange", "Normale Recheck-Kandidaten: interessant, aber noch nicht Follow-up-ready."],
+                ["Gelb / SPC Prep", "Interne Follow-up-Kandidaten. Aktiv weiterverfolgen, aber nicht automatisch ExoFOP-ready."],
+                ["Violett", "HZ-Fokus als Zusatzmarker. Violett ersetzt keine Ampelfarbe."],
+                ["ExoFOP", "Upload erst bei strenger gruener Freigabe; orange und gelb bleiben intern."]
+              ],
               methodTitle: "Methodik",
               methodSub: "Von Gaia-Sternparametern bis zur vorlaeufigen SPC/SPC_ART-Klassifikation.",
               methodNotice: "Gaia liefert Sternparameter und Distanz. TESS liefert Lichtkurven und Sektorfenster. BLS/TLS sucht periodische Transit-Signale. Der Evidence Score bewertet Datenlage und Signalqualitaet. SPC bedeutet starker Planetenkandidat; SPC_ART bedeutet starker Kandidat mit Artefakt- oder Systematikverdacht.",
@@ -6845,8 +6919,8 @@
               labelSub: "Kurze Leseregel fuer die wichtigsten Kwarves-Statuswerte.",
               labelHeaders: ["Label", "Bedeutung"],
               topTitle: "Top Kandidaten",
-              topSub: "Sortiert nach Evidence Score, HZ-Prioritaet und Follow-up-Reife. Klick bereitet ein Kandidatenprofil vor.",
-              topHeaders: ["Rang", "TIC", "Distanz ly", "Teff", "Sternradius", "Periode Tage", "Rp Erdradien", "HZ-Klasse", "Evidence Score", "Label", "Sektoren", "Notizen"],
+              topSub: "Kompakte Entscheidungsliste. Details stehen im Kandidatenprofil.",
+              topHeaders: ["Rang", "TIC", "Distanz ly", "Periode Tage", "HZ-Klasse", "Evidence", "Label", "Naechster Schritt"],
               statsTitle: "Statistik-Plots",
               statsSub: "Verteilungen aus den vorhandenen Matrix- und Kandidatenfeldern.",
               chartTitles: ["Evidence Score", "Transitanzahl", "Distanz", "HZ-Klassen", "Label-Verteilung", "TESS-Sektoren"],
@@ -6869,6 +6943,12 @@
         document.getElementById("introDisclaimer").innerHTML = visitorCopy.disclaimer;
         setText("#visitorStatusTitle", visitorCopy.statusTitle);
         setText("#visitorStatusSub", visitorCopy.statusSub);
+        document.getElementById("decisionSummary").innerHTML = visitorCopy.decisionCards.map(([title, text]) => `
+          <article class="decision-card">
+            <strong>${title}</strong>
+            <p>${text}</p>
+          </article>
+        `).join("");
         setText("#methodTitle", visitorCopy.methodTitle);
         setText("#methodSub", visitorCopy.methodSub);
         setText("#methodNotice", visitorCopy.methodNotice);
