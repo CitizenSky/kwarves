@@ -1009,7 +1009,7 @@ def main() -> int:
 
     lightcurve_candidates = [
         candidate for candidate in candidates
-        if candidate["lightcurveImg"]
+        if candidate["lightcurveImg"] and candidate["color"] != "red"
     ]
     priority_candidates = sorted(
         lightcurve_candidates,
