@@ -7892,7 +7892,7 @@
         const groups = {};
         const maxInstances = Math.max(1, (data.candidates || []).length);
         ["green", "spc-prep", "yellow", "red", "gray"].forEach((key) => {
-          const geometry = new THREE.SphereGeometry(0.026, 10, 10);
+          const geometry = new THREE.SphereGeometry(0.018, 18, 14);
           const material = new THREE.MeshBasicMaterial({
             color: key === "spc-prep" ? colors.spcPrep : colors[key],
             transparent: true,
@@ -7905,7 +7905,7 @@
           scene.add(mesh);
         });
 
-        const selectedGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+        const selectedGeometry = new THREE.SphereGeometry(0.055, 20, 16);
         const selectedMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
         const selectedMesh = new THREE.Mesh(selectedGeometry, selectedMaterial);
         scene.add(selectedMesh);
@@ -7934,7 +7934,7 @@
           const subset = candidates.filter((candidate) => key === "spc-prep" ? isSpcPrepCandidate(candidate) : (!isSpcPrepCandidate(candidate) && candidate.color === key));
           subset.forEach((candidate, index) => {
             const position = map3dPosition(candidate);
-            const scale = Math.max(0.75, Math.min(2.35, 0.75 + Number(candidate.snr || 0) / 48));
+            const scale = Math.max(0.65, Math.min(1.75, 0.65 + Math.sqrt(Number(candidate.snr || 0)) / 9));
             temp.position.set(position.x, position.y, position.z);
             temp.scale.setScalar(scale);
             temp.updateMatrix();
