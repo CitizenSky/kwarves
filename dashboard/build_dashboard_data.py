@@ -509,13 +509,21 @@ def load_full_vetting_reports() -> dict[int, dict[str, Any]]:
     reports: dict[int, dict[str, Any]] = {}
     if not VETTING_REPORTS_DIR.exists():
         return reports
+
+    def report_rank(payload: dict[str, Any]) -> tuple[float, int, float]:
+        return (
+            safe_float(payload.get("evidence_score")) or 0.0,
+            safe_int(payload.get("visible_transits")),
+            safe_float(payload.get("sap_pdcsap_ratio")) or 0.0,
+        )
+
     for path in VETTING_REPORTS_DIR.glob("TIC_*/vetting_summary.json"):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             continue
         tic = safe_int(payload.get("tic")) or safe_int(path.parent.name.replace("TIC_", ""))
-        if tic:
+        if tic and (tic not in reports or report_rank(payload) > report_rank(reports[tic])):
             reports[tic] = payload
     return reports
 
@@ -753,11 +761,19 @@ def build_candidate(
     recheck = recheck_model(observed_sectors, tess_state)
     full_vetting = full_vetting or {}
     full_vetting_promotes = is_full_vetting_exofop_prep(full_vetting)
+    display_labels: list[str] = []
+    sap_pdcsap_match = clean_text(matrix.get("sap_pdcsap_match"))
+    odd_even_result = clean_text(matrix.get("odd_even_result"))
+    rotation_risk = clean_text(matrix.get("rotation_risk"))
+    matrix_transits = safe_int_or_none(matrix.get("n_transits"))
+    matrix_visible_transits = safe_int_or_none(matrix.get("visible_transits"))
     if full_vetting_promotes:
         color = "green"
         vetted_score = safe_float(full_vetting.get("evidence_score"))
         if vetted_score is not None:
             evidence_score = round(max(evidence_score or 0.0, vetted_score), 1)
+        full_flags = [clean_text(flag).upper() for flag in full_vetting.get("flags", []) if clean_text(flag)]
+        full_visible_transits = safe_int_or_none(full_vetting.get("visible_transits"))
         reason_tags = [
             "Y_LONG_PERIOD",
             "Y_ACTIVITY_RISK",
@@ -767,9 +783,22 @@ def build_candidate(
         next_checks = ["Gaia Companion Check", "TPF Pixel Test", "Centroid Shift Analysis", "TLS Refit", "Rotation/activity check"]
         followup_strength = "STRONG"
         yellow_summary = ""
+        matrix_status_color = "GREEN"
         matrix_status = "HIGH_VALUE_HZ_RECHECK"
         matrix_class = "SPC_RV_NEEDED"
         matrix_score_band = "EXOFOP_PREP"
+        display_labels = [
+            "SPC_RV_NEEDED",
+            "HIGH_VALUE_HZ_RECHECK",
+            "EXOFOP_PREP",
+            "SAP_PDCSAP_OK",
+            "ODD_EVEN_OK",
+            *full_flags,
+        ]
+        sap_pdcsap_match = "OK"
+        odd_even_result = "OK"
+        rotation_risk = "FAST_ROTATION_ACTIVITY_RECHECK" if "FAST_ROTATION_ACTIVITY_RECHECK" in full_flags else rotation_risk
+        matrix_visible_transits = full_visible_transits or matrix_visible_transits
         decision_reason = "Full Vetting: SAP/PDCSAP konsistent, Odd-Even OK, HZ-Ziel mit starkem Follow-up-Wert; Aktivitaet weiter pruefen."
         next_step = "ExoFOP-Prep, RV-Feasibility und Pixel-/Centroid-Checks priorisieren."
     else:
@@ -778,6 +807,7 @@ def build_candidate(
         matrix_score_band = clean_text(matrix.get("score_interpretation"))
         decision_reason = clean_text(matrix.get("decision_reason"))
         next_step = clean_text(matrix.get("next_step"))
+        display_labels = [label for label in [matrix_class, matrix_status, matrix_score_band] if label]
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -808,6 +838,7 @@ def build_candidate(
         "matrixColor": matrix_status_color,
         "matrixClass": matrix_class,
         "matrixScoreBand": matrix_score_band,
+        "displayLabels": list(dict.fromkeys(display_labels)),
         "evidenceScore": evidence_score,
         "reasonTags": reason_tags,
         "nextChecks": next_checks,
@@ -817,19 +848,19 @@ def build_candidate(
         "nextStep": next_step,
         "matrixTransits": safe_int_or_none(matrix.get("n_transits")),
         "matrixSectors": safe_int_or_none(matrix.get("n_sectors")),
-        "matrixVisibleTransits": safe_int_or_none(matrix.get("visible_transits")),
+        "matrixVisibleTransits": matrix_visible_transits,
         "matrixCleanSectors": safe_int_or_none(matrix.get("clean_sector_count")),
         "depthPpt": safe_float(matrix.get("depth_ppt")),
         "durationHours": safe_float(matrix.get("duration_hours")),
-        "sapPdcsapMatch": clean_text(matrix.get("sap_pdcsap_match")),
-        "oddEvenResult": clean_text(matrix.get("odd_even_result")),
+        "sapPdcsapMatch": sap_pdcsap_match,
+        "oddEvenResult": odd_even_result,
         "transitShape": clean_text(matrix.get("transit_shape")),
         "depthStability": clean_text(matrix.get("depth_stability")),
         "dataGapRisk": clean_text(matrix.get("data_gap_risk")),
         "sectorEdgeRisk": clean_text(matrix.get("sector_edge_risk")),
         "secondaryEclipse": clean_text(matrix.get("secondary_eclipse")),
         "periodAliasRisk": clean_text(matrix.get("period_alias_risk")),
-        "rotationRisk": clean_text(matrix.get("rotation_risk")),
+        "rotationRisk": rotation_risk,
         "nextRecheck": clean_text(merged.get("next_recheck")),
         "revisitPriority": clean_text(merged.get("revisit_priority")),
         "notes": clean_text(merged.get("notes")),
@@ -860,6 +891,8 @@ def build_candidate(
             "rotation_period": safe_float(full_vetting.get("rotation_period")),
             "odd_even_status": clean_text(full_vetting.get("odd_even_status")),
             "exofop_readiness": clean_text(full_vetting.get("exofop_readiness")),
+            "flags": [clean_text(flag) for flag in full_vetting.get("flags", []) if clean_text(flag)],
+            "visible_transits": safe_int_or_none(full_vetting.get("visible_transits")),
             "report_dir": clean_text(full_vetting.get("report_dir")),
             "status": clean_text(full_vetting.get("status")),
         } if full_vetting else None,

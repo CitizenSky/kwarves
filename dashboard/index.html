@@ -5572,6 +5572,7 @@
           candidate.matrixStatus,
           candidate.matrixClass,
           candidate.matrixScoreBand,
+          ...(candidate.displayLabels || []),
           candidate.decisionReason,
           candidate.nextStep,
           candidate.notes,
@@ -5671,7 +5672,7 @@
       }
 
       function candidateLabel(candidate) {
-        return candidate.matrixClass || candidate.matrixStatus || candidate.status || candidate.markierungsKlasse || "UNKNOWN";
+        return (candidate.displayLabels || [])[0] || candidate.matrixClass || candidate.matrixStatus || candidate.status || candidate.markierungsKlasse || "UNKNOWN";
       }
 
       function candidateNotes(candidate) {
@@ -7325,11 +7326,13 @@
         const raText = Number.isFinite(Number(candidate.raDeg)) ? `${formatFloat(candidate.raDeg, 5)}°` : "-";
         const decText = Number.isFinite(Number(candidate.decDeg)) ? `${formatFloat(candidate.decDeg, 5)}°` : "-";
         const localizedBaseColor = localizedBaseColorLabel(candidate);
+        const displayLabels = candidate.displayLabels || [];
         const chips = [
           `<span class="chip ${candidate.color}">${localizedBaseColor}</span>`,
           candidate.isViolet ? `<span class="chip violet">${t("chip_violet_hz")}</span>` : "",
           candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
-          candidate.matrixStatus ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
+          ...displayLabels.map((label) => `<span class="chip ${matrixColorClass(candidate)}">${label}</span>`),
+          candidate.matrixStatus && !displayLabels.includes(candidate.matrixStatus) ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
           candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_evidence_prefix", { value: candidate.evidenceScore })}</span>` : "",
           candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
         ].filter(Boolean).join("");
