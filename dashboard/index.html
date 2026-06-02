@@ -393,7 +393,7 @@
 
       .kpis {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         gap: 14px;
       }
 
@@ -421,14 +421,18 @@
       }
 
       .kpis .card:nth-child(3) {
-        border-top-color: var(--gold);
+        border-top-color: var(--yellow);
       }
 
       .kpis .card:nth-child(4) {
-        border-top-color: var(--red);
+        border-top-color: var(--spc-prep);
       }
 
       .kpis .card:nth-child(5) {
+        border-top-color: var(--red);
+      }
+
+      .kpis .card:nth-child(6) {
         border-top-color: var(--violet);
       }
 
@@ -456,16 +460,21 @@
       }
 
       .kpis .card:nth-child(3) .icon-box {
-        background: #fff4dc;
-        color: var(--gold);
+        background: #ffe8d1;
+        color: var(--yellow);
       }
 
       .kpis .card:nth-child(4) .icon-box {
+        background: #fff7c2;
+        color: #8b6900;
+      }
+
+      .kpis .card:nth-child(5) .icon-box {
         background: #fdecea;
         color: var(--red);
       }
 
-      .kpis .card:nth-child(5) .icon-box {
+      .kpis .card:nth-child(6) .icon-box {
         background: #f0edff;
         color: var(--violet);
       }
@@ -587,6 +596,12 @@
         min-width: 760px;
       }
 
+      .top-table th,
+      .top-table td {
+        padding: 9px 10px;
+        font-size: 13px;
+      }
+
       .top-table tr[data-profile-tic] {
         cursor: pointer;
       }
@@ -596,8 +611,8 @@
       }
 
       .followup-subpanel {
-        margin-top: 18px;
-        padding-top: 16px;
+        margin-top: 12px;
+        padding-top: 12px;
         border-top: 1px solid var(--line);
       }
 
@@ -609,10 +624,21 @@
         margin-bottom: 10px;
       }
 
+      .followup-subpanel-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
       .followup-subpanel h3 {
         margin: 0 0 4px;
         color: var(--heading);
         font-size: 17px;
+      }
+
+      .followup-subpanel.is-collapsed .followup-list {
+        display: none;
       }
 
       .followup-list {
@@ -2805,7 +2831,12 @@
                     <h3 id="followupCandidatesTitle">Follow-up Kandidaten</h3>
                     <p id="followupCandidatesSub" class="mini">Alle internen Follow-up-Faelle, getrennt von normalem Orange.</p>
                   </div>
-                  <span class="pill spc-prep" id="followupCandidateCount">0</span>
+                  <div class="followup-subpanel-actions">
+                    <span class="pill spc-prep" id="followupCandidateCount">0</span>
+                    <button class="icon-button" type="button" id="toggleFollowupList" title="Follow-up einklappen" aria-expanded="true">
+                      <i data-lucide="chevron-up"></i>
+                    </button>
+                  </div>
                 </div>
                 <div class="followup-list" id="followupCandidateRows"></div>
               </article>
@@ -3020,7 +3051,7 @@
                   </div>
                   <div class="map-stat">
                     <strong id="lcCount">0</strong>
-                    <span>HZ/gruene Lichtkurven mit PNG</span>
+                    <span>Lichtkurven mit PNG</span>
                   </div>
                   <div class="map-stat">
                     <strong id="generatedAt">-</strong>
@@ -3179,13 +3210,15 @@
           <section class="panel" id="curvesPanel">
             <div class="panel-header">
               <div>
-                <h2>Lichtkurven: HZ und gruene Kandidaten</h2>
-                <p class="panel-subtitle">Alle passenden Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.</p>
+                <h2>Lichtkurven</h2>
+                <p class="panel-subtitle">Alle Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.</p>
               </div>
               <div class="panel-actions">
-                <button class="small-button active" type="button" data-curve-filter="all">Alle</button>
-                <button class="small-button" type="button" data-curve-filter="violet">HZ/Violett</button>
+                <button class="small-button active" type="button" data-curve-filter="all">Alle Kandidaten</button>
                 <button class="small-button" type="button" data-curve-filter="green">Gruen</button>
+                <button class="small-button" type="button" data-curve-filter="violet">Lila</button>
+                <button class="small-button" type="button" data-curve-filter="spc-prep">Gelb</button>
+                <button class="small-button" type="button" data-curve-filter="orange">Orange</button>
               </div>
             </div>
             <div class="panel-body curve-layout">
@@ -3560,8 +3593,11 @@
           filter_spc_prep: "SPC Prep",
           filter_red: "Rot",
           filter_violet: "Violett",
-          curves_filter_violet: "HZ/Violett",
+          curves_filter_violet: "Lila",
           curves_filter_green: "Gruen",
+          curves_filter_all: "Alle Kandidaten",
+          curves_filter_orange: "Orange",
+          curves_filter_spc_prep: "Gelb",
           map_legend_green: "Gruen = Kandidat",
           map_legend_yellow: "Orange = in Pruefung",
           map_legend_spc_prep: "Gelb = SPC Prep",
@@ -3670,7 +3706,7 @@
           showing_limited_results: "Zeige 260 von {count} Treffern. Suche nach TIC, um enger zu filtern.",
           no_curve_found: "Keine Lichtkurve gefunden",
           no_curve_selected: "Keine Lichtkurve ausgewaehlt",
-          no_curve_for_filter: "Keine passende HZ/gruene Lichtkurve im aktuellen Filter.",
+          no_curve_for_filter: "Keine passende Lichtkurve im aktuellen Filter.",
           loading_curve: "Lade kombinierte Lichtkurve ...",
           curve_load_failed: "PNG konnte nicht geladen werden. Bitte Pfad/Deploy pruefen.",
           folder_missing: "kein Kandidatenordner",
@@ -3698,7 +3734,7 @@
           admin_local_title: "Lokaler Browser-Fallback",
           admin_local_text: "Zaehlt nur dieses Geraet und diesen Browser via localStorage. Diese Werte sind nicht mit GoatCounter synchronisiert und dienen nur als schnelle lokale Kontrolle.",
           table_country_unknown: "Unknown",
-          toast_no_curve_for_candidate: "Fuer diesen Kandidaten ist keine HZ/gruene Lichtkurve im Dashboard-Set.",
+          toast_no_curve_for_candidate: "Fuer diesen Kandidaten ist keine Lichtkurve im Dashboard-Set.",
           toast_filter_hz: "HZ/Violett gefiltert.",
           toast_refresh_data: "Datenbundle: dashboard/build_dashboard_data.py erneut ausfuehren.",
           toast_tree_updated: "Entscheidungsbaum aktualisiert.",
@@ -3763,8 +3799,11 @@
           filter_spc_prep: "SPC Prep",
           filter_red: "Red",
           filter_violet: "Violet",
-          curves_filter_violet: "HZ/Violet",
+          curves_filter_violet: "Violet",
           curves_filter_green: "Green",
+          curves_filter_all: "All candidates",
+          curves_filter_orange: "Orange",
+          curves_filter_spc_prep: "Yellow",
           map_legend_green: "Green = candidate",
           map_legend_yellow: "Orange = under review",
           map_legend_spc_prep: "Yellow = SPC Prep",
@@ -3873,7 +3912,7 @@
           showing_limited_results: "Showing 260 of {count} matches. Search by TIC to narrow results.",
           no_curve_found: "No light curve found",
           no_curve_selected: "No light curve selected",
-          no_curve_for_filter: "No matching HZ/green light curve for the current filter.",
+          no_curve_for_filter: "No matching light curve for the current filter.",
           loading_curve: "Loading combined light curve ...",
           curve_load_failed: "PNG could not be loaded. Please check path/deploy.",
           folder_missing: "no candidate folder",
@@ -3901,7 +3940,7 @@
           admin_local_title: "Local browser fallback",
           admin_local_text: "Counts only this device and this browser via localStorage. These values are not synchronized with GoatCounter and are only a quick local check.",
           table_country_unknown: "Unknown",
-          toast_no_curve_for_candidate: "No HZ/green light curve is available for this candidate in the dashboard set.",
+          toast_no_curve_for_candidate: "No light curve is available for this candidate in the dashboard set.",
           toast_filter_hz: "Filtered to HZ/violet.",
           toast_refresh_data: "Data bundle: re-run dashboard/build_dashboard_data.py.",
           toast_tree_updated: "Decision tree updated.",
@@ -3966,8 +4005,11 @@
           filter_spc_prep: "SPC Prep",
           filter_red: "Rouge",
           filter_violet: "Violet",
-          curves_filter_violet: "HZ/Violet",
+          curves_filter_violet: "Violet",
           curves_filter_green: "Vert",
+          curves_filter_all: "Tous les candidats",
+          curves_filter_orange: "Orange",
+          curves_filter_spc_prep: "Jaune",
           map_legend_green: "Vert = candidat",
           map_legend_yellow: "Orange = en verification",
           map_legend_spc_prep: "Jaune = SPC Prep",
@@ -4076,7 +4118,7 @@
           showing_limited_results: "Affichage de 260 resultats sur {count}. Recherchez par TIC pour filtrer davantage.",
           no_curve_found: "Aucune courbe de lumiere trouvee",
           no_curve_selected: "Aucune courbe de lumiere selectionnee",
-          no_curve_for_filter: "Aucune courbe HZ/verte correspondant au filtre actuel.",
+          no_curve_for_filter: "Aucune courbe correspondant au filtre actuel.",
           loading_curve: "Chargement de la courbe de lumiere combinee ...",
           curve_load_failed: "Le PNG n'a pas pu etre charge. Verifiez le chemin/deploiement.",
           folder_missing: "aucun dossier candidat",
@@ -4104,7 +4146,7 @@
           admin_local_title: "Fallback navigateur local",
           admin_local_text: "Compte seulement cet appareil et ce navigateur via localStorage. Ces valeurs ne sont pas synchronisees avec GoatCounter et servent uniquement de controle local rapide.",
           table_country_unknown: "Unknown",
-          toast_no_curve_for_candidate: "Aucune courbe HZ/verte disponible pour ce candidat dans le set dashboard.",
+          toast_no_curve_for_candidate: "Aucune courbe disponible pour ce candidat dans le set dashboard.",
           toast_filter_hz: "Filtre HZ/violet actif.",
           toast_refresh_data: "Bundle de donnees: relancer dashboard/build_dashboard_data.py.",
           toast_tree_updated: "Arbre de decision mis a jour.",
@@ -4606,6 +4648,7 @@
         topCandidateRows: document.getElementById("topCandidateRows"),
         followupCandidateRows: document.getElementById("followupCandidateRows"),
         followupCandidateCount: document.getElementById("followupCandidateCount"),
+        toggleFollowupList: document.getElementById("toggleFollowupList"),
         visitorTimeline: document.getElementById("visitorTimeline"),
         yellowSelectedReason: document.getElementById("yellowSelectedReason"),
         matrixStats: document.getElementById("matrixStats"),
@@ -5888,6 +5931,11 @@
         return candidate.reason || "-";
       }
 
+      function shortText(text, maxLength = 86) {
+        const value = String(text || "-").trim();
+        return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}...` : value;
+      }
+
       const yellowTagLabels = {
         Y_NTR_LOW: "wenige Transits",
         Y_LONG_PERIOD: "lange Periode",
@@ -6052,7 +6100,7 @@
               <td>${formatMaybe(candidate.hz)}</td>
               <td>${formatFloat(candidate.evidenceScore, 0)}</td>
               <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
-              <td class="wrap-cell">${candidate.followupStrength === "STRONG" ? "FOLLOWUP_STRONG · " : ""}${candidateNotes(candidate)}</td>
+              <td class="wrap-cell">${shortText(`${candidate.followupStrength === "STRONG" ? "FOLLOWUP_STRONG · " : ""}${candidateNotes(candidate)}`)}</td>
             </tr>
           `;
         }).join("");
@@ -6067,10 +6115,20 @@
             <strong>TIC ${candidate.tic}</strong>
             <span class="pill ${candidateVisualClass(candidate)}">${candidateLabel(candidate)}</span>
             <span class="followup-meta">
-              Evidence ${formatMaybe(candidate.evidenceScore, 0)} · ${formatMaybe(candidate.hz)} · ${formatFloat(candidate.distance, 1)} ly · ${formatMaybe(candidate.matrixSectors ?? candidate.observedSectorCount ?? candidate.cleanSectors)} Sektoren
+              E${formatMaybe(candidate.evidenceScore, 0)} · ${formatMaybe(candidate.hz)} · ${formatFloat(candidate.distance, 1)} ly
             </span>
           </button>
         `).join("") : '<span class="muted">Keine Follow-up-Kandidaten.</span>';
+      }
+
+      function setFollowupCollapsed(collapsed) {
+        const panel = document.querySelector(".followup-subpanel");
+        if (!panel || !els.toggleFollowupList) return;
+        panel.classList.toggle("is-collapsed", Boolean(collapsed));
+        els.toggleFollowupList.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        els.toggleFollowupList.title = collapsed ? "Follow-up ausklappen" : "Follow-up einklappen";
+        els.toggleFollowupList.innerHTML = collapsed ? '<i data-lucide="chevron-down"></i>' : '<i data-lucide="chevron-up"></i>';
+        window.lucide?.createIcons();
       }
 
       function renderYellowReasonPanel() {
@@ -6488,7 +6546,7 @@
             mapObserved: "Observed sectors so far",
             mapNext: "Next observation / recheck",
             mapVisible: "Visible points after filter",
-            mapLc: "HZ/green light curves with PNG",
+            mapLc: "Light curves with PNG",
             mapData: "Data timestamp",
             tessCompareTitle: "3D TESS Sector Map",
             tessMiniSelected: "selected candidate",
@@ -6514,8 +6572,8 @@
             tessTableArrangement: "Arrangement",
             tessSource1: "HEASARC sector windows",
             tessSource2: "MIT Year 8 plan",
-            curvesTitle: "Light Curves: HZ and Green Candidates",
-            curvesSub: "All matching candidates are selectable on the left; the combined curve appears on the right.",
+            curvesTitle: "Light Curves",
+            curvesSub: "All candidates are selectable on the left; the combined curve appears on the right.",
             curveSearch: "Search light curve",
             curveOpenCandidate: "Mark candidate",
             tableTitle: "Candidate Matrix",
@@ -6587,7 +6645,7 @@
               mapObserved: "Secteurs deja observes",
               mapNext: "Prochaine observation / reverification",
               mapVisible: "Points visibles apres filtre",
-              mapLc: "Courbes HZ/vertes avec PNG",
+              mapLc: "Courbes avec PNG",
               mapData: "Horodatage des donnees",
               tessCompareTitle: "Carte 3D des Secteurs TESS",
               tessMiniSelected: "candidat selectionne",
@@ -6613,8 +6671,8 @@
               tessTableArrangement: "Disposition",
               tessSource1: "Fenetres secteurs HEASARC",
               tessSource2: "Planification MIT Year 8",
-              curvesTitle: "Courbes de Lumiere: HZ et Candidats Verts",
-              curvesSub: "Tous les candidats correspondants sont selectionnables a gauche; la courbe combinee apparait a droite.",
+              curvesTitle: "Courbes de Lumiere",
+              curvesSub: "Tous les candidats sont selectionnables a gauche; la courbe combinee apparait a droite.",
               curveSearch: "Rechercher une courbe",
               curveOpenCandidate: "Marquer le candidat",
               tableTitle: "Matrice Candidats",
@@ -6685,7 +6743,7 @@
               mapObserved: "Bisher beobachtete Sektoren",
               mapNext: "Naechste Beobachtung / Recheck",
               mapVisible: "sichtbare Punkte nach Filter",
-              mapLc: "HZ/gruene Lichtkurven mit PNG",
+              mapLc: "Lichtkurven mit PNG",
               mapData: "Datenstand",
               tessCompareTitle: "3D TESS-Sektorenkarte",
               tessMiniSelected: "ausgewaehlter Kandidat",
@@ -6711,8 +6769,8 @@
               tessTableArrangement: "Anordnung",
               tessSource1: "HEASARC Sektorzeiten",
               tessSource2: "MIT Year 8 Planung",
-              curvesTitle: "Lichtkurven: HZ und gruene Kandidaten",
-              curvesSub: "Alle passenden Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.",
+              curvesTitle: "Lichtkurven",
+              curvesSub: "Alle Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.",
               curveSearch: "Lichtkurve suchen",
               curveOpenCandidate: "Kandidat markieren",
               tableTitle: "Candidate Matrix",
@@ -7122,9 +7180,11 @@
 
         setText("#curvesPanel h2", labels.curvesTitle);
         setText("#curvesPanel .panel-subtitle", labels.curvesSub);
-        setText('[data-curve-filter="all"]', t("filter_all"));
+        setText('[data-curve-filter="all"]', t("curves_filter_all"));
         setText('[data-curve-filter="violet"]', t("curves_filter_violet"));
         setText('[data-curve-filter="green"]', t("curves_filter_green"));
+        setText('[data-curve-filter="spc-prep"]', t("curves_filter_spc_prep"));
+        setText('[data-curve-filter="orange"]', t("curves_filter_orange"));
         setTitle("#openCurveCandidate", labels.curveOpenCandidate);
 
         setText("#tablePanel h2", labels.tableTitle);
@@ -7570,7 +7630,14 @@
         const curve = data.lightcurveCandidates.find((item) => item.tic === candidate.tic);
         if (curve && source !== "curve") {
           state.selectedCurve = curve;
+          if (!curveMatchesFilter(curve, state.curveFilter)) {
+            state.curveFilter = "all";
+            document.querySelectorAll("[data-curve-filter]").forEach((button) => {
+              button.classList.toggle("active", button.dataset.curveFilter === state.curveFilter);
+            });
+          }
           renderCurves(false);
+          setPanelCollapsed("curvesPanel", false, true);
         }
       }
 
@@ -7957,11 +8024,17 @@
       function filteredCurves() {
         const term = els.curveSearch.value.trim().toLowerCase();
         return data.lightcurveCandidates.filter((candidate) => {
-          const matchesFilter =
-            state.curveFilter === "all" ||
-            (state.curveFilter === "violet" ? candidate.isViolet : candidate.color === "green");
+          const matchesFilter = curveMatchesFilter(candidate, state.curveFilter);
           return matchesFilter && matchesCandidate(candidate, term);
         });
+      }
+
+      function curveMatchesFilter(candidate, filter = state.curveFilter) {
+        if (filter === "all") return true;
+        if (filter === "violet") return candidate.isViolet;
+        if (filter === "spc-prep") return isSpcPrepCandidate(candidate);
+        if (filter === "orange") return candidate.color === "yellow" && !isSpcPrepCandidate(candidate);
+        return candidate.color === filter;
       }
 
       function renderCurves(reset = true) {
@@ -8268,6 +8341,11 @@
           selectCandidate(candidate, "followup");
           scrollToPanel("mapPanel");
         }
+      });
+
+      els.toggleFollowupList?.addEventListener("click", () => {
+        const panel = document.querySelector(".followup-subpanel");
+        setFollowupCollapsed(!panel?.classList.contains("is-collapsed"));
       });
 
       els.curveList.addEventListener("click", (event) => {
