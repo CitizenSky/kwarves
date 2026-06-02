@@ -7651,7 +7651,7 @@
               button.classList.toggle("active", button.dataset.curveFilter === state.curveFilter);
             });
           }
-          renderCurves(false);
+          renderCurves(false, true);
           setPanelCollapsed("curvesPanel", false, true);
         }
       }
@@ -8055,21 +8055,31 @@
         return candidate.color === filter;
       }
 
-      function renderCurves(reset = true) {
+      function scrollSelectedCurveIntoView(behavior = "smooth") {
+        const active = els.curveList.querySelector(".curve-item.active");
+        if (!active) return;
+        const targetTop = active.offsetTop - els.curveList.offsetTop - (els.curveList.clientHeight - active.offsetHeight) / 2;
+        els.curveList.scrollTo({
+          top: Math.max(0, targetTop),
+          behavior
+        });
+      }
+
+      function renderCurves(reset = true, syncScroll = false) {
         const curves = filteredCurves();
         if (reset || !state.selectedCurve || !curves.some((item) => item.tic === state.selectedCurve.tic)) {
           state.selectedCurve = curves.find((item) => state.selected && item.tic === state.selected.tic) || curves[0] || null;
         }
-        els.curveList.innerHTML = curves.slice(0, 260).map((candidate) => `
+        els.curveList.innerHTML = curves.map((candidate) => `
           <button class="curve-item ${state.selectedCurve && state.selectedCurve.tic === candidate.tic ? "active" : ""}" type="button" data-curve-tic="${candidate.tic}">
             <strong>TIC ${candidate.tic}</strong>
             <span>${colorName(candidate)} · ${candidate.hz || t("not_hz")} · SNR ${candidate.snr}</span>
           </button>
         `).join("");
-        if (curves.length > 260) {
-          els.curveList.insertAdjacentHTML("beforeend", `<div class="notice">${t("showing_limited_results", { count: formatNumber(curves.length) })}</div>`);
-        }
         renderCurveViewer();
+        if (syncScroll) {
+          window.requestAnimationFrame(() => scrollSelectedCurveIntoView());
+        }
       }
 
       function renderCurveViewer() {
@@ -8374,7 +8384,7 @@
         if (!candidate) return;
         state.selectedCurve = candidate;
         selectCandidate(candidate, "curve");
-        renderCurves(false);
+        renderCurves(false, true);
       });
 
       els.matrixStats.addEventListener("click", (event) => {
@@ -8417,7 +8427,7 @@
         const curve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic);
         if (curve) {
           state.selectedCurve = curve;
-          renderCurves(false);
+          renderCurves(false, true);
           setNavButtonActive("curvesPanel");
           document.getElementById("curvesPanel").scrollIntoView({ behavior: "smooth", block: "start" });
         } else {
