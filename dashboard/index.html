@@ -654,6 +654,12 @@
         padding-right: 4px;
       }
 
+      #followupCandidateRows.followup-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        overflow: auto;
+      }
+
       .followup-item {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -3548,7 +3554,7 @@
     </section>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-05-31-o";
+      const DASHBOARD_UI_VERSION = "2026-06-02-q";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
       const state = {
