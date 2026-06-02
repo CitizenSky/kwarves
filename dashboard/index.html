@@ -7408,7 +7408,7 @@
       function draw2dMap() {
         // Candidate map coordinates are Gaia RA/Dec based when available (fallback: heuristic).
         const { ctx, width, height } = setupCanvas(els.mapCanvas);
-        const candidates = filteredCandidates();
+        const candidates = filteredCandidates().filter((candidate) => candidate.color !== "gray");
         const focus = selectedMapFocus(candidates);
         const focusBaseX = width / 2;
         const focusBaseY = height / 2;
@@ -7596,7 +7596,7 @@
 
       function update3dData() {
         if (!state.sceneReady) return;
-        const candidates = filteredCandidates();
+        const candidates = filteredCandidates().filter((candidate) => candidate.color !== "gray");
         ["green", "yellow", "red", "gray"].forEach((key) => {
           const subset = candidates.filter((candidate) => candidate.color === key);
           const positions = new Float32Array(subset.length * 3);
