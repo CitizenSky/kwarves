@@ -725,16 +725,6 @@ def build_candidate(
     lightcurve_img = ""
     lightcurve_img_local = ""
     lightcurve_img_deploy = ""
-    if candidate_folder and (color == "green" or is_violet):
-        path = PROJECT_ROOT / candidate_folder / "lichtkurven_png" / "LICHTKURVE_COMBINED.png"
-        if path.exists():
-            lightcurve_img_local = rel_from_dashboard(path)
-            deploy_path = sync_curve_asset(path, tic)
-            if deploy_path and deploy_path.exists():
-                lightcurve_img_deploy = rel_from_dashboard(deploy_path)
-                lightcurve_img = lightcurve_img_deploy
-            else:
-                lightcurve_img = lightcurve_img_local
     matrix_status_color = clean_text(matrix.get("status_color")).upper()
     evidence_score = safe_float(matrix.get("evidence_score"))
     if evidence_score is not None:
@@ -812,6 +802,24 @@ def build_candidate(
         decision_reason = clean_text(matrix.get("decision_reason"))
         next_step = clean_text(matrix.get("next_step"))
         display_labels = [label for label in [matrix_class, matrix_status, matrix_score_band] if label]
+
+    if candidate_folder:
+        path = PROJECT_ROOT / candidate_folder / "lichtkurven_png" / "LICHTKURVE_COMBINED.png"
+        if path.exists():
+            lightcurve_img_local = rel_from_dashboard(path)
+            label_blob = " ".join([matrix_status, matrix_class, matrix_score_band, *display_labels]).upper()
+            sync_for_dashboard = (
+                is_violet
+                or color == "green"
+                or followup_strength == "STRONG"
+                or "SPC_FOLLOWUP_READY" in label_blob
+                or "FOLLOWUP_PRIORITY" in label_blob
+            )
+            if sync_for_dashboard:
+                deploy_path = sync_curve_asset(path, tic)
+                if deploy_path and deploy_path.exists():
+                    lightcurve_img_deploy = rel_from_dashboard(deploy_path)
+            lightcurve_img = lightcurve_img_deploy or lightcurve_img_local
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -1001,12 +1009,19 @@ def main() -> int:
 
     lightcurve_candidates = [
         candidate for candidate in candidates
-        if candidate["lightcurveImg"] and (candidate["isViolet"] or candidate["color"] == "green")
+        if candidate["lightcurveImg"]
     ]
     priority_candidates = sorted(
         lightcurve_candidates,
-        key=lambda item: (not item["isViolet"], item["color"] != "green", -item["snr"], item["distance"]),
-    )[:80]
+        key=lambda item: (
+            not (item.get("followupStrength") == "STRONG"),
+            not item["isViolet"],
+            item["color"] != "green",
+            -safe_float(item.get("evidenceScore")) if safe_float(item.get("evidenceScore")) is not None else 0,
+            -item["snr"],
+            item["distance"],
+        ),
+    )
 
     summary = {
         "total": len(candidates),

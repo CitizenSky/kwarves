@@ -7834,25 +7834,6 @@
         ctx.fillText(t("chart_legend_map"), 14, 22);
       }
 
-      function makeRoundPointTexture() {
-        if (!window.THREE) return null;
-        const canvas = document.createElement("canvas");
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext("2d");
-        const gradient = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
-        gradient.addColorStop(0, "rgba(255,255,255,1)");
-        gradient.addColorStop(0.55, "rgba(255,255,255,0.95)");
-        gradient.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(32, 32, 30, 0, Math.PI * 2);
-        ctx.fill();
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        return texture;
-      }
-
       function init3dMap() {
         if (!window.THREE || state.sceneReady) return;
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -7907,22 +7888,19 @@
         scene.add(northSouthLine);
 
         const groups = {};
-        const pointTexture = makeRoundPointTexture();
+        const maxInstances = Math.max(1, (data.candidates || []).length);
         ["green", "spc-prep", "yellow", "red", "gray"].forEach((key) => {
-          const geometry = new THREE.BufferGeometry();
-          const material = new THREE.PointsMaterial({
+          const geometry = new THREE.SphereGeometry(0.026, 10, 10);
+          const material = new THREE.MeshBasicMaterial({
             color: key === "spc-prep" ? colors.spcPrep : colors[key],
-            map: pointTexture,
-            size: 0.045,
-            sizeAttenuation: true,
             transparent: true,
-            opacity: 0.9,
-            alphaTest: 0.08,
-            depthWrite: false
+            opacity: 0.9
           });
-          const points = new THREE.Points(geometry, material);
-          groups[key] = { geometry, points };
-          scene.add(points);
+          const mesh = new THREE.InstancedMesh(geometry, material, maxInstances);
+          mesh.count = 0;
+          mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          groups[key] = { mesh };
+          scene.add(mesh);
         });
 
         const selectedGeometry = new THREE.SphereGeometry(0.08, 16, 16);
@@ -7949,17 +7927,19 @@
       function update3dData() {
         if (!state.sceneReady) return;
         const candidates = filteredCandidates().filter((candidate) => candidate.color !== "gray");
+        const temp = new THREE.Object3D();
         ["green", "spc-prep", "yellow", "red", "gray"].forEach((key) => {
           const subset = candidates.filter((candidate) => key === "spc-prep" ? isSpcPrepCandidate(candidate) : (!isSpcPrepCandidate(candidate) && candidate.color === key));
-          const positions = new Float32Array(subset.length * 3);
           subset.forEach((candidate, index) => {
             const position = map3dPosition(candidate);
-            positions[index * 3] = position.x;
-            positions[index * 3 + 1] = position.y;
-            positions[index * 3 + 2] = position.z;
+            const scale = Math.max(0.75, Math.min(2.35, 0.75 + Number(candidate.snr || 0) / 48));
+            temp.position.set(position.x, position.y, position.z);
+            temp.scale.setScalar(scale);
+            temp.updateMatrix();
+            three.groups[key].mesh.setMatrixAt(index, temp.matrix);
           });
-          three.groups[key].geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-          three.groups[key].geometry.computeBoundingSphere();
+          three.groups[key].mesh.count = subset.length;
+          three.groups[key].mesh.instanceMatrix.needsUpdate = true;
         });
         update3dSelection();
       }
