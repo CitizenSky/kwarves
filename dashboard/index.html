@@ -6517,6 +6517,18 @@
         if (node) node.title = value;
       }
 
+      function curveFilterCount(filter) {
+        return countWhere(data.lightcurveCandidates || [], (candidate) => curveMatchesFilter(candidate, filter));
+      }
+
+      function renderCurveFilterCounts() {
+        document.querySelectorAll("[data-curve-filter]").forEach((button) => {
+          const filter = button.dataset.curveFilter;
+          const baseLabel = t(`curves_filter_${filter.replace("-", "_")}`);
+          button.textContent = `${baseLabel} (${formatNumber(curveFilterCount(filter))})`;
+        });
+      }
+
       function setLegendText(selector, value) {
         const node = document.querySelector(selector);
         if (!node) return;
@@ -7187,6 +7199,7 @@
         setText('[data-curve-filter="green"]', t("curves_filter_green"));
         setText('[data-curve-filter="spc-prep"]', t("curves_filter_spc_prep"));
         setText('[data-curve-filter="orange"]', t("curves_filter_orange"));
+        renderCurveFilterCounts();
         setTitle("#openCurveCandidate", labels.curveOpenCandidate);
 
         setText("#tablePanel h2", labels.tableTitle);
@@ -8165,6 +8178,7 @@
         renderAdmin();
         renderSelected();
         renderTable();
+        renderCurveFilterCounts();
         renderCurves(false);
         renderNotificationBadge();
         draw2dMap();
