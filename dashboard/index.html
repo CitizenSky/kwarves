@@ -646,31 +646,28 @@
       }
 
       .followup-list {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 6px;
-        max-height: 44px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding: 0 4px 4px 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 7px;
+        max-height: 132px;
+        overflow: auto;
+        padding-right: 4px;
       }
 
       .followup-item {
-        display: inline-flex;
-        gap: 6px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 4px 8px;
         align-items: center;
-        width: auto;
+        width: 100%;
         min-height: 0;
-        max-width: 285px;
-        flex: 0 0 auto;
-        padding: 5px 7px;
+        padding: 7px 8px;
         border: 1px solid var(--line);
         border-radius: 7px;
         background: #fffdf2;
         color: var(--ink);
         text-align: left;
         cursor: pointer;
-        white-space: nowrap;
       }
 
       .followup-item:hover {
@@ -685,10 +682,11 @@
 
       .followup-item strong {
         font-size: 12px;
+        white-space: nowrap;
       }
 
       .followup-item .pill {
-        max-width: 112px;
+        max-width: 104px;
         padding: 3px 6px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -697,6 +695,7 @@
       }
 
       .followup-meta {
+        grid-column: 1 / -1;
         color: var(--muted);
         font-size: 11px;
         font-weight: 720;
@@ -5948,6 +5947,15 @@
         return (candidate.displayLabels || [])[0] || candidate.matrixClass || candidate.matrixStatus || candidate.status || candidate.markierungsKlasse || "UNKNOWN";
       }
 
+      function followupShortLabel(candidate) {
+        const text = matrixText(candidate);
+        if (text.includes("FOLLOWUP_PRIORITY")) return "PRIORITY";
+        if (text.includes("SPC_ACTIVE_STAR")) return "ACTIVE_STAR";
+        if (text.includes("SPC_FOLLOWUP_READY")) return "SPC_READY";
+        if (text.includes("RV_NEEDED")) return "RV_NEEDED";
+        return shortText(candidateLabel(candidate).replace(/^SPC_/, ""), 12);
+      }
+
       function candidateNotes(candidate) {
         if (candidate.color !== "green" && expectedTransits(candidate) < 5) return "Recheck: weniger als 5 Transits";
         if (candidate.nextStep) return candidate.nextStep;
@@ -6137,7 +6145,7 @@
         els.followupCandidateRows.innerHTML = rows.length ? rows.map((candidate) => `
           <button class="followup-item" type="button" data-followup-tic="${candidate.tic}">
             <strong>TIC ${candidate.tic}</strong>
-            <span class="pill ${candidateVisualClass(candidate)}">${shortText(candidateLabel(candidate), 18)}</span>
+            <span class="pill ${candidateVisualClass(candidate)}">${followupShortLabel(candidate)}</span>
             <span class="followup-meta">
               E${formatMaybe(candidate.evidenceScore, 0)} · ${formatFloat(candidate.distance, 1)} ly
             </span>
