@@ -588,6 +588,17 @@ def next_checks_for_tags(tags: list[str], matrix: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(checks))
 
 
+def is_full_vetting_exofop_prep(full_vetting: dict[str, Any]) -> bool:
+    classification = clean_text(full_vetting.get("classification")).upper()
+    readiness = clean_text(full_vetting.get("exofop_readiness")).upper()
+    status = clean_text(full_vetting.get("status")).upper()
+    return (
+        readiness in {"EXOFOP_PREP", "READY_FOR_EXOFOP"}
+        or "EXOFOP_PREP" in status
+        or classification == "HIGH_VALUE_HZ_RECHECK"
+    )
+
+
 def color_for(row: dict[str, Any], matrix: dict[str, Any] | None = None) -> str:
     if is_public_green_matrix(matrix):
         return "green"
@@ -741,6 +752,32 @@ def build_candidate(
     new_sectors = list(sector.get("newSectors") or [])
     recheck = recheck_model(observed_sectors, tess_state)
     full_vetting = full_vetting or {}
+    full_vetting_promotes = is_full_vetting_exofop_prep(full_vetting)
+    if full_vetting_promotes:
+        color = "green"
+        vetted_score = safe_float(full_vetting.get("evidence_score"))
+        if vetted_score is not None:
+            evidence_score = round(max(evidence_score or 0.0, vetted_score), 1)
+        reason_tags = [
+            "Y_LONG_PERIOD",
+            "Y_ACTIVITY_RISK",
+            "Y_MANUAL_REVIEW",
+            "Y_STRONG_BUT_UNCONFIRMED",
+        ]
+        next_checks = ["Gaia Companion Check", "TPF Pixel Test", "Centroid Shift Analysis", "TLS Refit", "Rotation/activity check"]
+        followup_strength = "STRONG"
+        yellow_summary = ""
+        matrix_status = "HIGH_VALUE_HZ_RECHECK"
+        matrix_class = "SPC_RV_NEEDED"
+        matrix_score_band = "EXOFOP_PREP"
+        decision_reason = "Full Vetting: SAP/PDCSAP konsistent, Odd-Even OK, HZ-Ziel mit starkem Follow-up-Wert; Aktivitaet weiter pruefen."
+        next_step = "ExoFOP-Prep, RV-Feasibility und Pixel-/Centroid-Checks priorisieren."
+    else:
+        matrix_status = clean_text(matrix.get("status"))
+        matrix_class = clean_text(matrix.get("extended_class"))
+        matrix_score_band = clean_text(matrix.get("score_interpretation"))
+        decision_reason = clean_text(matrix.get("decision_reason"))
+        next_step = clean_text(matrix.get("next_step"))
     return {
         "tic": tic,
         "status": clean_text(merged.get("status")),
@@ -767,17 +804,17 @@ def build_candidate(
         "transits": safe_int(merged.get("transit_count")),
         "visibleTransits": safe_int(merged.get("visible_transits")),
         "cleanSectors": safe_int(merged.get("clean_sector_count")),
-        "matrixStatus": clean_text(matrix.get("status")),
+        "matrixStatus": matrix_status,
         "matrixColor": matrix_status_color,
-        "matrixClass": clean_text(matrix.get("extended_class")),
-        "matrixScoreBand": clean_text(matrix.get("score_interpretation")),
+        "matrixClass": matrix_class,
+        "matrixScoreBand": matrix_score_band,
         "evidenceScore": evidence_score,
         "reasonTags": reason_tags,
         "nextChecks": next_checks,
         "followupStrength": followup_strength,
         "yellowSummary": yellow_summary,
-        "decisionReason": clean_text(matrix.get("decision_reason")),
-        "nextStep": clean_text(matrix.get("next_step")),
+        "decisionReason": decision_reason,
+        "nextStep": next_step,
         "matrixTransits": safe_int_or_none(matrix.get("n_transits")),
         "matrixSectors": safe_int_or_none(matrix.get("n_sectors")),
         "matrixVisibleTransits": safe_int_or_none(matrix.get("visible_transits")),

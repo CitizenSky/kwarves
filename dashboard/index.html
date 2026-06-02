@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="dashboard-data.js?v=20260601e"></script>
+    <script src="dashboard-data.js?v=20260602a"></script>
     <script src="dashboard-notifications.js?v=20260601a"></script>
     <style>
       :root {
@@ -847,6 +847,27 @@
       .panel-header p {
         margin-bottom: 0;
         font-size: 13px;
+      }
+
+      .panel-headline {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        margin-top: 8px;
+        padding: 6px 8px;
+        border: 1px solid #bee2d8;
+        border-radius: 8px;
+        background: #e8f7f2;
+        color: var(--heading);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .panel-headline.is-empty {
+        display: none;
       }
 
       .panel-actions {
@@ -2637,6 +2658,7 @@
               <div>
                 <h2 id="topCandidatesTitle">Top-20 Kandidaten</h2>
                 <p class="panel-subtitle" id="topCandidatesSub">Sortiert nach Evidence Score, HZ-Prioritaet und Follow-up-Reife. Klick bereitet ein Kandidatenprofil vor.</p>
+                <div class="panel-headline is-empty" id="topCandidateHighlight"></div>
               </div>
             </div>
             <div class="panel-body table-wrap">
@@ -4438,6 +4460,7 @@
         tree: document.getElementById("tree"),
         visitorKpis: document.getElementById("visitorKpis"),
         labelLegendRows: document.getElementById("labelLegendRows"),
+        topCandidateHighlight: document.getElementById("topCandidateHighlight"),
         topCandidateRows: document.getElementById("topCandidateRows"),
         visitorTimeline: document.getElementById("visitorTimeline"),
         yellowSelectedReason: document.getElementById("yellowSelectedReason"),
@@ -5817,9 +5840,14 @@
       function renderTopCandidates() {
         const rows = top20Candidates();
         if (!rows.length) {
+          els.topCandidateHighlight.classList.add("is-empty");
+          els.topCandidateHighlight.textContent = "";
           els.topCandidateRows.innerHTML = `<tr><td colspan="12">Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.</td></tr>`;
           return;
         }
+        const top = rows[0];
+        els.topCandidateHighlight.classList.remove("is-empty");
+        els.topCandidateHighlight.textContent = `Hoechst interessant: TIC ${top.tic} · ${candidateLabel(top)} · Evidence ${formatFloat(top.evidenceScore, 0)} · ${formatMaybe(top.hz)}`;
         els.topCandidateRows.innerHTML = rows.map((candidate, index) => {
           const rowClass = expectedTransits(candidate) < 5 ? "yellow" : matrixColorClass(candidate);
           return `
