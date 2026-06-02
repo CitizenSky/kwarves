@@ -7834,6 +7834,25 @@
         ctx.fillText(t("chart_legend_map"), 14, 22);
       }
 
+      function makeRoundPointTexture() {
+        if (!window.THREE) return null;
+        const canvas = document.createElement("canvas");
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext("2d");
+        const gradient = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+        gradient.addColorStop(0, "rgba(255,255,255,1)");
+        gradient.addColorStop(0.55, "rgba(255,255,255,0.95)");
+        gradient.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(32, 32, 30, 0, Math.PI * 2);
+        ctx.fill();
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return texture;
+      }
+
       function init3dMap() {
         if (!window.THREE || state.sceneReady) return;
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -7888,14 +7907,18 @@
         scene.add(northSouthLine);
 
         const groups = {};
+        const pointTexture = makeRoundPointTexture();
         ["green", "spc-prep", "yellow", "red", "gray"].forEach((key) => {
           const geometry = new THREE.BufferGeometry();
           const material = new THREE.PointsMaterial({
             color: key === "spc-prep" ? colors.spcPrep : colors[key],
+            map: pointTexture,
             size: 0.045,
             sizeAttenuation: true,
             transparent: true,
-            opacity: 0.86
+            opacity: 0.9,
+            alphaTest: 0.08,
+            depthWrite: false
           });
           const points = new THREE.Points(geometry, material);
           groups[key] = { geometry, points };
