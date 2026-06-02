@@ -30,6 +30,7 @@
         --line: #d9e1de;
         --green: #147a68;
         --gold: #b88220;
+        --spc-prep: #e0b24a;
         --aqua: #2c8f9c;
         --yellow: #bd7417;
         --red: #bf3e36;
@@ -987,6 +988,13 @@
         color: #89510c;
       }
 
+      .chip.spc-prep,
+      .pill.spc-prep {
+        background: #fff5c7;
+        color: #745000;
+        border-color: #e6c24f;
+      }
+
       .chip.red,
       .pill.red {
         background: #fde7e4;
@@ -1150,6 +1158,10 @@
 
       .dot.yellow {
         background: var(--yellow);
+      }
+
+      .dot.spc-prep {
+        background: var(--spc-prep);
       }
 
       .dot.red {
@@ -2577,6 +2589,14 @@
             </article>
             <article class="card">
               <div class="card-top">
+                <span>SPC Prep</span>
+                <div class="icon-box"><i data-lucide="clipboard-check"></i></div>
+              </div>
+              <p class="big-number" id="kpiSpcPrep">0</p>
+              <span class="metric-line"><i data-lucide="list-checks"></i> gelb getrennt</span>
+            </article>
+            <article class="card">
+              <div class="card-top">
                 <span>Rot</span>
                 <div class="icon-box"><i data-lucide="octagon-alert"></i></div>
               </div>
@@ -2810,6 +2830,7 @@
                   <button class="small-button active" type="button" data-color-filter="all">Alle</button>
                   <button class="small-button" type="button" data-color-filter="green">Gruen</button>
                   <button class="small-button" type="button" data-color-filter="yellow">Gelb</button>
+                  <button class="small-button" type="button" data-color-filter="spc-prep">SPC Prep</button>
                   <button class="small-button" type="button" data-color-filter="red">Rot</button>
                   <button class="small-button" type="button" data-color-filter="violet">Violett</button>
                 </div>
@@ -2837,6 +2858,7 @@
                   <div class="map-note">
                     <span class="legend-item"><span class="dot"></span> Gruen = Kandidat</span>
                     <span class="legend-item"><span class="dot yellow"></span> Gelb = in Pruefung</span>
+                    <span class="legend-item"><span class="dot spc-prep"></span> SPC Prep gelb</span>
                     <span class="legend-item"><span class="dot red"></span> Rot = FP/Rejected</span>
                     <span class="legend-item"><span class="dot violet"></span> Violett-Ring = HZ-Fokus</span>
                     <span class="legend-item">Weisser Ring = ausgewaehlt</span>
@@ -3395,7 +3417,9 @@
           kpi_green: "Gruen",
           kpi_green_sub: "SPC-Kandidaten",
           kpi_yellow: "Gelb",
-          kpi_yellow_sub: "mehr Daten",
+          kpi_yellow_sub: "normales Recheck-Gelb",
+          kpi_spc_prep: "SPC Prep",
+          kpi_spc_prep_sub: "gelb getrennt",
           kpi_red: "Rot",
           kpi_red_sub: "FP/Systematik",
           kpi_violet: "Violett",
@@ -3403,12 +3427,14 @@
           filter_all: "Alle",
           filter_green: "Gruen",
           filter_yellow: "Gelb",
+          filter_spc_prep: "SPC Prep",
           filter_red: "Rot",
           filter_violet: "Violett",
           curves_filter_violet: "HZ/Violett",
           curves_filter_green: "Gruen",
           map_legend_green: "Gruen = Kandidat",
           map_legend_yellow: "Gelb = in Pruefung",
+          map_legend_spc_prep: "SPC Prep gelb",
           map_legend_red: "Rot = FP/Rejected",
           map_legend_violet: "Violett-Ring = HZ-Fokus",
           map_legend_selected: "Weisser Ring = ausgewaehlt",
@@ -3594,7 +3620,9 @@
           kpi_green: "Green",
           kpi_green_sub: "SPC candidates",
           kpi_yellow: "Yellow",
-          kpi_yellow_sub: "more data",
+          kpi_yellow_sub: "ordinary yellow recheck",
+          kpi_spc_prep: "SPC Prep",
+          kpi_spc_prep_sub: "yellow separated",
           kpi_red: "Red",
           kpi_red_sub: "FP/systematics",
           kpi_violet: "Violet",
@@ -3602,12 +3630,14 @@
           filter_all: "All",
           filter_green: "Green",
           filter_yellow: "Yellow",
+          filter_spc_prep: "SPC Prep",
           filter_red: "Red",
           filter_violet: "Violet",
           curves_filter_violet: "HZ/Violet",
           curves_filter_green: "Green",
           map_legend_green: "Green = candidate",
           map_legend_yellow: "Yellow = under review",
+          map_legend_spc_prep: "SPC Prep yellow",
           map_legend_red: "Red = FP/rejected",
           map_legend_violet: "Violet ring = HZ focus",
           map_legend_selected: "White ring = selected",
@@ -3793,7 +3823,9 @@
           kpi_green: "Vert",
           kpi_green_sub: "candidats SPC",
           kpi_yellow: "Jaune",
-          kpi_yellow_sub: "plus de donnees",
+          kpi_yellow_sub: "jaune de reverification",
+          kpi_spc_prep: "SPC Prep",
+          kpi_spc_prep_sub: "jaune separe",
           kpi_red: "Rouge",
           kpi_red_sub: "FP/systematiques",
           kpi_violet: "Violet",
@@ -3801,12 +3833,14 @@
           filter_all: "Tous",
           filter_green: "Vert",
           filter_yellow: "Jaune",
+          filter_spc_prep: "SPC Prep",
           filter_red: "Rouge",
           filter_violet: "Violet",
           curves_filter_violet: "HZ/Violet",
           curves_filter_green: "Vert",
           map_legend_green: "Vert = candidat",
           map_legend_yellow: "Jaune = en verification",
+          map_legend_spc_prep: "SPC Prep jaune",
           map_legend_red: "Rouge = FP/rejete",
           map_legend_violet: "Anneau violet = focus HZ",
           map_legend_selected: "Anneau blanc = selectionne",
@@ -3980,6 +4014,7 @@
       const colors = {
         green: "#24a085",
         yellow: "#d08a24",
+        spcPrep: "#e0b24a",
         red: "#d75047",
         violet: "#806cf0",
         gray: "#a9b4b0",
@@ -5434,8 +5469,23 @@
       }
 
       function colorClass(candidate) {
+        if (isSpcPrepCandidate(candidate)) return "spc-prep";
         if (candidate.isViolet) return "violet";
         return candidate.color;
+      }
+
+      function candidateVisualClass(candidate) {
+        if (isSpcPrepCandidate(candidate)) return "spc-prep";
+        return matrixColorClass(candidate);
+      }
+
+      function candidateMapColor(candidate) {
+        return isSpcPrepCandidate(candidate) ? colors.spcPrep : (colors[candidate.color] || colors.gray);
+      }
+
+      function candidateGroupLabel(candidate) {
+        if (isSpcPrepCandidate(candidate)) return "SPC Prep (gelb)";
+        return colorName(candidate);
       }
 
       function matrixColorClass(candidate) {
@@ -5517,7 +5567,13 @@
         return publicVisibleCandidates().filter((candidate) => {
           const matchesColor =
             state.colorFilter === "all" ||
-            (state.colorFilter === "violet" ? candidate.isViolet : candidate.color === state.colorFilter);
+            (state.colorFilter === "violet"
+              ? candidate.isViolet
+              : state.colorFilter === "spc-prep"
+                ? isSpcPrepCandidate(candidate)
+                : state.colorFilter === "yellow"
+                  ? candidate.color === "yellow" && !isSpcPrepCandidate(candidate)
+                  : candidate.color === state.colorFilter);
           return matchesColor && matchesCandidate(candidate, term);
         });
       }
@@ -5525,6 +5581,7 @@
       function publicCandidatePool() {
         return (data.candidates || []).filter((candidate) => (
           candidate.color === "green" ||
+          isSpcPrepCandidate(candidate) ||
           (
             candidate.color === "yellow" &&
             candidate.followupStrength === "STRONG" &&
@@ -5542,6 +5599,7 @@
       const labelLegend = [
         ["SPC", "Strong Planet Candidate"],
         ["SPC_ART", "Strong Planet Candidate with artifact/systematics concern"],
+        ["SPC_FOLLOWUP_READY", "Yellow SPC-prep candidate, separated from ordinary yellow"],
         ["HZ_RECHECK", "Candidate in/near HZ, needs recheck"],
         ["SPC_RV_NEEDED", "Strong candidate, radial velocity follow-up needed"],
         ["EB_RISK", "Possible eclipsing binary risk"],
@@ -5554,6 +5612,7 @@
         de: {
           SPC: "Starker Planetenkandidat",
           SPC_ART: "Starker Planetenkandidat mit Artefakt- oder Systematikverdacht",
+          SPC_FOLLOWUP_READY: "Gelber SPC-Prep-Kandidat, getrennt von normalem Gelb",
           HZ_RECHECK: "Kandidat in/nahe der HZ, Nachpruefung noetig",
           SPC_RV_NEEDED: "Starker Kandidat, Radialgeschwindigkeits-Follow-up noetig",
           EB_RISK: "Moegliches Risiko einer bedeckungsveraenderlichen Doppelsternquelle",
@@ -5565,6 +5624,7 @@
         fr: {
           SPC: "Candidat planetaire fort",
           SPC_ART: "Candidat fort avec suspicion d'artefact ou de systematique",
+          SPC_FOLLOWUP_READY: "Candidat SPC-prep jaune, separe du jaune ordinaire",
           HZ_RECHECK: "Candidat dans/pres de la HZ, reverification necessaire",
           SPC_RV_NEEDED: "Candidat fort, suivi en vitesse radiale necessaire",
           EB_RISK: "Risque possible de binaire a eclipses",
@@ -5613,11 +5673,17 @@
         return isSpcStrong(candidate) || isRvNeeded(candidate) || text.includes("SPC_FOLLOWUP_READY") || candidate.color === "green";
       }
 
+      function isSpcPrepCandidate(candidate) {
+        const text = matrixText(candidate);
+        return candidate.color === "yellow" && text.includes("SPC_FOLLOWUP_READY");
+      }
+
       function matrixStatusBucket(candidate) {
         const text = matrixText(candidate);
         if (text.includes("EB_RISK")) return "EB_RISK";
         if (String(candidate.matrixStatus || "").toUpperCase() === "IGNORE") return "IGNORE";
         if (isSpcStrong(candidate)) return "SPC_STRONG";
+        if (isSpcPrepCandidate(candidate)) return "SPC_FOLLOWUP_READY";
         if (isSpcArt(candidate)) return "SPC_ART";
         if (text.includes("NEEDS_MORE")) return "NEEDS_MORE_DATA";
         if (text.includes("REJECT") || text.includes("FALSE") || text.includes(" FP") || text.includes("ARTIFACT")) return "REJECTED";
@@ -5750,6 +5816,7 @@
 
       function followupRank(candidate) {
         if (candidate.followupStrength === "STRONG") return 0;
+        if (isSpcPrepCandidate(candidate)) return 1;
         if (candidate.color === "green") return 1;
         if (candidate.followupStrength === "MEDIUM") return 2;
         return 3;
@@ -5822,7 +5889,7 @@
           return;
         }
         els.topCandidateRows.innerHTML = rows.map((candidate, index) => {
-          const rowClass = expectedTransits(candidate) < 5 ? "yellow" : matrixColorClass(candidate);
+          const rowClass = expectedTransits(candidate) < 5 ? "yellow" : candidateVisualClass(candidate);
           return `
             <tr data-profile-tic="${candidate.tic}">
               <td>${index + 1}</td>
@@ -5956,7 +6023,7 @@
 
       function renderMatrixStats() {
         const candidates = publicCandidatePool();
-        const statusLabels = ["SPC_STRONG", "SPC", "SPC_ART", "NEEDS_MORE_DATA", "EB_RISK", "REJECTED", "IGNORE"];
+        const statusLabels = ["SPC_STRONG", "SPC_FOLLOWUP_READY", "SPC", "SPC_ART", "NEEDS_MORE_DATA", "EB_RISK", "REJECTED", "IGNORE"];
         const hzLabels = ["ZU_HEISS", "OPT_HZ_INNEN", "KONSERVATIVE_HZ", "OPT_HZ_AUSSEN", "ZU_KALT"];
         const distanceRows = countBuckets(candidates, ["0-25 ly", "25-50 ly", "50-75 ly", "75-100 ly", "100-150 ly", "150-200 ly"], (candidate) => {
           const distance = Number(candidate.distance || 0);
@@ -5995,6 +6062,7 @@
           { label: "detected_signals", count: countWhere(candidates, (c) => Number(c.period || 0) > 0 && Number(c.snr || 0) > 0) },
           { label: "transit_candidates", count: countWhere(candidates, (c) => expectedTransits(c) > 0) },
           { label: "SPC_ART", count: countWhere(candidates, isSpcArt) },
+          { label: "SPC_FOLLOWUP_READY", count: countWhere(candidates, isSpcPrepCandidate) },
           { label: "SPC", count: countWhere(candidates, isSpc) },
           { label: "SPC_STRONG", count: countWhere(candidates, isSpcStrong) },
           { label: "RV_NEEDED", count: countWhere(candidates, isRvNeeded) },
@@ -6024,6 +6092,7 @@
           ["total_candidates", countWhere(candidates, (c) => expectedTransits(c) > 0)],
           ["total_spc", countWhere(candidates, isSpc)],
           ["total_spc_strong", countWhere(candidates, isSpcStrong)],
+          ["total_spc_prep_yellow", countWhere(candidates, isSpcPrepCandidate)],
           ["total_hz", countWhere(candidates, (c) => c.isViolet)],
           ["total_rv_needed", countWhere(candidates, isRvNeeded)],
           ["total_rejected", countWhere(candidates, (c) => matrixStatusBucket(c) === "REJECTED" || c.color === "red")],
@@ -6072,7 +6141,8 @@
         const publicRows = publicVisibleCandidates();
         document.getElementById("kpiTotal").textContent = formatNumber(data.summary.total);
         document.getElementById("kpiGreen").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "green"));
-        document.getElementById("kpiYellow").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "yellow"));
+        document.getElementById("kpiYellow").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "yellow" && !isSpcPrepCandidate(candidate)));
+        document.getElementById("kpiSpcPrep").textContent = formatNumber(countWhere(publicRows, isSpcPrepCandidate));
         document.getElementById("kpiRed").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "red"));
         document.getElementById("kpiViolet").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.isViolet));
         document.getElementById("lcCount").textContent = formatNumber(data.lightcurveCandidates?.length || 0);
@@ -6776,13 +6846,15 @@
         setText(".kpis article:nth-child(1) .card-top span", t("kpi_total"));
         setText(".kpis article:nth-child(2) .card-top span", t("kpi_green"));
         setText(".kpis article:nth-child(3) .card-top span", t("kpi_yellow"));
-        setText(".kpis article:nth-child(4) .card-top span", t("kpi_red"));
-        setText(".kpis article:nth-child(5) .card-top span", t("kpi_violet"));
+        setText(".kpis article:nth-child(4) .card-top span", t("kpi_spc_prep"));
+        setText(".kpis article:nth-child(5) .card-top span", t("kpi_red"));
+        setText(".kpis article:nth-child(6) .card-top span", t("kpi_violet"));
         document.querySelector(".kpis article:nth-child(1) .metric-line").innerHTML = `<i data-lucide="folder-tree"></i> ${t("kpi_total_sub")}`;
         document.querySelector(".kpis article:nth-child(2) .metric-line").innerHTML = `<i data-lucide="arrow-up-right"></i> ${t("kpi_green_sub")}`;
         document.querySelector(".kpis article:nth-child(3) .metric-line").innerHTML = `<i data-lucide="hourglass"></i> ${t("kpi_yellow_sub")}`;
-        document.querySelector(".kpis article:nth-child(4) .metric-line").innerHTML = `<i data-lucide="ban"></i> ${t("kpi_red_sub")}`;
-        document.querySelector(".kpis article:nth-child(5) .metric-line").innerHTML = `<i data-lucide="sun-medium"></i> ${t("kpi_violet_sub")}`;
+        document.querySelector(".kpis article:nth-child(4) .metric-line").innerHTML = `<i data-lucide="list-checks"></i> ${t("kpi_spc_prep_sub")}`;
+        document.querySelector(".kpis article:nth-child(5) .metric-line").innerHTML = `<i data-lucide="ban"></i> ${t("kpi_red_sub")}`;
+        document.querySelector(".kpis article:nth-child(6) .metric-line").innerHTML = `<i data-lucide="sun-medium"></i> ${t("kpi_violet_sub")}`;
 
         setText("#treePanel h2", labels.treeTitle);
         setText("#treePanel .panel-subtitle", labels.treeSub);
@@ -6793,14 +6865,16 @@
         setText('[data-color-filter="all"]', t("filter_all"));
         setText('[data-color-filter="green"]', t("filter_green"));
         setText('[data-color-filter="yellow"]', t("filter_yellow"));
+        setText('[data-color-filter="spc-prep"]', t("filter_spc_prep"));
         setText('[data-color-filter="red"]', t("filter_red"));
         setText('[data-color-filter="violet"]', t("filter_violet"));
         setLegendText("#mapPanel .map-note .legend-item:nth-child(1)", t("map_legend_green"));
         setLegendText("#mapPanel .map-note .legend-item:nth-child(2)", t("map_legend_yellow"));
-        setLegendText("#mapPanel .map-note .legend-item:nth-child(3)", t("map_legend_red"));
-        setLegendText("#mapPanel .map-note .legend-item:nth-child(4)", t("map_legend_violet"));
-        setText("#mapPanel .map-note .legend-item:nth-child(5)", t("map_legend_selected"));
-        setLegendText("#mapPanel .map-note .legend-item:nth-child(6)", t("map_legend_sun"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(3)", t("map_legend_spc_prep"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(4)", t("map_legend_red"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(5)", t("map_legend_violet"));
+        setText("#mapPanel .map-note .legend-item:nth-child(6)", t("map_legend_selected"));
+        setLegendText("#mapPanel .map-note .legend-item:nth-child(7)", t("map_legend_sun"));
         setText("#mapPanel .map-side .notice", currentMapNoticeText());
         setText("#mapPanel .map-status:nth-of-type(1) span", labels.mapSelected);
         setText("#mapPanel .map-status:nth-of-type(2) span", labels.mapObserved);
@@ -7331,15 +7405,15 @@
           `<span class="chip ${candidate.color}">${localizedBaseColor}</span>`,
           candidate.isViolet ? `<span class="chip violet">${t("chip_violet_hz")}</span>` : "",
           candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
-          ...displayLabels.map((label) => `<span class="chip ${matrixColorClass(candidate)}">${label}</span>`),
-          candidate.matrixStatus && !displayLabels.includes(candidate.matrixStatus) ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
-          candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${matrixColorClass(candidate)}">${t("chip_evidence_prefix", { value: candidate.evidenceScore })}</span>` : "",
+          ...displayLabels.map((label) => `<span class="chip ${candidateVisualClass(candidate)}">${label}</span>`),
+          candidate.matrixStatus && !displayLabels.includes(candidate.matrixStatus) ? `<span class="chip ${candidateVisualClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
+          candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${candidateVisualClass(candidate)}">${t("chip_evidence_prefix", { value: candidate.evidenceScore })}</span>` : "",
           candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
         ].filter(Boolean).join("");
         els.selectedCard.innerHTML = `
           <div class="selected-title">
             <strong>TIC ${candidate.tic}</strong>
-            <span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span>
+            <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
           </div>
           <div class="chips">${chips}</div>
           <p>${candidate.reason}</p>
@@ -7457,7 +7531,7 @@
             ? focusBaseY + (candidate.map.y - focus.map.y) * height * 0.42 * mapZoom
             : height / 2 + candidate.map.y * height * 0.42 * mapZoom;
           const size = Math.max(2.2, Math.min(7.5, 2.2 + candidate.snr / 22));
-          const fill = colors[candidate.color] || colors.gray;
+          const fill = candidateMapColor(candidate);
           if (candidate.isViolet) {
             ctx.beginPath();
             ctx.arc(x, y, size + 4, 0, Math.PI * 2);
@@ -7559,10 +7633,10 @@
         scene.add(northSouthLine);
 
         const groups = {};
-        ["green", "yellow", "red", "gray"].forEach((key) => {
+        ["green", "spc-prep", "yellow", "red", "gray"].forEach((key) => {
           const geometry = new THREE.BufferGeometry();
           const material = new THREE.PointsMaterial({
-            color: colors[key],
+            color: key === "spc-prep" ? colors.spcPrep : colors[key],
             size: 0.045,
             sizeAttenuation: true,
             transparent: true,
@@ -7597,8 +7671,8 @@
       function update3dData() {
         if (!state.sceneReady) return;
         const candidates = filteredCandidates().filter((candidate) => candidate.color !== "gray");
-        ["green", "yellow", "red", "gray"].forEach((key) => {
-          const subset = candidates.filter((candidate) => candidate.color === key);
+        ["green", "spc-prep", "yellow", "red", "gray"].forEach((key) => {
+          const subset = candidates.filter((candidate) => key === "spc-prep" ? isSpcPrepCandidate(candidate) : (!isSpcPrepCandidate(candidate) && candidate.color === key));
           const positions = new Float32Array(subset.length * 3);
           subset.forEach((candidate, index) => {
             const position = map3dPosition(candidate);
