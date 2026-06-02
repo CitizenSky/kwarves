@@ -3554,7 +3554,7 @@
     </section>
 
     <script>
-      const DASHBOARD_UI_VERSION = "2026-06-02-q";
+      const DASHBOARD_UI_VERSION = "2026-06-02-r";
       const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
       const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
       const state = {
@@ -3694,6 +3694,30 @@
           not_available: "nicht verfuegbar",
           not_set: "nicht gesetzt",
           no_entries: "Noch keine Eintraege.",
+          table_empty_search: "Keine Kandidaten fuer diese Suche.",
+          table_empty_filter: "Keine Kandidaten im aktuellen Filter.",
+          top_candidates_empty: "Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.",
+          followup_candidates_empty: "Keine Follow-up-Kandidaten.",
+          followup_expand: "Follow-up ausklappen",
+          followup_collapse: "Follow-up einklappen",
+          no_yellow_reason_tags: "Keine gelben Reason Tags.",
+          no_next_check: "Kein naechster Check gesetzt.",
+          yellow_summary_default: "Gelb: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen",
+          yellow_summary_not_yellow: "Dieser Kandidat ist aktuell nicht gelb markiert.",
+          why_label: "Warum?",
+          followup_label: "Follow-up",
+          reason_tags_label: "Reason Tags",
+          next_check_label: "Next Check",
+          observed_label: "Beobachtet",
+          current_label: "aktuell",
+          next_plan_label: "naechster Plan",
+          data_approx_label: "Daten ca.",
+          db_recheck_label: "DB-Recheck",
+          map_status_blue: "Blau: kommende Beobachtung geplant.",
+          exofop_criteria_label: "ExoFOP-Kriterien erfuellt?",
+          yes_label: "Ja",
+          no_review_open: "Nein - Review offen",
+          admin_exofop_empty: "Keine internen ExoFOP-Prep-Kandidaten.",
           no_candidate_selected: "Kein Kandidat ausgewaehlt.",
           status_add_sector_data: "Erst Sektordaten aus MAST/TESS ergaenzen.",
           status_recheck_possible: "Recheck moeglich, sobald neue TESS-Daten verfuegbar sind.",
@@ -3900,6 +3924,30 @@
           not_available: "not available",
           not_set: "not set",
           no_entries: "No entries yet.",
+          table_empty_search: "No candidates for this search.",
+          table_empty_filter: "No candidates in the current filter.",
+          top_candidates_empty: "No publicly released ExoFOP/SPC candidates right now. Internal prep cases are kept in the admin area.",
+          followup_candidates_empty: "No follow-up candidates.",
+          followup_expand: "Expand follow-up",
+          followup_collapse: "Collapse follow-up",
+          no_yellow_reason_tags: "No yellow reason tags.",
+          no_next_check: "No next check set.",
+          yellow_summary_default: "Yellow: scientifically interesting, but not clean enough for automatic green",
+          yellow_summary_not_yellow: "This candidate is currently not marked yellow.",
+          why_label: "Why?",
+          followup_label: "Follow-up",
+          reason_tags_label: "Reason tags",
+          next_check_label: "Next check",
+          observed_label: "Observed",
+          current_label: "current",
+          next_plan_label: "next plan",
+          data_approx_label: "data approx.",
+          db_recheck_label: "DB recheck",
+          map_status_blue: "Blue: upcoming observation planned.",
+          exofop_criteria_label: "ExoFOP criteria met?",
+          yes_label: "Yes",
+          no_review_open: "No - review open",
+          admin_exofop_empty: "No internal ExoFOP prep candidates.",
           no_candidate_selected: "No candidate selected.",
           status_add_sector_data: "Add sector history from MAST/TESS first.",
           status_recheck_possible: "Recheck possible as soon as new TESS data is available.",
@@ -4106,6 +4154,30 @@
           not_available: "indisponible",
           not_set: "non defini",
           no_entries: "Aucune entree pour le moment.",
+          table_empty_search: "Aucun candidat pour cette recherche.",
+          table_empty_filter: "Aucun candidat dans le filtre actuel.",
+          top_candidates_empty: "Aucun candidat ExoFOP/SPC publie actuellement. Les cas internes de preparation restent dans la zone admin.",
+          followup_candidates_empty: "Aucun candidat de suivi.",
+          followup_expand: "Ouvrir le suivi",
+          followup_collapse: "Replier le suivi",
+          no_yellow_reason_tags: "Aucun tag jaune.",
+          no_next_check: "Aucun prochain controle defini.",
+          yellow_summary_default: "Jaune: scientifiquement interessant, mais pas assez propre pour le vert automatique",
+          yellow_summary_not_yellow: "Ce candidat n'est actuellement pas marque jaune.",
+          why_label: "Pourquoi?",
+          followup_label: "Suivi",
+          reason_tags_label: "Tags de raison",
+          next_check_label: "Prochain controle",
+          observed_label: "Observe",
+          current_label: "actuel",
+          next_plan_label: "prochain plan",
+          data_approx_label: "donnees env.",
+          db_recheck_label: "DB recheck",
+          map_status_blue: "Bleu: prochaine observation planifiee.",
+          exofop_criteria_label: "Criteres ExoFOP remplis?",
+          yes_label: "Oui",
+          no_review_open: "Non - revue ouverte",
+          admin_exofop_empty: "Aucun candidat interne ExoFOP prep.",
           no_candidate_selected: "Aucun candidat selectionne.",
           status_add_sector_data: "Ajouter d'abord l'historique des secteurs depuis MAST/TESS.",
           status_recheck_possible: "Reverification possible des que de nouvelles donnees TESS sont disponibles.",
@@ -5460,14 +5532,14 @@
         const exofopRows = exofopUploadCandidates(els.globalSearch.value).map((candidate) => `
           <tr>
             <td data-label="TIC"><strong>TIC ${candidate.tic}</strong></td>
-            <td data-label="ExoFOP-Kriterien erfuellt?">
+            <td data-label="${t("exofop_criteria_label")}">
               <span class="pill ${exofopCriteriaFulfilled(candidate) ? "green" : "yellow"}">
-                ${exofopCriteriaFulfilled(candidate) ? "Ja" : "Nein - Review offen"}
+                ${exofopCriteriaFulfilled(candidate) ? t("yes_label") : t("no_review_open")}
               </span>
             </td>
           </tr>
         `).join("");
-        els.adminExofopRows.innerHTML = exofopRows || `<tr><td colspan="2">Keine internen ExoFOP-Prep-Kandidaten.</td></tr>`;
+        els.adminExofopRows.innerHTML = exofopRows || `<tr><td colspan="2">${t("admin_exofop_empty")}</td></tr>`;
       }
 
       async function resolveCountry() {
@@ -5989,13 +6061,13 @@
       function reasonTagList(tags = []) {
         return tags.length
           ? `<div class="reason-tag-list">${tags.map((tag) => `<span class="reason-tag" title="${yellowTagLabels[tag] || tag}">${tag}</span>`).join("")}</div>`
-          : '<span class="mini">Keine gelben Reason Tags.</span>';
+          : `<span class="mini">${t("no_yellow_reason_tags")}</span>`;
       }
 
       function nextCheckList(checks = []) {
         return checks.length
           ? `<div class="next-check-list">${checks.map((check) => `<span class="next-check">${check}</span>`).join("")}</div>`
-          : '<span class="mini">Kein naechster Check gesetzt.</span>';
+          : `<span class="mini">${t("no_next_check")}</span>`;
       }
 
       function recheckChip(candidate) {
@@ -6123,7 +6195,7 @@
       function renderTopCandidates() {
         const rows = top20Candidates();
         if (!rows.length) {
-          els.topCandidateRows.innerHTML = `<tr><td colspan="8">Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.</td></tr>`;
+          els.topCandidateRows.innerHTML = `<tr><td colspan="8">${t("top_candidates_empty")}</td></tr>`;
           renderFollowupCandidates();
           return;
         }
@@ -6156,7 +6228,7 @@
               E${formatMaybe(candidate.evidenceScore, 0)} · ${formatFloat(candidate.distance, 1)} ly
             </span>
           </button>
-        `).join("") : '<span class="muted">Keine Follow-up-Kandidaten.</span>';
+        `).join("") : `<span class="muted">${t("followup_candidates_empty")}</span>`;
       }
 
       function setFollowupCollapsed(collapsed) {
@@ -6164,7 +6236,7 @@
         if (!panel || !els.toggleFollowupList) return;
         panel.classList.toggle("is-collapsed", Boolean(collapsed));
         els.toggleFollowupList.setAttribute("aria-expanded", collapsed ? "false" : "true");
-        els.toggleFollowupList.title = collapsed ? "Follow-up ausklappen" : "Follow-up einklappen";
+        els.toggleFollowupList.title = collapsed ? t("followup_expand") : t("followup_collapse");
         els.toggleFollowupList.innerHTML = collapsed ? '<i data-lucide="chevron-down"></i>' : '<i data-lucide="chevron-up"></i>';
         window.lucide?.createIcons();
       }
@@ -6174,15 +6246,15 @@
         if (!selected) return;
         const summary = selected.yellowSummary || (
           selected.color === "yellow" || (selected.reasonTags || []).some((tag) => tag.startsWith("Y_"))
-            ? "Gelb: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen"
-            : "Dieser Kandidat ist aktuell nicht gelb markiert."
+            ? t("yellow_summary_default")
+            : t("yellow_summary_not_yellow")
         );
         els.yellowSelectedReason.innerHTML = `
           <p>${summary}</p>
-          <div><strong>Follow-up:</strong> ${formatMaybe(selected.followupStrength)}</div>
-          <div><strong>Reason Tags:</strong>${reasonTagList(selected.reasonTags || [])}</div>
-          <div><strong>Next Check:</strong>${nextCheckList(selected.nextChecks || [])}</div>
-          <div class="notice matrix-note"><strong>Warum?</strong><span>${formatMaybe(selected.decisionReason, selected.reason)}</span></div>
+          <div><strong>${t("followup_label")}:</strong> ${formatMaybe(selected.followupStrength)}</div>
+          <div><strong>${t("reason_tags_label")}:</strong>${reasonTagList(selected.reasonTags || [])}</div>
+          <div><strong>${t("next_check_label")}:</strong>${nextCheckList(selected.nextChecks || [])}</div>
+          <div class="notice matrix-note"><strong>${t("why_label")}</strong><span>${formatMaybe(selected.decisionReason, selected.reason)}</span></div>
         `;
       }
 
@@ -6283,6 +6355,80 @@
 
       function renderMatrixStats() {
         const candidates = publicCandidatePool();
+        const copy = {
+          de: {
+            kpis: {
+              total_scanned: "gesamt gescannt",
+              total_candidates: "Kandidaten gesamt",
+              total_spc: "SPC",
+              total_spc_strong: "starke SPC",
+              total_spc_prep_yellow: "SPC Prep gelb",
+              total_hz: "HZ gesamt",
+              total_rv_needed: "RV benoetigt",
+              total_rejected: "abgelehnt",
+              total_needs_more_data: "mehr Daten noetig"
+            },
+            pipeline: "Pipeline-Funnel",
+            status: "Status-Verteilung",
+            hz: "HZ-Statistik",
+            falsePositive: "False-Positive-Gruende",
+            distance: "Entfernungsklassen",
+            radius: "Planetengroessen",
+            top: "Top Kandidaten",
+            tess: "TESS-Abdeckung",
+            distanceColumn: "Distanz",
+            noHits: "Keine Treffer",
+            spcArtHigh: "SPC_ART hoher Score"
+          },
+          en: {
+            kpis: {
+              total_scanned: "total scanned",
+              total_candidates: "total candidates",
+              total_spc: "SPC",
+              total_spc_strong: "strong SPC",
+              total_spc_prep_yellow: "yellow SPC prep",
+              total_hz: "HZ total",
+              total_rv_needed: "RV needed",
+              total_rejected: "rejected",
+              total_needs_more_data: "needs more data"
+            },
+            pipeline: "Pipeline funnel",
+            status: "Status distribution",
+            hz: "HZ statistics",
+            falsePositive: "False-positive reasons",
+            distance: "Distance classes",
+            radius: "Planet sizes",
+            top: "Top candidates",
+            tess: "TESS coverage",
+            distanceColumn: "Distance",
+            noHits: "No matches",
+            spcArtHigh: "High-score SPC_ART"
+          },
+          fr: {
+            kpis: {
+              total_scanned: "total analyse",
+              total_candidates: "candidats au total",
+              total_spc: "SPC",
+              total_spc_strong: "SPC forts",
+              total_spc_prep_yellow: "SPC prep jaune",
+              total_hz: "total HZ",
+              total_rv_needed: "RV requis",
+              total_rejected: "rejetes",
+              total_needs_more_data: "donnees requises"
+            },
+            pipeline: "Entonnoir pipeline",
+            status: "Distribution des statuts",
+            hz: "Statistiques HZ",
+            falsePositive: "Raisons false-positive",
+            distance: "Classes de distance",
+            radius: "Tailles planetaires",
+            top: "Top candidats",
+            tess: "Couverture TESS",
+            distanceColumn: "Distance",
+            noHits: "Aucun resultat",
+            spcArtHigh: "SPC_ART score eleve"
+          }
+        }[state.lang] || {};
         const statusLabels = ["SPC_STRONG", "SPC_FOLLOWUP_READY", "SPC", "SPC_ART", "NEEDS_MORE_DATA", "EB_RISK", "REJECTED", "IGNORE"];
         const hzLabels = ["ZU_HEISS", "OPT_HZ_INNEN", "KONSERVATIVE_HZ", "OPT_HZ_AUSSEN", "ZU_KALT"];
         const distanceRows = countBuckets(candidates, ["0-25 ly", "25-50 ly", "50-75 ly", "75-100 ly", "100-150 ly", "150-200 ly"], (candidate) => {
@@ -6345,7 +6491,7 @@
           ["SPC_FOLLOWUP_READY", candidates.filter((c) => matrixText(c).includes("FOLLOWUP_READY")).slice(0, 12)],
           ["HZ_RECHECK", candidates.filter((c) => c.isViolet && /RECHECK|REVISIT|TESS/.test(matrixText(c))).slice(0, 12)],
           ["NEEDS_MORE_DATA", candidates.filter((c) => matrixStatusBucket(c) === "NEEDS_MORE_DATA").slice(0, 12)],
-          ["SPC_ART hoher Score", candidates.filter((c) => isSpcArt(c) && Number(c.evidenceScore || 0) >= 65).slice(0, 12)]
+          [copy.spcArtHigh, candidates.filter((c) => isSpcArt(c) && Number(c.evidenceScore || 0) >= 65).slice(0, 12)]
         ];
         const kpis = [
           ["total_scanned", data.summary?.total || candidates.length],
@@ -6361,28 +6507,28 @@
 
         els.matrixStats.innerHTML = `
           <div class="matrix-stat-kpis">
-            ${kpis.map(([label, value]) => `<div class="matrix-stat-card"><span>${label}</span><strong>${formatNumber(value)}</strong></div>`).join("")}
+            ${kpis.map(([label, value]) => `<div class="matrix-stat-card"><span>${copy.kpis?.[label] || label}</span><strong>${formatNumber(value)}</strong></div>`).join("")}
           </div>
           <div class="matrix-stat-grid">
-            <article class="matrix-stat-box"><h3>Pipeline-Funnel</h3><div class="matrix-stat-list">${renderStatRows(funnelRows)}</div></article>
-            <article class="matrix-stat-box"><h3>Status-Verteilung</h3><div class="matrix-stat-list">${renderStatRows(statusRows)}</div></article>
-            <article class="matrix-stat-box"><h3>HZ-Statistik</h3><div class="matrix-stat-list">${renderStatRows(hzRows)}</div></article>
-            <article class="matrix-stat-box"><h3>False-Positive-Gruende</h3><div class="matrix-stat-list">${renderStatRows(falsePositiveRows)}</div></article>
-            <article class="matrix-stat-box"><h3>Entfernungsklassen</h3><div class="matrix-stat-list">${renderStatRows(distanceRows)}</div></article>
-            <article class="matrix-stat-box"><h3>Planetengroessen</h3><div class="matrix-stat-list">${renderStatRows(radiusRows)}</div></article>
+            <article class="matrix-stat-box"><h3>${copy.pipeline}</h3><div class="matrix-stat-list">${renderStatRows(funnelRows)}</div></article>
+            <article class="matrix-stat-box"><h3>${copy.status}</h3><div class="matrix-stat-list">${renderStatRows(statusRows)}</div></article>
+            <article class="matrix-stat-box"><h3>${copy.hz}</h3><div class="matrix-stat-list">${renderStatRows(hzRows)}</div></article>
+            <article class="matrix-stat-box"><h3>${copy.falsePositive}</h3><div class="matrix-stat-list">${renderStatRows(falsePositiveRows)}</div></article>
+            <article class="matrix-stat-box"><h3>${copy.distance}</h3><div class="matrix-stat-list">${renderStatRows(distanceRows)}</div></article>
+            <article class="matrix-stat-box"><h3>${copy.radius}</h3><div class="matrix-stat-list">${renderStatRows(radiusRows)}</div></article>
           </div>
           <div class="matrix-followup-grid">
             <article class="matrix-stat-box">
-              <h3>Top Kandidaten</h3>
+              <h3>${copy.top}</h3>
               <div class="table-wrap">
                 <table class="docs-table">
-                  <thead><tr><th>TIC</th><th>Evidence</th><th>HZ</th><th>Distanz</th><th>Status</th></tr></thead>
+                  <thead><tr><th>TIC</th><th>Evidence</th><th>HZ</th><th>${copy.distanceColumn}</th><th>Status</th></tr></thead>
                   <tbody>${top20.map((c) => `<tr><td><strong>TIC ${c.tic}</strong></td><td>${formatMaybe(c.evidenceScore, 0)}</td><td>${formatMaybe(c.hz)}</td><td>${c.distance} ly</td><td>${formatMaybe(c.matrixClass, c.matrixStatus)}</td></tr>`).join("")}</tbody>
                 </table>
               </div>
             </article>
             <article class="matrix-stat-box">
-              <h3>TESS-Abdeckung</h3>
+              <h3>${copy.tess}</h3>
               <div class="table-wrap">
                 <table class="docs-table">
                   <thead><tr><th>TIC</th><th>expected_transits</th><th>visible_transits</th><th>coverage_percent</th></tr></thead>
@@ -6392,7 +6538,7 @@
             </article>
           </div>
           <div class="matrix-followup-grid">
-            ${followups.map(([label, items]) => `<article class="matrix-stat-box"><h3>${label}</h3><div class="matrix-mini-list">${items.length ? items.map(candidateChip).join("") : '<span class="muted">Keine Treffer</span>'}</div></article>`).join("")}
+            ${followups.map(([label, items]) => `<article class="matrix-stat-box"><h3>${label}</h3><div class="matrix-mini-list">${items.length ? items.map(candidateChip).join("") : `<span class="muted">${copy.noHits}</span>`}</div></article>`).join("")}
           </div>
         `;
       }
@@ -6674,6 +6820,7 @@
               <p><strong>Responsible for content:</strong><br />Konrad Gottschalk</p>
               <p>Kwarves is an independent citizen-science project analyzing publicly available astronomical data.</p>
               <p><strong>Contact:</strong><br /><a href="mailto:astroproject725@gmail.com">astroproject725@gmail.com</a></p>
+              <p>If you have improvements, ideas, or notes, please send an email or leave a comment.</p>
             `,
             privacyHtml: `
               <h3>Privacy</h3>
@@ -6773,6 +6920,7 @@
                 <p><strong>Responsable du contenu:</strong><br />Konrad Gottschalk</p>
                 <p>Kwarves est un projet citizen-science independant pour l'analyse de donnees astronomiques publiquement disponibles.</p>
                 <p><strong>Contact:</strong><br /><a href="mailto:astroproject725@gmail.com">astroproject725@gmail.com</a></p>
+                <p>Pour des ameliorations, idees ou remarques, envoyez volontiers un e-mail ou laissez un commentaire.</p>
               `,
               privacyHtml: `
                 <h3>Confidentialite</h3>
@@ -6935,6 +7083,8 @@
             topTitle: "Top Candidates",
             topSub: "Compact decision list. Details open in the candidate profile.",
             topHeaders: ["Rank", "TIC", "Distance ly", "Period days", "HZ class", "Evidence", "Label", "Next step"],
+            followupTitle: "Follow-up Candidates",
+            followupSub: "Internal follow-up cases, separated from ordinary orange.",
             statsTitle: "Statistics Plots",
             statsSub: "Distributions from existing matrix and candidate fields.",
             chartTitles: ["Evidence Score", "Transit count", "Distance", "HZ classes", "Label distribution", "TESS sectors"],
@@ -6983,6 +7133,8 @@
               topTitle: "Top candidats",
               topSub: "Liste compacte pour decider. Les details s'ouvrent dans le profil candidat.",
               topHeaders: ["Rang", "TIC", "Distance al", "Periode jours", "Classe HZ", "Evidence", "Label", "Prochaine etape"],
+              followupTitle: "Candidats de suivi",
+              followupSub: "Cas internes de suivi, separes de l'orange ordinaire.",
               statsTitle: "Graphiques statistiques",
               statsSub: "Distributions issues des champs matrice et candidats existants.",
               chartTitles: ["Evidence Score", "Nombre de transits", "Distance", "Classes HZ", "Distribution labels", "Secteurs TESS"],
@@ -7030,6 +7182,8 @@
               topTitle: "Top Kandidaten",
               topSub: "Kompakte Entscheidungsliste. Details stehen im Kandidatenprofil.",
               topHeaders: ["Rang", "TIC", "Distanz ly", "Periode Tage", "HZ-Klasse", "Evidence", "Label", "Naechster Schritt"],
+              followupTitle: "Follow-up Kandidaten",
+              followupSub: "Alle internen Follow-up-Faelle, getrennt von normalem Orange.",
               statsTitle: "Statistik-Plots",
               statsSub: "Verteilungen aus den vorhandenen Matrix- und Kandidatenfeldern.",
               chartTitles: ["Evidence Score", "Transitanzahl", "Distanz", "HZ-Klassen", "Label-Verteilung", "TESS-Sektoren"],
@@ -7070,6 +7224,8 @@
         setText("#topCandidatesTitle", visitorCopy.topTitle);
         setText("#topCandidatesSub", visitorCopy.topSub);
         document.getElementById("topCandidatesHead").innerHTML = `<tr>${visitorCopy.topHeaders.map((value) => `<th>${value}</th>`).join("")}</tr>`;
+        setText("#followupCandidatesTitle", visitorCopy.followupTitle);
+        setText("#followupCandidatesSub", visitorCopy.followupSub);
         setText("#statisticsTitle", visitorCopy.statsTitle);
         setText("#statisticsSub", visitorCopy.statsSub);
         document.querySelectorAll("#statisticsPanel .chart-card h3").forEach((node, index) => {
@@ -7420,7 +7576,7 @@
           return;
         }
         if (coverage.statusKey === "blue") {
-          els.mapCoverageStatus.textContent = "Blau: kommende Beobachtung geplant.";
+          els.mapCoverageStatus.textContent = t("map_status_blue");
           return;
         }
         if (coverage.statusKey === "yellow") {
@@ -7734,7 +7890,7 @@
           </div>
           <div class="notice matrix-note">
             <strong>TESS Recheck</strong>
-            <span>${recheckChip(candidate)} Beobachtet: ${formatSectorList(candidate.observedSectors, 10)} · aktuell: ${candidate.currentSector ? `S${candidate.currentSector}` : "-"} · naechster Plan: ${candidate.nextPlannedSector ? `S${candidate.nextPlannedSector}` : "-"} · Daten ca.: ${candidate.estimatedDataAvailable ? formatDate(candidate.estimatedDataAvailable) : "-"}</span>
+            <span>${recheckChip(candidate)} ${t("observed_label")}: ${formatSectorList(candidate.observedSectors, 10)} · ${t("current_label")}: ${candidate.currentSector ? `S${candidate.currentSector}` : "-"} · ${t("next_plan_label")}: ${candidate.nextPlannedSector ? `S${candidate.nextPlannedSector}` : "-"} · ${t("data_approx_label")}: ${candidate.estimatedDataAvailable ? formatDate(candidate.estimatedDataAvailable) : "-"}</span>
           </div>
           <div class="details-grid">
             <div class="detail"><span>${t("detail_matrix_status")}</span><strong>${matrixStatus}</strong></div>
@@ -8047,7 +8203,7 @@
         const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
         const term = els.globalSearch.value.trim().toLowerCase();
         if (!limited.length) {
-          els.rows.innerHTML = `<tr><td colspan="12">${term ? "Keine Kandidaten fuer diese Suche." : "Keine Kandidaten im aktuellen Filter."}</td></tr>`;
+          els.rows.innerHTML = `<tr><td colspan="12">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
           return;
         }
         els.rows.innerHTML = limited.map((candidate) => `
@@ -8181,7 +8337,7 @@
           const src = sources[index];
           tried.push(src);
           const img = document.createElement("img");
-          img.alt = `Kombinierte Lichtkurve TIC ${candidate.tic}`;
+          img.alt = `${t("loading_curve").replace(" ...", "")} TIC ${candidate.tic}`;
           img.loading = "lazy";
           let settled = false;
           const settle = (ok) => {
