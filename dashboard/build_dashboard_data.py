@@ -761,6 +761,8 @@ def build_candidate(
     recheck = recheck_model(observed_sectors, tess_state)
     full_vetting = full_vetting or {}
     full_vetting_promotes = is_full_vetting_exofop_prep(full_vetting)
+    dashboard_exofop_readiness = clean_text(full_vetting.get("exofop_readiness"))
+    dashboard_full_vetting_status = clean_text(full_vetting.get("status"))
     display_labels: list[str] = []
     sap_pdcsap_match = clean_text(matrix.get("sap_pdcsap_match"))
     odd_even_result = clean_text(matrix.get("odd_even_result"))
@@ -768,7 +770,7 @@ def build_candidate(
     matrix_transits = safe_int_or_none(matrix.get("n_transits"))
     matrix_visible_transits = safe_int_or_none(matrix.get("visible_transits"))
     if full_vetting_promotes:
-        color = "green"
+        color = "yellow"
         vetted_score = safe_float(full_vetting.get("evidence_score"))
         if vetted_score is not None:
             evidence_score = round(max(evidence_score or 0.0, vetted_score), 1)
@@ -782,15 +784,17 @@ def build_candidate(
         ]
         next_checks = ["Gaia Companion Check", "TPF Pixel Test", "Centroid Shift Analysis", "TLS Refit", "Rotation/activity check"]
         followup_strength = "STRONG"
-        yellow_summary = ""
-        matrix_status_color = "GREEN"
+        yellow_summary = "Gelb: hoch interessanter HZ-Kandidat, intern priorisiert, aber nicht fuer ExoFOP-Upload freigegeben"
+        matrix_status_color = "YELLOW"
         matrix_status = "HIGH_VALUE_HZ_RECHECK"
-        matrix_class = "SPC_RV_NEEDED"
-        matrix_score_band = "EXOFOP_PREP"
+        matrix_class = "FOLLOWUP_PRIORITY"
+        matrix_score_band = "NOT_EXOFOP_READY"
+        dashboard_exofop_readiness = "NOT_EXOFOP_READY"
+        dashboard_full_vetting_status = "HIGH_VALUE_HZ_RECHECK / NOT_EXOFOP_READY"
         display_labels = [
-            "SPC_RV_NEEDED",
+            "FOLLOWUP_PRIORITY",
             "HIGH_VALUE_HZ_RECHECK",
-            "EXOFOP_PREP",
+            "NOT_EXOFOP_READY",
             "SAP_PDCSAP_OK",
             "ODD_EVEN_OK",
             *full_flags,
@@ -799,8 +803,8 @@ def build_candidate(
         odd_even_result = "OK"
         rotation_risk = "FAST_ROTATION_ACTIVITY_RECHECK" if "FAST_ROTATION_ACTIVITY_RECHECK" in full_flags else rotation_risk
         matrix_visible_transits = full_visible_transits or matrix_visible_transits
-        decision_reason = "Full Vetting: SAP/PDCSAP konsistent, Odd-Even OK, HZ-Ziel mit starkem Follow-up-Wert; Aktivitaet weiter pruefen."
-        next_step = "ExoFOP-Prep, RV-Feasibility und Pixel-/Centroid-Checks priorisieren."
+        decision_reason = "Full Vetting: SAP/PDCSAP konsistent, Odd-Even OK, HZ-Ziel mit starkem Follow-up-Wert; wegen Aktivitaet/Recheck nicht fuer ExoFOP-Upload freigeben."
+        next_step = "Intern weiter verfolgen: RV-Feasibility, Pixel-/Centroid-Checks und Aktivitaets-Recheck priorisieren."
     else:
         matrix_status = clean_text(matrix.get("status"))
         matrix_class = clean_text(matrix.get("extended_class"))
@@ -890,11 +894,11 @@ def build_candidate(
             "sap_pdcsap_ratio": safe_float(full_vetting.get("sap_pdcsap_ratio")),
             "rotation_period": safe_float(full_vetting.get("rotation_period")),
             "odd_even_status": clean_text(full_vetting.get("odd_even_status")),
-            "exofop_readiness": clean_text(full_vetting.get("exofop_readiness")),
+            "exofop_readiness": dashboard_exofop_readiness,
             "flags": [clean_text(flag) for flag in full_vetting.get("flags", []) if clean_text(flag)],
             "visible_transits": safe_int_or_none(full_vetting.get("visible_transits")),
             "report_dir": clean_text(full_vetting.get("report_dir")),
-            "status": clean_text(full_vetting.get("status")),
+            "status": dashboard_full_vetting_status,
         } if full_vetting else None,
         "folder": candidate_folder,
         "lightcurveImg": lightcurve_img,

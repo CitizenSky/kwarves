@@ -3282,7 +3282,7 @@
                 <div class="admin-source-grid">
                   <article class="admin-source-card">
                     <h3>Warum gelistet?</h3>
-                    <p>Aufgenommen werden gelbe Kandidaten mit starkem Evidence Score und Matrixklasse SPC_FOLLOWUP_READY/SPC_RV_NEEDED/SPC_STRONG, solange kein EB_RISK, REJECTED oder IGNORE vorliegt.</p>
+                    <p>Aufgenommen werden nur Kandidaten, die nach strengem Vetting gruen und ExoFOP-ready sind. Gelbe High-Value-Faelle bleiben intern priorisierte Recheck-Ziele.</p>
                   </article>
                   <article class="admin-source-card">
                     <h3>Was fehlt noch?</h3>
@@ -3294,7 +3294,7 @@
                   </article>
                   <article class="admin-source-card">
                     <h3>Wann nur Prep?</h3>
-                    <p>Gelbe Kandidaten mit starkem Signal bleiben EXOFOP_PREP, solange mindestens ein Vetting-Kriterium offen ist. Sie sind intern priorisiert, aber noch keine Upload-Empfehlung.</p>
+                    <p>Gelbe Kandidaten mit starkem Signal bleiben intern priorisierte Recheck-/Follow-up-Ziele. Sie sind keine Upload-Empfehlung und werden erst mit gruenem Vetting ExoFOP-ready.</p>
                   </article>
                 </div>
                 <div class="table-wrap" style="margin-top: 10px;">
@@ -5523,7 +5523,15 @@
       }
 
       function publicCandidatePool() {
-        return (data.candidates || []).filter((candidate) => candidate.color === "green");
+        return (data.candidates || []).filter((candidate) => (
+          candidate.color === "green" ||
+          (
+            candidate.color === "yellow" &&
+            candidate.followupStrength === "STRONG" &&
+            /HIGH_VALUE_HZ_RECHECK|FOLLOWUP_PRIORITY/.test(matrixText(candidate)) &&
+            !/EB_RISK|REJECTED|IGNORE/.test(matrixText(candidate))
+          )
+        ));
       }
 
       function publicMatrixCandidates() {
@@ -5720,21 +5728,13 @@
       function exofopReadiness(candidate) {
         const text = matrixText(candidate);
         if (candidate.color === "green" && /SPC|RV_NEEDED|FOLLOWUP/.test(text)) return "READY_FOR_EXOFOP";
-        if (
-          candidate.color === "yellow" &&
-          candidate.followupStrength === "STRONG" &&
-          /SPC_FOLLOWUP_READY|SPC_RV_NEEDED|SPC_STRONG/.test(text) &&
-          !/EB_RISK|REJECTED|IGNORE/.test(text)
-        ) {
-          return "EXOFOP_PREP";
-        }
         return "NOT_READY";
       }
 
       function exofopUploadCandidates(term = "") {
         const normalizedTerm = String(term || "").trim().toLowerCase();
         return [...(data.candidates || [])]
-          .filter((candidate) => ["READY_FOR_EXOFOP", "EXOFOP_PREP"].includes(exofopReadiness(candidate)))
+          .filter((candidate) => exofopReadiness(candidate) === "READY_FOR_EXOFOP")
           .filter((candidate) => matchesCandidate(candidate, normalizedTerm))
           .sort((a, b) => (
             (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
@@ -6075,7 +6075,7 @@
         document.getElementById("kpiYellow").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "yellow"));
         document.getElementById("kpiRed").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "red"));
         document.getElementById("kpiViolet").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.isViolet));
-        document.getElementById("lcCount").textContent = formatNumber(countWhere(data.lightcurveCandidates || [], (candidate) => exofopReadiness(candidate) !== "EXOFOP_PREP"));
+        document.getElementById("lcCount").textContent = formatNumber(data.lightcurveCandidates?.length || 0);
         document.getElementById("generatedAt").textContent = new Date(data.generatedAt).toLocaleTimeString(currentLocale(), {
           hour: "2-digit",
           minute: "2-digit"
