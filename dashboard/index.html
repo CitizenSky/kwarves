@@ -30,9 +30,9 @@
         --line: #d9e1de;
         --green: #147a68;
         --gold: #b88220;
-        --spc-prep: #e0b24a;
+        --spc-prep: #f3c64e;
         --aqua: #2c8f9c;
-        --yellow: #bd7417;
+        --yellow: #d87118;
         --red: #bf3e36;
         --violet: #6956c5;
         --blue: #315dba;
@@ -591,6 +591,65 @@
         background: #f3f8f6;
       }
 
+      .followup-subpanel {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      .followup-subpanel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .followup-subpanel h3 {
+        margin: 0 0 4px;
+        color: var(--heading);
+        font-size: 17px;
+      }
+
+      .followup-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 8px;
+      }
+
+      .followup-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px 10px;
+        align-items: center;
+        width: 100%;
+        min-height: 64px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fffdf2;
+        color: var(--ink);
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .followup-item:hover {
+        border-color: #e4c43e;
+        background: #fff8ce;
+      }
+
+      .followup-item strong,
+      .followup-item span {
+        min-width: 0;
+      }
+
+      .followup-meta {
+        grid-column: 1 / -1;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 720;
+      }
+
       .chart-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
@@ -984,15 +1043,16 @@
 
       .chip.yellow,
       .pill.yellow {
-        background: #fff0d9;
-        color: #89510c;
+        background: #ffe8d1;
+        color: #8c3f09;
+        border-color: #efb170;
       }
 
       .chip.spc-prep,
       .pill.spc-prep {
-        background: #fff5c7;
-        color: #745000;
-        border-color: #e6c24f;
+        background: #fff7c2;
+        color: #6f5200;
+        border-color: #e4c43e;
       }
 
       .chip.red,
@@ -2581,11 +2641,11 @@
             </article>
             <article class="card">
               <div class="card-top">
-                <span>Gelb</span>
+                <span>Orange</span>
                 <div class="icon-box"><i data-lucide="clock-3"></i></div>
               </div>
               <p class="big-number" id="kpiYellow">0</p>
-              <span class="metric-line"><i data-lucide="hourglass"></i> mehr Daten</span>
+              <span class="metric-line"><i data-lucide="hourglass"></i> normales Recheck-Orange</span>
             </article>
             <article class="card">
               <div class="card-top">
@@ -2679,6 +2739,16 @@
                 </thead>
                 <tbody id="topCandidateRows"></tbody>
               </table>
+              <article class="followup-subpanel" aria-label="Follow-up Kandidaten">
+                <div class="followup-subpanel-header">
+                  <div>
+                    <h3 id="followupCandidatesTitle">Follow-up Kandidaten</h3>
+                    <p id="followupCandidatesSub" class="mini">Alle internen Follow-up-Faelle, getrennt von normalem Orange.</p>
+                  </div>
+                  <span class="pill spc-prep" id="followupCandidateCount">0</span>
+                </div>
+                <div class="followup-list" id="followupCandidateRows"></div>
+              </article>
             </div>
           </section>
 
@@ -2829,7 +2899,7 @@
                 <div class="map-header-group">
                   <button class="small-button active" type="button" data-color-filter="all">Alle</button>
                   <button class="small-button" type="button" data-color-filter="green">Gruen</button>
-                  <button class="small-button" type="button" data-color-filter="yellow">Gelb</button>
+                  <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
                   <button class="small-button" type="button" data-color-filter="spc-prep">SPC Prep</button>
                   <button class="small-button" type="button" data-color-filter="red">Rot</button>
                   <button class="small-button" type="button" data-color-filter="violet">Violett</button>
@@ -2857,8 +2927,8 @@
                   </div>
                   <div class="map-note">
                     <span class="legend-item"><span class="dot"></span> Gruen = Kandidat</span>
-                    <span class="legend-item"><span class="dot yellow"></span> Gelb = in Pruefung</span>
-                    <span class="legend-item"><span class="dot spc-prep"></span> SPC Prep gelb</span>
+                    <span class="legend-item"><span class="dot yellow"></span> Orange = in Pruefung</span>
+                    <span class="legend-item"><span class="dot spc-prep"></span> Gelb = SPC Prep</span>
                     <span class="legend-item"><span class="dot red"></span> Rot = FP/Rejected</span>
                     <span class="legend-item"><span class="dot violet"></span> Violett-Ring = HZ-Fokus</span>
                     <span class="legend-item">Weisser Ring = ausgewaehlt</span>
@@ -3416,25 +3486,25 @@
           kpi_total_sub: "aus Manifest",
           kpi_green: "Gruen",
           kpi_green_sub: "SPC-Kandidaten",
-          kpi_yellow: "Gelb",
-          kpi_yellow_sub: "normales Recheck-Gelb",
+          kpi_yellow: "Orange",
+          kpi_yellow_sub: "normales Recheck-Orange",
           kpi_spc_prep: "SPC Prep",
-          kpi_spc_prep_sub: "gelb getrennt",
+          kpi_spc_prep_sub: "gelb markiert",
           kpi_red: "Rot",
           kpi_red_sub: "FP/Systematik",
           kpi_violet: "Violett",
           kpi_violet_sub: "HZ/Top-Tier",
           filter_all: "Alle",
           filter_green: "Gruen",
-          filter_yellow: "Gelb",
+          filter_yellow: "Orange",
           filter_spc_prep: "SPC Prep",
           filter_red: "Rot",
           filter_violet: "Violett",
           curves_filter_violet: "HZ/Violett",
           curves_filter_green: "Gruen",
           map_legend_green: "Gruen = Kandidat",
-          map_legend_yellow: "Gelb = in Pruefung",
-          map_legend_spc_prep: "SPC Prep gelb",
+          map_legend_yellow: "Orange = in Pruefung",
+          map_legend_spc_prep: "Gelb = SPC Prep",
           map_legend_red: "Rot = FP/Rejected",
           map_legend_violet: "Violett-Ring = HZ-Fokus",
           map_legend_selected: "Weisser Ring = ausgewaehlt",
@@ -3619,25 +3689,25 @@
           kpi_total_sub: "from manifest",
           kpi_green: "Green",
           kpi_green_sub: "SPC candidates",
-          kpi_yellow: "Yellow",
-          kpi_yellow_sub: "ordinary yellow recheck",
+          kpi_yellow: "Orange",
+          kpi_yellow_sub: "ordinary orange recheck",
           kpi_spc_prep: "SPC Prep",
-          kpi_spc_prep_sub: "yellow separated",
+          kpi_spc_prep_sub: "marked yellow",
           kpi_red: "Red",
           kpi_red_sub: "FP/systematics",
           kpi_violet: "Violet",
           kpi_violet_sub: "HZ/top-tier",
           filter_all: "All",
           filter_green: "Green",
-          filter_yellow: "Yellow",
+          filter_yellow: "Orange",
           filter_spc_prep: "SPC Prep",
           filter_red: "Red",
           filter_violet: "Violet",
           curves_filter_violet: "HZ/Violet",
           curves_filter_green: "Green",
           map_legend_green: "Green = candidate",
-          map_legend_yellow: "Yellow = under review",
-          map_legend_spc_prep: "SPC Prep yellow",
+          map_legend_yellow: "Orange = under review",
+          map_legend_spc_prep: "Yellow = SPC Prep",
           map_legend_red: "Red = FP/rejected",
           map_legend_violet: "Violet ring = HZ focus",
           map_legend_selected: "White ring = selected",
@@ -3822,25 +3892,25 @@
           kpi_total_sub: "du manifeste",
           kpi_green: "Vert",
           kpi_green_sub: "candidats SPC",
-          kpi_yellow: "Jaune",
-          kpi_yellow_sub: "jaune de reverification",
+          kpi_yellow: "Orange",
+          kpi_yellow_sub: "orange de reverification",
           kpi_spc_prep: "SPC Prep",
-          kpi_spc_prep_sub: "jaune separe",
+          kpi_spc_prep_sub: "marque jaune",
           kpi_red: "Rouge",
           kpi_red_sub: "FP/systematiques",
           kpi_violet: "Violet",
           kpi_violet_sub: "HZ/top-tier",
           filter_all: "Tous",
           filter_green: "Vert",
-          filter_yellow: "Jaune",
+          filter_yellow: "Orange",
           filter_spc_prep: "SPC Prep",
           filter_red: "Rouge",
           filter_violet: "Violet",
           curves_filter_violet: "HZ/Violet",
           curves_filter_green: "Vert",
           map_legend_green: "Vert = candidat",
-          map_legend_yellow: "Jaune = en verification",
-          map_legend_spc_prep: "SPC Prep jaune",
+          map_legend_yellow: "Orange = en verification",
+          map_legend_spc_prep: "Jaune = SPC Prep",
           map_legend_red: "Rouge = FP/rejete",
           map_legend_violet: "Anneau violet = focus HZ",
           map_legend_selected: "Anneau blanc = selectionne",
@@ -4474,6 +4544,8 @@
         visitorKpis: document.getElementById("visitorKpis"),
         labelLegendRows: document.getElementById("labelLegendRows"),
         topCandidateRows: document.getElementById("topCandidateRows"),
+        followupCandidateRows: document.getElementById("followupCandidateRows"),
+        followupCandidateCount: document.getElementById("followupCandidateCount"),
         visitorTimeline: document.getElementById("visitorTimeline"),
         yellowSelectedReason: document.getElementById("yellowSelectedReason"),
         matrixStats: document.getElementById("matrixStats"),
@@ -5502,7 +5574,7 @@
         const explicit = String(candidate.color || "").toLowerCase();
         const raw = String(candidate.baseColorLabel || "").toLowerCase();
         if (explicit === "green" || raw.includes("gruen") || raw.includes("green") || raw.includes("vert")) return t("filter_green");
-        if (explicit === "yellow" || raw.includes("gelb") || raw.includes("yellow") || raw.includes("jaune")) return t("filter_yellow");
+        if (explicit === "yellow" || raw.includes("gelb") || raw.includes("yellow") || raw.includes("jaune") || raw.includes("orange")) return t("filter_yellow");
         if (explicit === "red" || raw.includes("rot") || raw.includes("red") || raw.includes("rouge")) return t("filter_red");
         if (candidate.isViolet || raw.includes("violett") || raw.includes("violet")) return t("filter_violet");
         return candidate.baseColorLabel || "-";
@@ -5834,6 +5906,26 @@
           .slice(0, 20);
       }
 
+      function followupCandidates() {
+        return [...(data.candidates || [])]
+          .filter((candidate) => (
+            isSpcPrepCandidate(candidate) ||
+            isRvNeeded(candidate) ||
+            isSpcStrong(candidate) ||
+            (
+              candidate.followupStrength === "STRONG" &&
+              /FOLLOWUP|HIGH_VALUE_HZ_RECHECK|SPC/.test(matrixText(candidate)) &&
+              !/EB_RISK|REJECTED|IGNORE/.test(matrixText(candidate))
+            )
+          ))
+          .sort((a, b) => (
+            (followupRank(a) - followupRank(b))
+            || (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
+            || (hzPriority(a) - hzPriority(b))
+            || (Number(a.distance || 0) - Number(b.distance || 0))
+          ));
+      }
+
       function renderVisitorKpis() {
         const candidates = publicVisibleCandidates();
         const tess = countWhere(candidates, (candidate) => expectedTransits(candidate) > 0 || Number(candidate.matrixSectors || 0) > 0);
@@ -5886,10 +5978,11 @@
         const rows = top20Candidates();
         if (!rows.length) {
           els.topCandidateRows.innerHTML = `<tr><td colspan="12">Aktuell keine oeffentlich freigegebenen ExoFOP-/SPC-Kandidaten. Interne Prep-Faelle liegen im Admin-Bereich.</td></tr>`;
+          renderFollowupCandidates();
           return;
         }
         els.topCandidateRows.innerHTML = rows.map((candidate, index) => {
-          const rowClass = expectedTransits(candidate) < 5 ? "yellow" : candidateVisualClass(candidate);
+          const rowClass = candidateVisualClass(candidate);
           return `
             <tr data-profile-tic="${candidate.tic}">
               <td>${index + 1}</td>
@@ -5907,6 +6000,21 @@
             </tr>
           `;
         }).join("");
+        renderFollowupCandidates();
+      }
+
+      function renderFollowupCandidates() {
+        const rows = followupCandidates();
+        els.followupCandidateCount.textContent = formatNumber(rows.length);
+        els.followupCandidateRows.innerHTML = rows.length ? rows.map((candidate) => `
+          <button class="followup-item" type="button" data-followup-tic="${candidate.tic}">
+            <strong>TIC ${candidate.tic}</strong>
+            <span class="pill ${candidateVisualClass(candidate)}">${candidateLabel(candidate)}</span>
+            <span class="followup-meta">
+              Evidence ${formatMaybe(candidate.evidenceScore, 0)} · ${formatMaybe(candidate.hz)} · ${formatFloat(candidate.distance, 1)} ly · ${formatMaybe(candidate.matrixSectors ?? candidate.observedSectorCount ?? candidate.cleanSectors)} Sektoren
+            </span>
+          </button>
+        `).join("") : '<span class="muted">Keine Follow-up-Kandidaten.</span>';
       }
 
       function renderYellowReasonPanel() {
@@ -8068,6 +8176,16 @@
         const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.profileTic));
         if (candidate) {
           selectCandidate(candidate, "profile");
+          scrollToPanel("mapPanel");
+        }
+      });
+
+      els.followupCandidateRows.addEventListener("click", (event) => {
+        const row = event.target.closest("[data-followup-tic]");
+        if (!row) return;
+        const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.followupTic));
+        if (candidate) {
+          selectCandidate(candidate, "followup");
           scrollToPanel("mapPanel");
         }
       });
