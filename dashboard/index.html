@@ -2572,6 +2572,166 @@
           flex: 1;
         }
       }
+
+      /* Final Decision Panel */
+      .final-decision-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+      .final-decision-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        cursor: pointer;
+      }
+      .final-decision-header:hover {
+        background: var(--soft);
+      }
+      .final-decision-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 760;
+      }
+      .final-decision-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 780;
+        text-transform: uppercase;
+      }
+      .final-decision-badge.exofop_candidate {
+        background: #d4edda;
+        color: #155724;
+      }
+      .final-decision-badge.data_limited_sectors,
+      .final-decision-badge.data_limited_transits {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .final-decision-badge.no_planet {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .final-decision-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+      }
+      td .final-decision-badge {
+        display: inline-block;
+      }
+      .final-decision-content {
+        padding: 16px;
+        background: var(--surface);
+      }
+      .final-decision-reason {
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 16px;
+        line-height: 1.5;
+      }
+      .final-decision-matrix {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .matrix-cell {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: var(--bg);
+      }
+      .matrix-cell-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .matrix-cell-value {
+        font-weight: 760;
+        font-size: 14px;
+      }
+      .matrix-cell-value.weak { color: var(--red); }
+      .matrix-cell-value.medium { color: var(--gold); }
+      .matrix-cell-value.strong { color: var(--green); }
+      .matrix-cell-value.low { color: var(--red); }
+      .matrix-cell-value.sufficient { color: var(--gold); }
+      .matrix-cell-value.high { color: var(--green); }
+      .final-decision-checks {
+        margin-bottom: 16px;
+      }
+      .check-group {
+        margin-bottom: 12px;
+      }
+      .check-group-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .check-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .check-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        background: var(--bg);
+      }
+      .check-item.passed {
+        background: #d4edda;
+        color: #155724;
+      }
+      .check-item.warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .check-item.failed {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .check-item.not_run {
+        background: #e2e3e5;
+        color: #6c757d;
+      }
+      .final-decision-next {
+        padding: 12px;
+        border-radius: 6px;
+        background: var(--soft);
+        font-size: 13px;
+      }
+      .final-decision-next-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .final-decision-blockers {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #f8d7da;
+        font-size: 13px;
+      }
+      .blockers-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #721c24;
+        margin-bottom: 4px;
+      }
+
     </style>
   </head>
   <body>
@@ -7849,6 +8009,99 @@
         }
       }
 
+
+      function renderFinalDecisionPanel(candidate) {
+        const fd = candidate.finalDecision;
+        if (!fd) return "";
+        
+        const statusClass = (fd.status || "").toLowerCase().replace(/_/g, "-");
+        const statusLabel = fd.status || "UNKNOWN";
+        
+        const passedChecks = fd.passed_checks || [];
+        const warningChecks = fd.warning_checks || [];
+        const failedChecks = fd.failed_checks || [];
+        const notRunChecks = fd.not_run_checks || [];
+        
+        const signalQuality = fd.signal_quality || "unknown";
+        const dataQuality = fd.data_quality || "unknown";
+        
+        return `
+          <div class="final-decision-panel">
+            <div class="final-decision-header">
+              <div class="final-decision-title">
+                <span>Final Decision Pipeline</span>
+                <span class="final-decision-badge ${statusClass}">${statusLabel}</span>
+              </div>
+            </div>
+            <div class="final-decision-content">
+              <div class="final-decision-reason">${fd.reason || ""}</div>
+              
+              <div class="final-decision-matrix">
+                <div class="matrix-cell">
+                  <div class="matrix-cell-label">Signal Quality</div>
+                  <div class="matrix-cell-value ${signalQuality}">${signalQuality}</div>
+                </div>
+                <div class="matrix-cell">
+                  <div class="matrix-cell-label">Data Quality</div>
+                  <div class="matrix-cell-value ${dataQuality}">${dataQuality}</div>
+                </div>
+              </div>
+              
+              ${(passedChecks.length > 0 || warningChecks.length > 0 || failedChecks.length > 0 || notRunChecks.length > 0) ? `
+              <div class="final-decision-checks">
+                ${passedChecks.length > 0 ? `
+                <div class="check-group">
+                  <div class="check-group-title">Passed Checks</div>
+                  <div class="check-list">
+                    ${passedChecks.map(check => `<span class="check-item passed">✓ ${check}</span>`).join("")}
+                  </div>
+                </div>
+                ` : ""}
+                ${warningChecks.length > 0 ? `
+                <div class="check-group">
+                  <div class="check-group-title">Warnings</div>
+                  <div class="check-list">
+                    ${warningChecks.map(check => `<span class="check-item warning">⚠ ${check}</span>`).join("")}
+                  </div>
+                </div>
+                ` : ""}
+                ${failedChecks.length > 0 ? `
+                <div class="check-group">
+                  <div class="check-group-title">Failed Checks</div>
+                  <div class="check-list">
+                    ${failedChecks.map(check => `<span class="check-item failed">✗ ${check}</span>`).join("")}
+                  </div>
+                </div>
+                ` : ""}
+                ${notRunChecks.length > 0 ? `
+                <div class="check-group">
+                  <div class="check-group-title">Not Run</div>
+                  <div class="check-list">
+                    ${notRunChecks.map(check => `<span class="check-item not_run">○ ${check}</span>`).join("")}
+                  </div>
+                </div>
+                ` : ""}
+              </div>
+              ` : ""}
+              
+              ${fd.next_action ? `
+              <div class="final-decision-next">
+                <div class="final-decision-next-label">Next Action</div>
+                <div>${fd.next_action}</div>
+              </div>
+              ` : ""}
+              
+              ${(fd.blockers || []).length > 0 ? `
+              <div class="final-decision-blockers">
+                <div class="blockers-title">Blockers</div>
+                <div>${fd.blockers.join(", ")}</div>
+              </div>
+              ` : ""}
+            </div>
+          </div>
+        `;
+      }
+
       function renderSelected() {
         const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
         if (!candidate) return;
@@ -7874,6 +8127,7 @@
           candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
         ].filter(Boolean).join("");
         els.selectedCard.innerHTML = `
+          ${renderFinalDecisionPanel(candidate)}
           <div class="selected-title">
             <strong>TIC ${candidate.tic}</strong>
             <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
@@ -8210,6 +8464,7 @@
           <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
             <td><strong>TIC ${candidate.tic}</strong></td>
             <td><span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span></td>
+            <td>${candidate.finalDecision ? `<span class="final-decision-badge ${(candidate.finalDecision.status || "").toLowerCase().replace(/_/g, "-")}">${candidate.finalDecision.status || "-"}</span>` : "-"}</td>
             <td>
               <div><strong>${formatMaybe(candidate.status)}</strong></div>
               <div class="mini">${formatMaybe(candidate.markierungsKlasse)}</div>

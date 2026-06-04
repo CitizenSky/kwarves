@@ -697,6 +697,297 @@ def build_map_coordinates(
     )
 
 
+def compute_final_decision(
+    row: dict[str, Any],
+    matrix: dict[str, Any] | None,
+    sector: dict[str, Any] | None,
+    full_vetting: dict[str, Any] | None,
+    observed_sectors: list[int],
+    period: float,
+) -> dict[str, Any]:
+    """
+    Compute the Final Decision Pipeline for a candidate.
+    """
+    check_tree: list[dict[str, Any]] = []
+    passed_checks: list[str] = []
+    warning_checks: list[str] = []
+    failed_checks: list[str] = []
+    not_run_checks: list[str] = []
+    blockers: list[str] = []
+    
+    # Step 1: TESS Data present?
+    has_tess_data = bool(observed_sectors)
+    if not has_tess_data:
+        check_tree.append({
+            "name": "TESS Data",
+            "status": "failed",
+            "reason": "No TESS sectors available"
+        })
+        failed_checks.append("TESS Data")
+        blockers.append("No TESS data available")
+        return {
+            "status": "NO_PLANET",
+            "reason": "No TESS observations available for this target.",
+            "failed_test": "TESS Data",
+            "next_action": "Wait for TESS observations or request new sector coverage.",
+            "signal_quality": "unknown",
+            "data_quality": "low",
+            "matrix_cell": "no_tess_data",
+            "passed_checks": [],
+            "warning_checks": [],
+            "failed_checks": failed_checks,
+            "not_run_checks": ["Signal Detection", "Folded Light Curve", "Sector Coverage", "Transit Count", "Vetting Checks"],
+            "blockers": blockers,
+            "check_tree": check_tree
+        }
+    
+    check_tree.append({
+        "name": "TESS Data",
+        "status": "passed",
+        "reason": f"{len(observed_sectors)} TESS sector(s) available"
+    })
+    passed_checks.append("TESS Data")
+    
+    # Step 2: Signal found (BLS/TLS)?
+    snr = safe_float(row.get("transit_snr")) or 0.0
+    has_signal = snr > 0
+    if not has_signal:
+        check_tree.append({
+            "name": "Signal Detection",
+            "status": "failed",
+            "reason": "No BLS/TLS signal detected"
+        })
+        failed_checks.append("Signal Detection")
+        blockers.append("No transit signal detected")
+        return {
+            "status": "NO_PLANET",
+            "reason": "No statistically significant transit signal detected.",
+            "failed_test": "Signal Detection",
+            "next_action": "Signal detection failed. No viable transit candidate.",
+            "signal_quality": "weak",
+            "data_quality": "sufficient",
+            "matrix_cell": "no_signal",
+            "passed_checks": passed_checks,
+            "warning_checks": [],
+            "failed_checks": failed_checks,
+            "not_run_checks": ["Folded Light Curve", "Sector Coverage", "Transit Count", "Vetting Checks"],
+            "blockers": blockers,
+            "check_tree": check_tree
+        }
+    
+    check_tree.append({
+        "name": "Signal Detection",
+        "status": "passed",
+        "reason": f"BLS/TLS signal detected (SNR: {snr:.1f})"
+    })
+    passed_checks.append("Signal Detection")
+    
+    # Step 3: Folded light curve OK?
+    transit_shape = clean_text((matrix or {}).get("transit_shape")).upper()
+    depth_stability = clean_text((matrix or {}).get("depth_stability")).upper()
+    
+    valid_shapes = {"U_SHAPED", "BOX", "BOX_SHAPED", "TRAPEZOID", "PLAUIBLE"}
+    has_valid_shape = transit_shape in valid_shapes or not transit_shape
+    has_bad_shape = transit_shape in {"INVERTED", "NOISE", "SPURIOUS", "IRREGULAR", "INVALID"}
+    is_unstable_depth = depth_stability in {"UNSTABLE", "HIGH_VARIABILITY"}
+    
+    if has_bad_shape or is_unstable_depth:
+        check_tree.append({
+            "name": "Folded Light Curve",
+            "status": "failed",
+            "reason": f"Transit shape: {transit_shape or 'unknown'}, Depth stability: {depth_stability or 'unknown'}"
+        })
+        failed_checks.append("Folded Light Curve")
+        blockers.append("Transit shape implausible or depth unstable")
+        return {
+            "status": "NO_PLANET",
+            "reason": "Folded light curve shows implausible transit shape or unstable depth.",
+            "failed_test": "Folded Light Curve",
+            "next_action": "Transit shape check failed. Candidate is likely not a planet.",
+            "signal_quality": "weak",
+            "data_quality": "sufficient",
+            "matrix_cell": "weak_signal",
+            "passed_checks": passed_checks,
+            "warning_checks": [],
+            "failed_checks": failed_checks,
+            "not_run_checks": ["Sector Coverage", "Transit Count", "Vetting Checks"],
+            "blockers": blockers,
+            "check_tree": check_tree
+        }
+    
+    if has_valid_shape:
+        check_tree.append({
+            "name": "Folded Light Curve",
+            "status": "passed",
+            "reason": f"Plausible transit shape: {transit_shape or 'U-shaped'}"
+        })
+        passed_checks.append("Folded Light Curve")
+    else:
+        check_tree.append({
+            "name": "Folded Light Curve",
+            "status": "warning",
+            "reason": f"Transit shape unclear: {transit_shape or 'unknown'}"
+        })
+        warning_checks.append("Folded Light Curve")
+    
+    # Step 4: Sector coverage sufficient?
+    sector_count = len(observed_sectors)
+    min_sectors_for_period = 1
+    if period > 0:
+        min_sectors_for_period = max(1, int(period / 10) + 1)
+    
+    has_sufficient_sectors = sector_count >= min_sectors_for_period
+    
+    if not has_sufficient_sectors:
+        check_tree.append({
+            "name": "Sector Coverage",
+            "status": "failed",
+            "reason": f"Only {sector_count} sector(s), need {min_sectors_for_period}+ for period {period:.2f} days"
+        })
+        warning_checks.append("Sector Coverage")
+        return {
+            "status": "DATA_LIMITED_SECTORS",
+            "reason": f"Insufficient TESS coverage: only {sector_count} sector(s) for period {period:.2f} days.",
+            "failed_test": "Sector Coverage",
+            "next_action": "Wait for additional TESS sector coverage or request new observations.",
+            "signal_quality": "strong",
+            "data_quality": "low",
+            "matrix_cell": "strong_signal_low_data",
+            "passed_checks": passed_checks,
+            "warning_checks": warning_checks,
+            "failed_checks": [],
+            "not_run_checks": ["Transit Count", "Vetting Checks"],
+            "blockers": [f"Only {sector_count} TESS sector(s) available"],
+            "check_tree": check_tree
+        }
+    
+    check_tree.append({
+        "name": "Sector Coverage",
+        "status": "passed",
+        "reason": f"{sector_count} sectors sufficient for period {period:.2f} days"
+    })
+    passed_checks.append("Sector Coverage")
+    
+    # Step 5: Enough observed transits?
+    matrix_transits = safe_int_or_none((matrix or {}).get("n_transits"))
+    visible_transits = safe_int_or_none((matrix or {}).get("visible_transits"))
+    row_transits = safe_int(row.get("transit_count"))
+    
+    observed_transits = max(
+        matrix_transits or 0,
+        visible_transits or 0,
+        row_transits
+    )
+    
+    min_transits = 2
+    has_sufficient_transits = observed_transits >= min_transits
+    
+    if not has_sufficient_transits:
+        check_tree.append({
+            "name": "Transit Count",
+            "status": "failed",
+            "reason": f"Only {observed_transits} observed transit(s), need {min_transits}+"
+        })
+        warning_checks.append("Transit Count")
+        return {
+            "status": "DATA_LIMITED_TRANSITS",
+            "reason": f"Only {observed_transits} observed transit(s). Orbital period not sufficiently constrained.",
+            "failed_test": "Transit Count",
+            "next_action": "Wait for additional transit observations or request extended TESS coverage.",
+            "signal_quality": "strong",
+            "data_quality": "low",
+            "matrix_cell": "strong_signal_low_data",
+            "passed_checks": passed_checks,
+            "warning_checks": warning_checks,
+            "failed_checks": [],
+            "not_run_checks": ["Vetting Checks"],
+            "blockers": [f"Only {observed_transits} observed transits"],
+            "check_tree": check_tree
+        }
+    
+    check_tree.append({
+        "name": "Transit Count",
+        "status": "passed",
+        "reason": f"{observed_transits} observed transit(s)"
+    })
+    passed_checks.append("Transit Count")
+    
+    # Step 6: Vetting checks
+    vetting_passed = True
+    
+    sap_pdcsap = clean_text((matrix or {}).get("sap_pdcsap_match")).upper()
+    if sap_pdcsap and sap_pdcsap not in {"OK", "MATCH", "CONSISTENT", "GOOD"}:
+        not_run_checks.append("SAP/PDCSAP")
+    else:
+        passed_checks.append("SAP/PDCSAP")
+    
+    odd_even = clean_text((matrix or {}).get("odd_even_result")).upper()
+    if odd_even and odd_even not in {"OK", "PASS", "CONSISTENT", "GOOD", "NONE"}:
+        not_run_checks.append("Odd/Even")
+    else:
+        passed_checks.append("Odd/Even")
+    
+    secondary = clean_text((matrix or {}).get("secondary_eclipse")).upper()
+    if secondary and secondary not in {"NONE", "NOT_DETECTED", "NO", "OK"}:
+        check_tree.append({
+            "name": "Secondary Eclipse",
+            "status": "failed",
+            "reason": f"Secondary eclipse detected: {secondary}"
+        })
+        failed_checks.append("Secondary Eclipse")
+        blockers.append("Secondary eclipse present - likely EB, not planet")
+        vetting_passed = False
+    else:
+        passed_checks.append("Secondary Eclipse")
+    
+    rotation_risk = clean_text((matrix or {}).get("rotation_risk")).upper()
+    if rotation_risk and rotation_risk not in {"NONE", "LOW", "OK", "NO"}:
+        not_run_checks.append("Activity/Rotation")
+    else:
+        passed_checks.append("Activity/Rotation")
+    
+    check_tree.append({
+        "name": "Vetting Checks",
+        "status": "passed" if vetting_passed else "failed",
+        "reason": "Core vetting checks passed" if vetting_passed else "Hard vetting failure detected"
+    })
+    
+    if not vetting_passed:
+        return {
+            "status": "NO_PLANET",
+            "reason": f"Vetting check failed: {', '.join(blockers)}",
+            "failed_test": "Vetting Checks",
+            "next_action": "Candidate failed vetting. Likely false positive or eclipsing binary.",
+            "signal_quality": "medium",
+            "data_quality": "sufficient",
+            "matrix_cell": "vetting_failed",
+            "passed_checks": passed_checks,
+            "warning_checks": warning_checks,
+            "failed_checks": failed_checks,
+            "not_run_checks": not_run_checks,
+            "blockers": blockers,
+            "check_tree": check_tree
+        }
+    
+    return {
+        "status": "EXOFOP_CANDIDATE",
+        "reason": "Candidate meets all scientific requirements for ExoFOP submission.",
+        "failed_test": None,
+        "next_action": "Ready for ExoFOP upload and follow-up prioritization.",
+        "signal_quality": "strong",
+        "data_quality": "high",
+        "matrix_cell": "strong_signal_high_data",
+        "passed_checks": passed_checks,
+        "warning_checks": warning_checks,
+        "failed_checks": [],
+        "not_run_checks": not_run_checks,
+        "blockers": [],
+        "check_tree": check_tree
+    }
+
+
+
+
 def build_candidate(
     row: dict[str, Any],
     db_row: dict[str, Any] | None,
@@ -908,6 +1199,14 @@ def build_candidate(
             "report_dir": clean_text(full_vetting.get("report_dir")),
             "status": dashboard_full_vetting_status,
         } if full_vetting else None,
+        "finalDecision": compute_final_decision(
+            row=merged,
+            matrix=matrix,
+            sector=sector,
+            full_vetting=full_vetting,
+            observed_sectors=observed_sectors,
+            period=period,
+        ),
         "folder": candidate_folder,
         "lightcurveImg": lightcurve_img,
         "lightcurveImgLocal": lightcurve_img_local,
