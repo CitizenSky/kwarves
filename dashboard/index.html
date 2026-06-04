@@ -2732,6 +2732,178 @@
         margin-bottom: 4px;
       }
 
+
+      /* Final Decision Redesign */
+      .final-decision-panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+      .fd-header {
+        padding: 16px 20px;
+        background: var(--soft);
+        border-bottom: 1px solid var(--line);
+      }
+      .fd-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .fd-title strong {
+        font-size: 14px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .fd-subtitle {
+        font-size: 15px;
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      .final-decision-badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 780;
+        text-transform: uppercase;
+      }
+      .final-decision-badge.exofop_candidate { background: #d4edda; color: #155724; }
+      .final-decision-badge.data_limited_sectors, .final-decision-badge.data_limited_transits { background: #fff3cd; color: #856404; }
+      .final-decision-badge.no_planet { background: #f8d7da; color: #721c24; }
+      
+      .fd-matrix {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .matrix-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .matrix-axis-y {
+        width: 100px;
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .matrix-quadrant {
+        flex: 1;
+        padding: 16px 20px;
+        border-radius: 8px;
+        border: 2px solid var(--line);
+        background: var(--bg);
+      }
+      .quadrant-label {
+        font-size: 18px;
+        font-weight: 780;
+        text-transform: uppercase;
+      }
+      .quadrant-desc {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .matrix-x-axis {
+        text-align: center;
+        font-size: 11px;
+        color: var(--muted);
+        margin-left: 112px;
+      }
+      
+      .fd-section {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .fd-section:last-of-type {
+        border-bottom: none;
+      }
+      .fd-section-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 12px;
+        font-weight: 760;
+      }
+      .check-tree-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 8px 0;
+        font-size: 14px;
+      }
+      .check-reason {
+        font-size: 12px;
+        color: var(--muted);
+        margin-left: 24px;
+      }
+      
+      .heatmap-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .heatmap-cell {
+        padding: 10px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+      }
+      .heatmap-legend {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+      }
+      
+      .fd-next-action {
+        padding: 16px 20px;
+        background: #e8f5e9;
+        border-top: 1px solid var(--line);
+      }
+      .fd-next-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #2e7d32;
+        margin-bottom: 4px;
+      }
+      .fd-next-value {
+        font-size: 14px;
+        color: #1b5e20;
+      }
+      
+      .fd-blockers {
+        padding: 16px 20px;
+        background: #ffebee;
+        border-top: 1px solid var(--line);
+      }
+      .fd-blockers-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #c62828;
+        margin-bottom: 4px;
+      }
+      .fd-blockers-list {
+        font-size: 14px;
+        color: #b71c1c;
+      }
+
+
+      .details-grid.compact {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 16px 0;
+      }
+      .details-grid.compact .detail {
+        padding: 8px;
+      }
     </style>
   </head>
   <body>
@@ -3450,6 +3622,7 @@
                   <tr>
                     <th>TIC</th>
                     <th>Farbe</th>
+                    <th>Final</th>
                     <th>Status</th>
                     <th>Matrix</th>
                     <th>Evidence</th>
@@ -7133,7 +7306,7 @@
               curveOpenCandidate: "Kandidat markieren",
               tableTitle: "Candidate Matrix",
               tableSub: "Die oeffentliche Matrix zeigt Kandidaten nach sichtbarer Risikofarbe. ExoFOP-Readiness steht nur im eingeschraenkten Review-Bereich.",
-              tableHeaders: ["TIC", "Farbe", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
+              tableHeaders: ["TIC", "Farbe", "Final", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
               docsTitle: "Projektlogik und Skripte",
               docsSub: "Wie jedes Level Kandidaten prueft, welche Skripte es stuetzen und warum die Evidenz vorlaeufig bleibt.",
               docsRefresh: "Dokuseite aktualisieren",
@@ -8011,98 +8184,119 @@
 
 
       function renderFinalDecisionPanel(candidate) {
-        const fd = candidate.finalDecision;
-        if (!fd) return "";
-        
-        const statusClass = (fd.status || "").toLowerCase().replace(/_/g, "-");
-        const statusLabel = fd.status || "UNKNOWN";
-        
-        const passedChecks = fd.passed_checks || [];
-        const warningChecks = fd.warning_checks || [];
-        const failedChecks = fd.failed_checks || [];
-        const notRunChecks = fd.not_run_checks || [];
-        
-        const signalQuality = fd.signal_quality || "unknown";
-        const dataQuality = fd.data_quality || "unknown";
-        
-        return `
-          <div class="final-decision-panel">
-            <div class="final-decision-header">
-              <div class="final-decision-title">
-                <span>Final Decision Pipeline</span>
-                <span class="final-decision-badge ${statusClass}">${statusLabel}</span>
-              </div>
-            </div>
-            <div class="final-decision-content">
-              <div class="final-decision-reason">${fd.reason || ""}</div>
-              
-              <div class="final-decision-matrix">
-                <div class="matrix-cell">
-                  <div class="matrix-cell-label">Signal Quality</div>
-                  <div class="matrix-cell-value ${signalQuality}">${signalQuality}</div>
-                </div>
-                <div class="matrix-cell">
-                  <div class="matrix-cell-label">Data Quality</div>
-                  <div class="matrix-cell-value ${dataQuality}">${dataQuality}</div>
-                </div>
-              </div>
-              
-              ${(passedChecks.length > 0 || warningChecks.length > 0 || failedChecks.length > 0 || notRunChecks.length > 0) ? `
-              <div class="final-decision-checks">
-                ${passedChecks.length > 0 ? `
-                <div class="check-group">
-                  <div class="check-group-title">Passed Checks</div>
-                  <div class="check-list">
-                    ${passedChecks.map(check => `<span class="check-item passed">✓ ${check}</span>`).join("")}
-                  </div>
-                </div>
-                ` : ""}
-                ${warningChecks.length > 0 ? `
-                <div class="check-group">
-                  <div class="check-group-title">Warnings</div>
-                  <div class="check-list">
-                    ${warningChecks.map(check => `<span class="check-item warning">⚠ ${check}</span>`).join("")}
-                  </div>
-                </div>
-                ` : ""}
-                ${failedChecks.length > 0 ? `
-                <div class="check-group">
-                  <div class="check-group-title">Failed Checks</div>
-                  <div class="check-list">
-                    ${failedChecks.map(check => `<span class="check-item failed">✗ ${check}</span>`).join("")}
-                  </div>
-                </div>
-                ` : ""}
-                ${notRunChecks.length > 0 ? `
-                <div class="check-group">
-                  <div class="check-group-title">Not Run</div>
-                  <div class="check-list">
-                    ${notRunChecks.map(check => `<span class="check-item not_run">○ ${check}</span>`).join("")}
-                  </div>
-                </div>
-                ` : ""}
-              </div>
-              ` : ""}
-              
-              ${fd.next_action ? `
-              <div class="final-decision-next">
-                <div class="final-decision-next-label">Next Action</div>
-                <div>${fd.next_action}</div>
-              </div>
-              ` : ""}
-              
-              ${(fd.blockers || []).length > 0 ? `
-              <div class="final-decision-blockers">
-                <div class="blockers-title">Blockers</div>
-                <div>${fd.blockers.join(", ")}</div>
-              </div>
-              ` : ""}
-            </div>
-          </div>
-        `;
-      }
+  var fd = candidate.finalDecision;
+  if (!fd) return "";
+  
+  var statusClass = (fd.status || "").toLowerCase().replace(/_/g, "-");
+  var statusLabel = fd.status || "UNKNOWN";
+  var statusGerman = statusLabel;
+  if (statusLabel === "EXOFOP_CANDIDATE") statusGerman = "ExoFOP bereit";
+  else if (statusLabel === "DATA_LIMITED_SECTORS") statusGerman = "Wenige Daten (Sektoren)";
+  else if (statusLabel === "DATA_LIMITED_TRANSITS") statusGerman = "Wenige Daten (Transits)";
+  else if (statusLabel === "NO_PLANET") statusGerman = "Kein Planet";
+  
+  var signalQuality = fd.signal_quality || "unknown";
+  var dataQuality = fd.data_quality || "unknown";
+  
+  var signalColor = "#66736f";
+  if (signalQuality === "weak") signalColor = "#bf3e36";
+  else if (signalQuality === "medium") signalColor = "#b88220";
+  else if (signalQuality === "strong") signalColor = "#147a68";
+  
+  var dataColor = "#66736f";
+  if (dataQuality === "low") dataColor = "#bf3e36";
+  else if (dataQuality === "sufficient") dataColor = "#b88220";
+  else if (dataQuality === "high") dataColor = "#147a68";
+  
+  var passed_checks = fd.passed_checks || [];
+  var warning_checks = fd.warning_checks || [];
+  var failed_checks = fd.failed_checks || [];
+  var not_run_checks = fd.not_run_checks || [];
+  
+  var checkTree = fd.check_tree || [];
+  var treeHtml = "";
+  for (var i = 0; i < checkTree.length; i++) {
+    var check = checkTree[i];
+    var statusIcon = "o";
+    var statusColor = "#66736f";
+    if (check.status === "passed") { statusIcon = String.fromCharCode(10003); statusColor = "#147a68"; }
+    else if (check.status === "warning") { statusIcon = String.fromCharCode(9888); statusColor = "#b88220"; }
+    else if (check.status === "failed") { statusIcon = String.fromCharCode(10007); statusColor = "#bf3e36"; }
+    
+    treeHtml += '<div class="check-tree-item" style="margin-left:' + (i * 20) + 'px">';
+    treeHtml += '<span style="color:' + statusColor + ';margin-right:8px">' + statusIcon + '</span>';
+    treeHtml += '<span>' + check.name + '</span>';
+    if (check.reason) {
+      treeHtml += '<div class="check-reason">' + check.reason + '</div>';
+    }
+    treeHtml += '</div>';
+  }
+  
+  var allChecks = [
+    { name: "TESS Data", status: passed_checks.indexOf("TESS Data") >= 0 ? "passed" : (warning_checks.indexOf("TESS Data") >= 0 ? "warning" : (failed_checks.indexOf("TESS Data") >= 0 ? "failed" : "not_run")) },
+    { name: "Signal Detection", status: passed_checks.indexOf("Signal Detection") >= 0 ? "passed" : (warning_checks.indexOf("Signal Detection") >= 0 ? "warning" : (failed_checks.indexOf("Signal Detection") >= 0 ? "failed" : "not_run")) },
+    { name: "Folded Light Curve", status: passed_checks.indexOf("Folded Light Curve") >= 0 ? "passed" : (warning_checks.indexOf("Folded Light Curve") >= 0 ? "warning" : (failed_checks.indexOf("Folded Light Curve") >= 0 ? "failed" : "not_run")) },
+    { name: "Sector Coverage", status: passed_checks.indexOf("Sector Coverage") >= 0 ? "passed" : (warning_checks.indexOf("Sector Coverage") >= 0 ? "warning" : (failed_checks.indexOf("Sector Coverage") >= 0 ? "failed" : "not_run")) },
+    { name: "Transit Count", status: passed_checks.indexOf("Transit Count") >= 0 ? "passed" : (warning_checks.indexOf("Transit Count") >= 0 ? "warning" : (failed_checks.indexOf("Transit Count") >= 0 ? "failed" : "not_run")) },
+    { name: "SAP/PDCSAP", status: passed_checks.indexOf("SAP/PDCSAP") >= 0 ? "passed" : (warning_checks.indexOf("SAP/PDCSAP") >= 0 ? "warning" : (failed_checks.indexOf("SAP/PDCSAP") >= 0 ? "failed" : "not_run")) },
+    { name: "Odd/Even", status: passed_checks.indexOf("Odd/Even") >= 0 ? "passed" : (warning_checks.indexOf("Odd/Even") >= 0 ? "warning" : (failed_checks.indexOf("Odd/Even") >= 0 ? "failed" : "not_run")) },
+    { name: "Secondary Eclipse", status: passed_checks.indexOf("Secondary Eclipse") >= 0 ? "passed" : (warning_checks.indexOf("Secondary Eclipse") >= 0 ? "warning" : (failed_checks.indexOf("Secondary Eclipse") >= 0 ? "failed" : "not_run")) },
+    { name: "Activity/Rotation", status: passed_checks.indexOf("Activity/Rotation") >= 0 ? "passed" : (warning_checks.indexOf("Activity/Rotation") >= 0 ? "warning" : (failed_checks.indexOf("Activity/Rotation") >= 0 ? "failed" : "not_run")) }
+  ];
+  
+  var heatmapColors = {
+    "passed": "#147a68",
+    "warning": "#b88220",
+    "failed": "#bf3e36",
+    "not_run": "#e2e3e5"
+  };
+  
+  var heatmapHtml = "";
+  for (var j = 0; j < allChecks.length; j++) {
+    var c = allChecks[j];
+    heatmapHtml += '<div class="heatmap-cell" style="background:' + heatmapColors[c.status] + '">' + c.name + '</div>';
+  }
+  
+  var heatmapLegend = '<div class="heatmap-legend"><span style="color:#147a68">ok</span><span style="color:#b88220">warn</span><span style="color:#bf3e36">fail</span><span style="color:#6c757d">-</span></div>';
+  
+  var nextActionHtml = "";
+  if (fd.next_action) {
+    nextActionHtml = '<div class="fd-next-action"><div class="fd-next-label">Nachste Aktion</div><div class="fd-next-value">' + fd.next_action + '</div></div>';
+  }
+  
+  var blockersHtml = "";
+  var blockers = fd.blockers || [];
+  if (blockers.length > 0) {
+    blockersHtml = '<div class="fd-blockers"><div class="fd-blockers-label">Blocker</div><div class="fd-blockers-list">' + blockers.join(", ") + '</div></div>';
+  }
+  
+  var html = '<div class="final-decision-panel">';
+  html += '<div class="fd-header">';
+  html += '<div class="fd-title"><strong>FINAL DECISION</strong><span class="final-decision-badge ' + statusClass + '">' + statusGerman + '</span></div>';
+  html += '<div class="fd-subtitle">' + (fd.reason || "") + '</div>';
+  html += '</div>';
+  
+  html += '<div class="fd-matrix">';
+  html += '<div class="matrix-row"><div class="matrix-axis-y">Signalqualitat</div>';
+  html += '<div class="matrix-quadrant" style="border-color:' + signalColor + '">';
+  html += '<div class="quadrant-label">' + signalQuality.toUpperCase() + '</div>';
+  html += '<div class="quadrant-desc">Transit-Signal Qualitat</div></div></div>';
+  html += '<div class="matrix-row"><div class="matrix-axis-y">Datenqualitat</div>';
+  html += '<div class="matrix-quadrant" style="border-color:' + dataColor + '">';
+  html += '<div class="quadrant-label">' + dataQuality.toUpperCase() + '</div>';
+  html += '<div class="quadrant-desc">TESS Daten Umfang</div></div></div>';
+  html += '<div class="matrix-x-axis">Schwach - Stark</div>';
+  html += '</div>';
+  
+  html += '<div class="fd-section"><div class="fd-section-title">Prufbaum</div><div class="check-tree">' + treeHtml + '</div></div>';
+  html += '<div class="fd-section"><div class="fd-section-title">Evidence Heatmap</div><div class="heatmap-grid">' + heatmapHtml + '</div>' + heatmapLegend + '</div>';
+  html += nextActionHtml + blockersHtml;
+  html += '</div>';
+  
+  return html;
+}
 
-      function renderSelected() {
+function renderSelected() {
         const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
         if (!candidate) return;
         state.selected = candidate;
@@ -8133,55 +8327,18 @@
             <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
           </div>
           <div class="chips">${chips}</div>
-          <p>${candidate.reason}</p>
-          <div class="notice matrix-note">
-            <strong>Reason Tags</strong>
-            ${reasonTagList(candidate.reasonTags || [])}
-          </div>
-          <div class="notice matrix-note">
-            <strong>Next Check</strong>
-            ${nextCheckList(candidate.nextChecks || [])}
-          </div>
-          <div class="notice matrix-note">
-            <strong>TESS Recheck</strong>
-            <span>${recheckChip(candidate)} ${t("observed_label")}: ${formatSectorList(candidate.observedSectors, 10)} · ${t("current_label")}: ${candidate.currentSector ? `S${candidate.currentSector}` : "-"} · ${t("next_plan_label")}: ${candidate.nextPlannedSector ? `S${candidate.nextPlannedSector}` : "-"} · ${t("data_approx_label")}: ${candidate.estimatedDataAvailable ? formatDate(candidate.estimatedDataAvailable) : "-"}</span>
-          </div>
-          <div class="details-grid">
-            <div class="detail"><span>${t("detail_matrix_status")}</span><strong>${matrixStatus}</strong></div>
-            <div class="detail"><span>${t("detail_matrix_class")}</span><strong>${matrixClass}</strong></div>
-            <div class="detail"><span>${t("detail_evidence_score")}</span><strong>${evidence}</strong></div>
+          <div class="details-grid compact">
             <div class="detail"><span>${t("detail_distance")}</span><strong>${candidate.distance} ly</strong></div>
             <div class="detail"><span>${t("detail_period")}</span><strong>${candidate.period} d</strong></div>
             <div class="detail"><span>${t("detail_snr")}</span><strong>${candidate.snr}</strong></div>
             <div class="detail"><span>${t("detail_transits_visible")}</span><strong>${candidate.visibleTransits}/${candidate.transits}</strong></div>
-            <div class="detail"><span>${t("detail_matrix_transits")}</span><strong>${formatMaybe(candidate.matrixVisibleTransits, "-")}/${formatMaybe(candidate.matrixTransits, "-")} · S ${formatMaybe(candidate.matrixSectors, "-")}</strong></div>
             <div class="detail"><span>${t("detail_radius")}</span><strong>${candidate.radius || "-"} R_E</strong></div>
-            <div class="detail"><span>${t("detail_status")}</span><strong>${candidate.status || "-"}</strong></div>
             <div class="detail"><span>${t("detail_ra")}</span><strong>${raText}</strong></div>
             <div class="detail"><span>${t("detail_dec")}</span><strong>${decText}</strong></div>
-            <div class="detail"><span>${t("detail_map_source")}</span><strong>${mapSourceLabel(candidate)}</strong></div>
-            <div class="detail"><span>${t("detail_shape")}</span><strong>${formatMaybe(candidate.transitShape)}</strong></div>
-            <div class="detail"><span>${t("detail_sap_pdcsap")}</span><strong>${formatMaybe(candidate.sapPdcsapMatch)}</strong></div>
-            <div class="detail"><span>${t("detail_oddeven")}</span><strong>${formatMaybe(candidate.oddEvenResult)}</strong></div>
-            <div class="detail"><span>${t("detail_secondary")}</span><strong>${formatMaybe(candidate.secondaryEclipse)}</strong></div>
-            <div class="detail"><span>${t("detail_depth")}</span><strong>${depthText}</strong></div>
-            <div class="detail"><span>${t("detail_duration")}</span><strong>${durationText}</strong></div>
-            <div class="detail"><span>${t("detail_depth_stable")}</span><strong>${formatMaybe(candidate.depthStability)}</strong></div>
-            <div class="detail"><span>${t("detail_data_gap")}</span><strong>${formatMaybe(candidate.dataGapRisk)}</strong></div>
-            <div class="detail"><span>${t("detail_sector_edge")}</span><strong>${formatMaybe(candidate.sectorEdgeRisk)}</strong></div>
-            <div class="detail"><span>${t("detail_alias")}</span><strong>${formatMaybe(candidate.periodAliasRisk)}</strong></div>
-            <div class="detail"><span>${t("detail_rotation")}</span><strong>${formatMaybe(candidate.rotationRisk)}</strong></div>
-          </div>
-          <div class="notice matrix-note">
-            <strong>${t("matrix_reason_label")}</strong>
-            <span>${matrixReason}</span>
-          </div>
-          <div class="notice matrix-note">
-            <strong>${t("matrix_next_label")}</strong>
-            <span>${matrixNext}</span>
+            <div class="detail"><span>Sektoren</span><strong>${candidate.observedSectorCount || "-"}</strong></div>
           </div>
           <div class="notice">
-            ${t("path_prefix")}: ${candidate.folder || t("selected_path_missing")}
+            <strong>Ordner:</strong> ${candidate.folder || "-"}
           </div>
         `;
       }
@@ -8457,14 +8614,14 @@
         const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
         const term = els.globalSearch.value.trim().toLowerCase();
         if (!limited.length) {
-          els.rows.innerHTML = `<tr><td colspan="12">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
+          els.rows.innerHTML = `<tr><td colspan="13">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
           return;
         }
         els.rows.innerHTML = limited.map((candidate) => `
           <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
             <td><strong>TIC ${candidate.tic}</strong></td>
             <td><span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span></td>
-            <td>${candidate.finalDecision ? `<span class="final-decision-badge ${(candidate.finalDecision.status || "").toLowerCase().replace(/_/g, "-")}">${candidate.finalDecision.status || "-"}</span>` : "-"}</td>
+            <td>${candidate.finalDecision ? (function(){var s=candidate.finalDecision.status||"";var g=s;if(s==="EXOFOP_CANDIDATE")g="ExoFOP";else if(s==="DATA_LIMITED_SECTORS")g="Wenige Daten";else if(s==="DATA_LIMITED_TRANSITS")g="Wenige Transits";else if(s==="NO_PLANET")g="Kein Planet";return '<span class="final-decision-badge '+(s||"").toLowerCase().replace(/_/g,'-')+'">'+g+'</span>'})() : "-"}</td>
             <td>
               <div><strong>${formatMaybe(candidate.status)}</strong></div>
               <div class="mini">${formatMaybe(candidate.markierungsKlasse)}</div>
