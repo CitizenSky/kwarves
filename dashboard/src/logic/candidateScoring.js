@@ -147,7 +147,7 @@ export function top20Candidates() {
       || (statusPriority(a) - statusPriority(b))
       || (Number(a.distance || 0) - Number(b.distance || 0))
     ))
-    .slice(0, 20);
+    .slice(0, 5);
 }
 
 export function followupCandidates() {

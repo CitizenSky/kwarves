@@ -3,6 +3,10 @@ import { collapseButtonState, loadCollapsedPanelState, saveCollapsedPanelState }
 import { t, formatNumber, formatDate, formatDateTime, buildTessScheduleState } from './i18n.js';
 import { notificationSeverityClass, formatNotificationValue } from './logic/renderHelpers.js';
 import { colorClass } from './logic/colorFor.js';
+import { draw2dMap } from './components/starMap2D.js';
+import { resize3d } from './components/starMap3D.js';
+import { drawTessSector2d, updateTessSector3dData, resizeTessSector3d } from './components/tessMissionControl.js';
+import { renderVisitorCharts } from './main.js';
 
 let toastTimer;
 
@@ -35,6 +39,7 @@ export function setPanelCollapsed(panelId, collapsed, store = true) {
     window.requestAnimationFrame(() => renderVisitorCharts());
   }
   if (!collapsed && panelId === "mapPanel") {
+    void panel.clientHeight;
     window.requestAnimationFrame(() => {
       draw2dMap();
       resize3d();
