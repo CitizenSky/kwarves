@@ -11,6 +11,11 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,10 +35,10 @@ jobs:
 
       - run: npm run build
 
-      - name: Prepare artifact
+      - name: Prepare artifact (under repo root)
         run: |
-          mkdir -p _site/dashboard
-          cp -r dist/* _site/dashboard/
+          mkdir -p "$GITHUB_WORKSPACE"/_site/dashboard
+          cp -r dist/* "$GITHUB_WORKSPACE"/_site/dashboard/
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -42,9 +47,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
