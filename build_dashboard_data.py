@@ -5,13 +5,20 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 import math
 import os
+import shutil
 import sqlite3
+import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+_log = logging.getLogger("build_dashboard_data")
 
 PROJECT_ROOT = Path(os.environ.get("ASTRO_PROJECT_ROOT", "/Users/koni/astro_projects"))
 SCRIPT_ROOT = PROJECT_ROOT / "scripts"
@@ -199,10 +206,36 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def backup_existing(path: Path) -> None:
+    if not path.exists():
+        return
+    backup_dir = path.parent / "backup"
+    backup_dir.mkdir(exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = backup_dir / f"{path.name}.{stamp}"
+    shutil.copy2(path, backup_path)
+    _log.info("backed up %s -> %s", path.name, backup_path)
+
+
 def main() -> int:
-    db_rows = load_db_rows()
-    with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
-        manifest_rows = list(csv.DictReader(handle))
+    dry_run = "--dry-run" in sys.argv
+
+    _log.info("loading DB rows from %s", DB_PATH)
+    try:
+        db_rows = load_db_rows()
+    except sqlite3.OperationalError as exc:
+        _log.error("failed to open DB: %s", exc)
+        return 1
+    _log.info("loaded %d DB rows", len(db_rows))
+
+    _log.info("reading manifest from %s", MANIFEST_PATH)
+    try:
+        with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
+            manifest_rows = list(csv.DictReader(handle))
+    except FileNotFoundError:
+        _log.error("manifest not found: %s", MANIFEST_PATH)
+        return 1
+    _log.info("read %d manifest rows", len(manifest_rows))
 
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates = [
@@ -230,7 +263,7 @@ def main() -> int:
     }
 
     data = {
-        "generatedAt": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
+        "generatedAt": datetime.now().isoformat(timespec="seconds"),
         "summary": summary,
         "tree": build_tree(candidates),
         "candidates": candidates,
@@ -238,14 +271,27 @@ def main() -> int:
         "priorityCandidates": priority_candidates,
     }
 
-    OUT_PATH.write_text(
-        "window.ASTRO_DASHBOARD_DATA = "
-        + json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-        + ";\n",
-        encoding="utf-8",
-    )
-    print(f"wrote {OUT_PATH}")
-    print(json.dumps(summary, ensure_ascii=False))
+    if dry_run:
+        _log.info("dry-run: would write %s (%d candidates)", OUT_PATH.name, len(candidates))
+        _log.info("summary: %s", json.dumps(summary, ensure_ascii=False))
+        return 0
+
+    backup_existing(OUT_PATH)
+
+    try:
+        OUT_PATH.write_text(
+            "window.ASTRO_DASHBOARD_DATA = "
+            + json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+            + ";\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        _log.error("failed to write %s: %s", OUT_PATH, exc)
+        return 1
+
+    written_size = OUT_PATH.stat().st_size
+    _log.info("wrote %s (%d bytes, %d candidates)", OUT_PATH.name, written_size, len(candidates))
+    _log.info("summary: %s", json.dumps(summary, ensure_ascii=False))
     return 0
 
 
