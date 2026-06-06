@@ -5,7 +5,7 @@ import { renderCurveFilterCounts } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
 import { init3dMap, update3dData, resize3d } from './components/starMap3D.js';
 import { renderTable, renderTopCandidates, renderFollowupCandidates, renderVisitorKpis, renderKpis, filteredCandidates, publicCandidatePool, publicVisibleCandidates, setFollowupCollapsed } from './components/candidateList.js';
-import { renderSelected } from './components/candidateCard.js';
+import { renderSelected, renderYellowReasonPanel } from './components/candidateCard.js';
 import { renderMatrixStats, renderVisitorTimeline, renderLabelLegend } from './components/matrixView.js';
 import { renderCurves } from './components/lightcurveView.js';
 import { renderTess, drawTessSector2d, updateTessSector3dData, initTessSector3d, resizeTessSector3d, setTessCompareCollapsed } from './components/tessMissionControl.js';

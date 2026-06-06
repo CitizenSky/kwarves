@@ -1,6 +1,7 @@
 import { analytics, ensureCountryBucket, saveAnalyticsStore, loadAnalyticsStore, saveSelfFilterPreference, setupGlobalAnalytics } from './state.js';
 import { t, currentLocale } from './i18n.js';
 import { data } from './dataLoader.js';
+import { renderAdmin } from './components/followupPanel.js';
 
 export function countryNameFromCode(code) {
   const safeCode = String(code || "").toUpperCase();
