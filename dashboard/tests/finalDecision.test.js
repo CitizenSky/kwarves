@@ -1,0 +1,321 @@
+import { describe, it, expect } from 'vitest';
+import {
+  computeFinalDecision,
+  computeSignalQuality,
+  computeDataQuality,
+  checkTessData,
+  checkSignalDetection,
+  checkFoldedLightCurve,
+  checkSectorCoverage,
+  checkTransitCount,
+  checkOddEven,
+  checkSecondaryEclipse,
+  checkSapPdcsap,
+  checkActivityRotation,
+  runAllChecks,
+  MIN_SECTORS_FOR_DATA,
+  MIN_TRANSITS_FOR_DATA,
+  STRONG_SCORE,
+  MEDIUM_SCORE,
+  HIGH_SECTORS,
+  HIGH_TRANSITS,
+  SIGNAL_MIN_SCORE
+} from '../src/logic/finalDecision.js';
+
+function makeCandidate(overrides = {}) {
+  return {
+    tic: 123456789,
+    color: "yellow",
+    evidenceScore: 55,
+    status: "SPC-C",
+    matrixStatus: "NEEDS_MORE_DATA",
+    matrixClass: "SPC_C",
+    transitShape: "U_SHAPE",
+    sapPdcsapMatch: "OK",
+    oddEvenResult: "OK",
+    secondaryEclipse: "NO",
+    rotationRisk: "LOW",
+    observedSectorCount: 5,
+    matrixVisibleTransits: 4,
+    visibleTransits: 4,
+    isViolet: false,
+    hz: "KONSERVATIVE_HZ",
+    ...overrides
+  };
+}
+
+describe('checkTessData', () => {
+  it('passes when sectors are available', () => {
+    expect(checkTessData(makeCandidate({ observedSectorCount: 3 })).status).toBe("passed");
+  });
+  it('fails when no sectors', () => {
+    expect(checkTessData(makeCandidate({ observedSectorCount: 0 })).status).toBe("failed");
+  });
+  it('fails when sectors is null', () => {
+    expect(checkTessData(makeCandidate({ observedSectorCount: null })).status).toBe("failed");
+  });
+});
+
+describe('checkSignalDetection', () => {
+  it('passes with evidenceScore >= SIGNAL_MIN_SCORE', () => {
+    expect(checkSignalDetection(makeCandidate({ evidenceScore: SIGNAL_MIN_SCORE })).status).toBe("passed");
+  });
+  it('fails with evidenceScore < SIGNAL_MIN_SCORE', () => {
+    expect(checkSignalDetection(makeCandidate({ evidenceScore: SIGNAL_MIN_SCORE - 1 })).status).toBe("failed");
+  });
+  it('fails with null evidenceScore', () => {
+    expect(checkSignalDetection(makeCandidate({ evidenceScore: null })).status).toBe("failed");
+  });
+});
+
+describe('checkFoldedLightCurve', () => {
+  it('passes with U_SHAPE', () => {
+    expect(checkFoldedLightCurve(makeCandidate({ transitShape: "U_SHAPE" })).status).toBe("passed");
+  });
+  it('fails with V_SHAPE', () => {
+    expect(checkFoldedLightCurve(makeCandidate({ transitShape: "V_SHAPE" })).status).toBe("failed");
+  });
+  it('warns with UNKNOWN', () => {
+    expect(checkFoldedLightCurve(makeCandidate({ transitShape: "UNKNOWN" })).status).toBe("warning");
+  });
+  it('warns with ASYMMETRIC', () => {
+    expect(checkFoldedLightCurve(makeCandidate({ transitShape: "ASYMMETRIC" })).status).toBe("warning");
+  });
+});
+
+describe('checkSectorCoverage', () => {
+  it('passes with enough sectors', () => {
+    expect(checkSectorCoverage(makeCandidate({ observedSectorCount: MIN_SECTORS_FOR_DATA })).status).toBe("passed");
+  });
+  it('fails with too few sectors', () => {
+    expect(checkSectorCoverage(makeCandidate({ observedSectorCount: MIN_SECTORS_FOR_DATA - 1 })).status).toBe("failed");
+  });
+});
+
+describe('checkTransitCount', () => {
+  it('passes with enough transits', () => {
+    expect(checkTransitCount(makeCandidate({ matrixVisibleTransits: MIN_TRANSITS_FOR_DATA })).status).toBe("passed");
+  });
+  it('fails with too few transits', () => {
+    expect(checkTransitCount(makeCandidate({ matrixVisibleTransits: MIN_TRANSITS_FOR_DATA - 1 })).status).toBe("failed");
+  });
+  it('falls back to visibleTransits when matrixVisibleTransits missing', () => {
+    expect(checkTransitCount(makeCandidate({ matrixVisibleTransits: null, visibleTransits: 5 })).status).toBe("passed");
+  });
+});
+
+describe('checkOddEven', () => {
+  it('passes with OK', () => {
+    expect(checkOddEven(makeCandidate({ oddEvenResult: "OK" })).status).toBe("passed");
+  });
+  it('fails with BAD', () => {
+    expect(checkOddEven(makeCandidate({ oddEvenResult: "BAD" })).status).toBe("failed");
+  });
+  it('warns with BORDERLINE', () => {
+    expect(checkOddEven(makeCandidate({ oddEvenResult: "BORDERLINE" })).status).toBe("warning");
+  });
+  it('warns with UNKNOWN', () => {
+    expect(checkOddEven(makeCandidate({ oddEvenResult: "UNKNOWN" })).status).toBe("warning");
+  });
+});
+
+describe('checkSecondaryEclipse', () => {
+  it('passes with NO', () => {
+    expect(checkSecondaryEclipse(makeCandidate({ secondaryEclipse: "NO" })).status).toBe("passed");
+  });
+  it('fails with YES', () => {
+    expect(checkSecondaryEclipse(makeCandidate({ secondaryEclipse: "YES" })).status).toBe("failed");
+  });
+  it('warns with UNKNOWN', () => {
+    expect(checkSecondaryEclipse(makeCandidate({ secondaryEclipse: "UNKNOWN" })).status).toBe("warning");
+  });
+  it('warns with BORDERLINE', () => {
+    expect(checkSecondaryEclipse(makeCandidate({ secondaryEclipse: "BORDERLINE" })).status).toBe("warning");
+  });
+});
+
+describe('checkSapPdcsap', () => {
+  it('passes with OK', () => {
+    expect(checkSapPdcsap(makeCandidate({ sapPdcsapMatch: "OK" })).status).toBe("passed");
+  });
+  it('fails with MISMATCH', () => {
+    expect(checkSapPdcsap(makeCandidate({ sapPdcsapMatch: "MISMATCH" })).status).toBe("failed");
+  });
+  it('warns with UNKNOWN', () => {
+    expect(checkSapPdcsap(makeCandidate({ sapPdcsapMatch: "UNKNOWN" })).status).toBe("warning");
+  });
+});
+
+describe('checkActivityRotation', () => {
+  it('passes with LOW', () => {
+    expect(checkActivityRotation(makeCandidate({ rotationRisk: "LOW" })).status).toBe("passed");
+  });
+  it('fails with HIGH', () => {
+    expect(checkActivityRotation(makeCandidate({ rotationRisk: "HIGH" })).status).toBe("failed");
+  });
+  it('warns with POSSIBLE', () => {
+    expect(checkActivityRotation(makeCandidate({ rotationRisk: "POSSIBLE" })).status).toBe("warning");
+  });
+  it('warns with UNKNOWN', () => {
+    expect(checkActivityRotation(makeCandidate({ rotationRisk: "UNKNOWN" })).status).toBe("warning");
+  });
+});
+
+describe('computeSignalQuality', () => {
+  it('returns strong for score >= STRONG_SCORE', () => {
+    expect(computeSignalQuality(makeCandidate({ evidenceScore: STRONG_SCORE }))).toBe("strong");
+  });
+  it('returns medium for score = MEDIUM_SCORE', () => {
+    expect(computeSignalQuality(makeCandidate({ evidenceScore: MEDIUM_SCORE }))).toBe("medium");
+  });
+  it('returns weak for score < MEDIUM_SCORE', () => {
+    expect(computeSignalQuality(makeCandidate({ evidenceScore: MEDIUM_SCORE - 1 }))).toBe("weak");
+  });
+});
+
+describe('computeDataQuality', () => {
+  it('returns high for many sectors and transits', () => {
+    expect(computeDataQuality(makeCandidate({ observedSectorCount: HIGH_SECTORS, matrixVisibleTransits: HIGH_TRANSITS }))).toBe("high");
+  });
+  it('returns sufficient for moderate data', () => {
+    expect(computeDataQuality(makeCandidate({ observedSectorCount: MIN_SECTORS_FOR_DATA, matrixVisibleTransits: 1 }))).toBe("sufficient");
+  });
+  it('returns low for poor data', () => {
+    expect(computeDataQuality(makeCandidate({ observedSectorCount: MIN_SECTORS_FOR_DATA - 1, matrixVisibleTransits: 0 }))).toBe("low");
+  });
+});
+
+describe('computeFinalDecision', () => {
+  it('returns NO_PLANET for no TESS data', () => {
+    var result = computeFinalDecision(makeCandidate({ observedSectorCount: 0 }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.failed_test).toBe("TESS Data");
+  });
+
+  it('returns NO_PLANET for no signal', () => {
+    var result = computeFinalDecision(makeCandidate({ evidenceScore: 10 }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.failed_test).toBe("Signal Detection");
+  });
+
+  it('returns NO_PLANET for V_SHAPE folded light curve', () => {
+    var result = computeFinalDecision(makeCandidate({ transitShape: "V_SHAPE" }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.failed_test).toBe("Folded Light Curve");
+  });
+
+  it('returns DATA_LIMITED_SECTORS for too few sectors', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA - 1,
+      evidenceScore: 55,
+      transitShape: "U_SHAPE"
+    }));
+    expect(result.status).toBe("DATA_LIMITED_SECTORS");
+    expect(result.failed_test).toBe("Sector Coverage");
+  });
+
+  it('returns DATA_LIMITED_TRANSITS for too few transits with enough sectors', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA - 1,
+      transitShape: "U_SHAPE",
+      evidenceScore: 55
+    }));
+    expect(result.status).toBe("DATA_LIMITED_TRANSITS");
+    expect(result.failed_test).toBe("Transit Count");
+  });
+
+  it('returns NO_PLANET when SAP/PDCSAP mismatch blocks EXOFOP', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: 55,
+      sapPdcsapMatch: "MISMATCH"
+    }));
+    expect(result.status).toBe("NO_PLANET");
+  });
+
+  it('returns NO_PLANET when Activity/Rotation HIGH blocks EXOFOP', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: 55,
+      rotationRisk: "HIGH"
+    }));
+    expect(result.status).toBe("NO_PLANET");
+  });
+
+  it('returns EXOFOP_CANDIDATE when all checks pass', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: 55,
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO",
+      rotationRisk: "LOW"
+    }));
+    expect(result.status).toBe("EXOFOP_CANDIDATE");
+    expect(result.next_action).toBe("prepare_exofop_upload");
+  });
+
+  it('returns NO_PLANET for null candidate', () => {
+    var result = computeFinalDecision(null);
+    expect(result.status).toBe("NO_PLANET");
+  });
+
+  it('returns NO_PLANET with warning blockers when folded light curve is UNKNOWN', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "UNKNOWN",
+      evidenceScore: 55,
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO",
+      rotationRisk: "LOW"
+    }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.reason).toContain("Folded Light Curve");
+  });
+
+  it('does not overrule with old SPC labels', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: 0,
+      matrixVisibleTransits: 0,
+      // Old SPC labels should not affect the pipeline decision
+      status: "SPC-A",
+      matrixStatus: "SPC_ART",
+      displayLabels: ["SPC", "SPC_STRONG"]
+    }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.failed_test).toBe("TESS Data");
+  });
+
+  it('produces check_tree with all 9 checks', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: 55,
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO",
+      rotationRisk: "LOW"
+    }));
+    expect(result.check_tree.length).toBe(9);
+    expect(result.check_tree[0].name).toBe("TESS Data");
+    expect(result.check_tree[8].name).toBe("Activity/Rotation");
+  });
+
+  it('produces blockers listing all failing checks', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: 0,
+      matrixVisibleTransits: 0
+    }));
+    expect(result.blockers.length).toBeGreaterThan(0);
+  });
+});

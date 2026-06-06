@@ -56,6 +56,7 @@ export function draw2dMap() {
   ctx.fillText("S", centerX, axisBottom + 20);
   ctx.restore();
 
+  var plotted = [];
   candidates.forEach((candidate) => {
     const x = focus
       ? focusBaseX + (candidate.map.x - focus.map.x) * width * 0.42 * mapZoom
@@ -64,18 +65,42 @@ export function draw2dMap() {
       ? focusBaseY + (candidate.map.y - focus.map.y) * height * 0.42 * mapZoom
       : height / 2 + candidate.map.y * height * 0.42 * mapZoom;
     if (x < -30 || x > width + 30 || y < -30 || y > height + 30) return;
-    const size = Math.max(2, Math.min(10, (candidate.snr || 1) * 0.36 + 1.4));
+    const isSelected = state.selected && state.selected.tic === candidate.tic;
+    var size = Math.max(1.5, Math.min(5, Math.sqrt(candidate.snr || 1) * 0.65 + 0.8));
+    if (isSelected) size = Math.max(size, 4);
+    plotted.push({ x, y, size, candidate, isSelected });
+  });
+
+  // draw small points first (better layering)
+  plotted.sort(function (a, b) { return a.size - b.size; });
+
+  for (var i = 0; i < plotted.length; i++) {
+    var p = plotted[i];
+    ctx.globalAlpha = 0.75;
     ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = candidateMapColor(candidate);
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = candidateMapColor(p.candidate);
     ctx.fill();
-    if (state.selected && state.selected.tic === candidate.tic) {
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
+
+    // subtle glow for selected point
+    if (p.isSelected) {
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size + 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 1.2;
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
-    points2d.push({ x, y, radius: size + 8, candidate });
+  }
+  ctx.globalAlpha = 1;
+
+  plotted.forEach(function (p) {
+    points2d.push({ x: p.x, y: p.y, radius: p.size + 8, candidate: p.candidate });
   });
 
   const sunX = focus ? focusBaseX - focus.map.x * width * 0.42 * mapZoom : centerX;

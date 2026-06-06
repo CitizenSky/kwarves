@@ -34,6 +34,17 @@ AUTO_TESS_UPDATE_ENABLED = os.environ.get("KWARVES_AUTO_TESS_UPDATE", "1").strip
 AUTO_TESS_MAX_AGE_HOURS = float(os.environ.get("KWARVES_AUTO_TESS_MAX_AGE_HOURS", "18"))
 AUTO_TESS_SLEEP = float(os.environ.get("KWARVES_AUTO_TESS_SLEEP", "0.2"))
 
+# Pipeline thresholds (loaded from shared config file)
+_PIPELINE_CFG: dict[str, Any] | None = None
+def _load_pipeline_config() -> dict[str, Any]:
+    global _PIPELINE_CFG
+    if _PIPELINE_CFG is not None:
+        return _PIPELINE_CFG
+    cfg_path = DASHBOARD_DIR / "config" / "pipeline_thresholds.json"
+    with open(cfg_path) as f:
+        _PIPELINE_CFG = json.load(f)
+    return _PIPELINE_CFG
+
 TESS_SECTOR_SCHEDULE = [
     {"sector": 97, "start": "2025-09-15", "end": "2025-11-09", "arrangement": "Suedpol (4 Orbits)"},
     {"sector": 98, "start": "2025-11-09", "end": "2026-01-05", "arrangement": "Suedpol (4 Orbits)"},
@@ -573,7 +584,7 @@ def yellow_reason_tags(merged: dict[str, Any], matrix: dict[str, Any], is_violet
         tags.append("Y_ODD_EVEN_MISSING")
     if "RECHECK" in text or "MANUAL" in text or "SPC_ART" in text or "NEEDS_MORE" in text:
         tags.append("Y_MANUAL_REVIEW")
-    if evidence >= 75 or (is_violet and snr >= 20 and period >= 40):
+    if evidence >= _load_pipeline_config()["BUILD_STRONG_UNCONFIRMED_EVIDENCE"] or (is_violet and snr >= 20 and period >= 40):
         tags.append("Y_STRONG_BUT_UNCONFIRMED")
 
     return list(dict.fromkeys(tags))
@@ -707,6 +718,7 @@ def compute_final_decision(
     observed_sectors: list[int],
     period: float,
 ) -> dict[str, Any]:
+    _cfg = _load_pipeline_config()
     """
     Compute the Final Decision Pipeline for a candidate.
     
@@ -766,7 +778,7 @@ def compute_final_decision(
     visible_transits = safe_int_or_none((matrix or {}).get("visible_transits"))
     row_transits = safe_int(row.get("transit_count"))
     observed_transits = max(matrix_transits or 0, visible_transits or 0, row_transits)
-    min_transits = 2
+    min_transits = _cfg["BUILD_MIN_TRANSITS"]
     has_sufficient_transits = visible_transits is not None and visible_transits >= min_transits
     
     sector_count = len(observed_sectors)
@@ -896,7 +908,7 @@ def compute_final_decision(
     core_vetting_ok = sap_pdcsap_ok and odd_even_ok and secondary_ok and rotation_ok
     flc_ok = flc_status == "passed"
     
-    if not core_vetting_ok or not flc_ok or evidence_score < 80:
+    if not core_vetting_ok or not flc_ok or evidence_score < _cfg["BUILD_EXOFOP_EVIDENCE"]:
         prep_reasons = []
         if not core_vetting_ok:
             if not sap_pdcsap_ok: prep_reasons.append("SAP/PDCSAP unclear")
@@ -905,8 +917,8 @@ def compute_final_decision(
             if not secondary_ok: prep_reasons.append("Secondary Eclipse unclear")
         if not flc_ok:
             prep_reasons.append("Folded Light Curve not fully validated")
-        if evidence_score < 80:
-            prep_reasons.append(f"Evidence score {evidence_score:.1f} < 80")
+        if evidence_score < _cfg["BUILD_EXOFOP_EVIDENCE"]:
+            prep_reasons.append(f"Evidence score {evidence_score:.1f} < {_cfg['BUILD_EXOFOP_EVIDENCE']}")
         
         check_tree.append({"name": "Decision", "status": "warning", "reason": "Some vetting checks not complete"})
         
@@ -971,7 +983,7 @@ def build_candidate(
     followup_strength = (
         "STRONG"
         if "Y_STRONG_BUT_UNCONFIRMED" in reason_tags or color == "green"
-        else ("MEDIUM" if evidence_score is not None and evidence_score >= 60 else "LOW")
+        else ("MEDIUM" if evidence_score is not None and evidence_score >= _load_pipeline_config()["BUILD_MEDIUM_FOLLOWUP_EVIDENCE"] else "LOW")
     )
     yellow_summary = (
         "Gelb: starker HZ-Kandidat, aber Nachpruefung noetig"

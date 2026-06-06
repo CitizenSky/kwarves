@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { t, formatMaybe, formatFloat } from '../i18n.js';
 import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList } from '../dataLoader.js';
+import { renderFinalDecisionPanel as renderNewFdPanel, initPanelListeners } from './finalDecisionPanel.js';
 
 export function candidateChip(candidate) {
   return `<button class="chip" type="button" data-stat-tic="${candidate.tic}">TIC ${candidate.tic} · ${formatMaybe(candidate.evidenceScore, 0)}</button>`;
@@ -149,6 +150,7 @@ export function renderSelected() {
     candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
   ].filter(Boolean).join("");
   els.selectedCard.innerHTML = `
+    ${renderNewFdPanel(candidate)}
     ${renderFinalDecisionPanel(candidate)}
     <div class="selected-title">
       <strong>TIC ${candidate.tic}</strong>
@@ -169,6 +171,7 @@ export function renderSelected() {
       <strong>Ordner:</strong> ${candidate.folder || "-"}
     </div>
   `;
+  initPanelListeners(els.selectedCard);
 }
 
 export function renderYellowReasonPanel() {
