@@ -1,4 +1,4 @@
-name: Build and Deploy Dashboard
+name: Build Dashboard
 
 on:
   push:
@@ -6,15 +6,6 @@ on:
     paths:
       - 'dashboard/**'
       - '.github/workflows/deploy.yml'
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -34,22 +25,3 @@ jobs:
       - run: npm ci
 
       - run: npm run build
-
-      - name: Prepare artifact (under repo root)
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE"/_site/dashboard
-          cp -r dist/* "$GITHUB_WORKSPACE"/_site/dashboard/
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
