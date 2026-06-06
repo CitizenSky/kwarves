@@ -7,11 +7,13 @@ on:
       - 'dashboard/**'
       - '.github/workflows/deploy.yml'
 
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     defaults:
       run:
         working-directory: dashboard
@@ -28,9 +30,24 @@ jobs:
 
       - run: npm run build
 
-      - uses: peaceiris/actions-gh-pages@v3
+      - name: Prepare artifact
+        run: |
+          mkdir -p _site/dashboard
+          cp -r dist/* _site/dashboard/
+
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dashboard/dist
-          publish_branch: gh-pages
-          destination_dir: dashboard
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
