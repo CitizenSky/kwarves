@@ -45,6 +45,14 @@ export function resolveCountryFromLocale() {
   return null;
 }
 
+export function resolveCountry() {
+  return Promise.resolve().then(() => {
+    const fromLocale = resolveCountryFromLocale();
+    if (fromLocale) return fromLocale;
+    return { code: "UN", name: "Unknown", source: "unresolved" };
+  });
+}
+
 export function transferSessionCountry(fromCode, toCode, toName) {
   const from = ensureCountryBucket(fromCode, t("table_country_unknown"));
   const to = ensureCountryBucket(toCode, toName || t("table_country_unknown"));
