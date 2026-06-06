@@ -1,12 +1,11 @@
-import cfg from '../../config/pipeline_thresholds.json';
-
-export const MIN_SECTORS_FOR_DATA = cfg.MIN_SECTORS_FOR_DATA;
-export const MIN_TRANSITS_FOR_DATA = cfg.MIN_TRANSITS_FOR_DATA;
-export const STRONG_SCORE = cfg.STRONG_SCORE;
-export const MEDIUM_SCORE = cfg.MEDIUM_SCORE;
-export const HIGH_SECTORS = cfg.HIGH_SECTORS;
-export const HIGH_TRANSITS = cfg.HIGH_TRANSITS;
-export const SIGNAL_MIN_SCORE = cfg.SIGNAL_MIN_SCORE;
+// Thresholds match config/pipeline_thresholds.json
+export const MIN_SECTORS_FOR_DATA = 2;
+export const MIN_TRANSITS_FOR_DATA = 3;
+export const STRONG_SCORE = 65;
+export const MEDIUM_SCORE = 40;
+export const HIGH_SECTORS = 8;
+export const HIGH_TRANSITS = 3;
+export const SIGNAL_MIN_SCORE = 20;
 
 export function checkTessData(candidate) {
   const sectors = candidate.observedSectorCount || 0;
