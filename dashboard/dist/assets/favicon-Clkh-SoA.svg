@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-  <title id="title">Kwarves Symbol</title>
-  <desc id="desc">A stylized K inside an orbital ring.</desc>
-  <rect x="8" y="8" width="240" height="240" rx="52" fill="#10201e"/>
-  <circle cx="128" cy="128" r="82" fill="none" stroke="#6fd6ca" stroke-width="12"/>
-  <path d="M98 78V178M98 126L160 78M98 126L166 178" fill="none" stroke="#f4c96d" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="186" cy="94" r="10" fill="#2ca98c"/>
-  <circle cx="72" cy="158" r="8" fill="#5c8cf6"/>
-</svg>
