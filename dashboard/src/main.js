@@ -1188,7 +1188,7 @@ els.toggleFollowupList?.addEventListener("click", () => {
   setFollowupCollapsed(!panel?.classList.contains("is-collapsed"));
 });
 
-els.curveList.addEventListener("click", (event) => {
+els.curveList?.addEventListener("click", (event) => {
   const item = event.target.closest("[data-curve-tic]");
   if (!item) return;
   const candidate = data.lightcurveCandidates.find((entry) => entry.tic === Number(item.dataset.curveTic));
