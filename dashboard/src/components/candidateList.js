@@ -175,18 +175,15 @@ export function renderTable() {
   const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
   const term = els.globalSearch.value.trim().toLowerCase();
   if (!limited.length) {
-    els.rows.innerHTML = `<tr><td colspan="8">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
+    els.rows.innerHTML = `<tr><td colspan="5">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
     return;
   }
   els.rows.innerHTML = limited.map((candidate) => `
     <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
       <td><strong>TIC ${candidate.tic}</strong></td>
-      <td><span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span></td>
-      <td>${candidate.finalDecision ? (function(){var s=candidate.finalDecision.status||"";var g=s;if(s==="EXOFOP_CANDIDATE")g="ExoFOP";else if(s==="DATA_LIMITED_SECTORS")g="Wenige Daten";else if(s==="DATA_LIMITED_TRANSITS")g="Wenige Transits";else if(s==="NO_PLANET")g="Kein Planet";return '<span class="final-decision-badge '+(s||"").toLowerCase().replace(/_/g,'-')+'">'+g+'</span>'})() : "-"}</td>
       <td>${formatFloat(candidate.evidenceScore, 0)}</td>
       <td>${formatMaybe(candidate.hz)}</td>
-      <td>${candidate.distance}</td>
-      <td>${candidate.period}</td>
+      <td>${candidate.distance ? candidate.distance + " ly" : "-"}</td>
       <td>${candidate.nextStep || candidate.decisionReason || candidate.reason || "-"}</td>
     </tr>
   `).join("");

@@ -243,7 +243,7 @@ export function applyLanguageToUi() {
       curveOpenCandidate: "Mark candidate",
       tableTitle: "Candidate Matrix",
       tableSub: "Public matrix view lists candidates by visible risk color. ExoFOP readiness is shown only in the restricted review area.",
-      tableHeaders: ["TIC", "Color", "Status", "Matrix", "Evidence", "Why", "Next step", "HZ", "Distance", "Period", "SNR", "Transits"],
+      tableHeaders: ["TIC", "Evidence", "HZ", "Distance", "Next Step"],
       docsTitle: "Project Logic and Scripts",
       docsSub: "How each level checks candidates, which scripts support it, and why the evidence remains provisional.",
       docsRefresh: "Refresh docs",
@@ -350,7 +350,7 @@ export function applyLanguageToUi() {
         curveOpenCandidate: "Marquer le candidat",
         tableTitle: "Matrice Candidats",
         tableSub: "La matrice publique liste les candidats par couleur de risque visible. La readiness ExoFOP reste dans la zone restreinte.",
-        tableHeaders: ["TIC", "Couleur", "Statut", "Matrice", "Evidence", "Pourquoi", "Etape suivante", "HZ", "Distance", "Periode", "SNR", "Transits"],
+        tableHeaders: ["TIC", "Evidence", "HZ", "Distance", "Etape suivante"],
         docsTitle: "Logique Projet et Scripts",
         docsSub: "Comment chaque niveau verifie les candidats, quels scripts le soutiennent, et pourquoi l'evidence reste provisoire.",
         docsRefresh: "Actualiser la doc",
@@ -456,7 +456,7 @@ export function applyLanguageToUi() {
         curveOpenCandidate: "Kandidat markieren",
         tableTitle: "Candidate Matrix",
         tableSub: "Die oeffentliche Matrix zeigt Kandidaten nach sichtbarer Risikofarbe. ExoFOP-Readiness steht nur im eingeschraenkten Review-Bereich.",
-        tableHeaders: ["TIC", "Farbe", "Final", "Status", "Matrix", "Evidence", "Warum", "Naechster Schritt", "HZ", "Distanz", "Periode", "SNR", "Transits"],
+        tableHeaders: ["TIC", "Evidence", "HZ", "Distanz", "N\u00e4chster Schritt"],
         docsTitle: "Projektlogik und Skripte",
         docsSub: "Wie jedes Level Kandidaten prueft, welche Skripte es stuetzen und warum die Evidenz vorlaeufig bleibt.",
         docsRefresh: "Dokuseite aktualisieren",
@@ -880,12 +880,12 @@ export function applyLanguageToUi() {
   setText("#tessPanel .tess-sources a:nth-child(2)", labels.tessSource2);
 
   setText("#curvesPanel h2", labels.curvesTitle);
-  setText("#curvesPanel .panel-subtitle", labels.curvesSub);
   setText('[data-curve-filter="all"]', t("curves_filter_all"));
   setText('[data-curve-filter="violet"]', t("curves_filter_violet"));
   setText('[data-curve-filter="green"]', t("curves_filter_green"));
   setText('[data-curve-filter="spc-prep"]', t("curves_filter_spc_prep"));
   setText('[data-curve-filter="orange"]', t("curves_filter_orange"));
+  setText('[data-curve-filter="red"]', t("curves_filter_red"));
   renderCurveFilterCounts();
   setTitle("#openCurveCandidate", labels.curveOpenCandidate);
 

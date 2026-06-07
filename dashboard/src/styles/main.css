@@ -389,7 +389,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        padding: 14px 18px;
+        padding: 10px 14px;
         border-bottom: 1px solid var(--line);
       }
 
@@ -407,10 +407,9 @@
       }
 
       .selected-card-tic {
-        font-size: 24px;
-        font-weight: 860;
-        color: var(--heading);
-        letter-spacing: 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--muted);
         white-space: nowrap;
       }
 
@@ -435,8 +434,8 @@
 
       .kpis {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
       }
 
       .card,
@@ -523,7 +522,7 @@
 
       .big-number {
         margin: 0;
-        font-size: 34px;
+        font-size: 26px;
         font-weight: 860;
         line-height: 1;
       }
@@ -1039,8 +1038,8 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        padding: 16px 18px;
+        gap: 10px;
+        padding: 12px 14px;
         border-bottom: 1px solid var(--line);
       }
 
@@ -1078,7 +1077,7 @@
       }
 
       .panel-body {
-        padding: 16px 18px 18px;
+        padding: 12px 14px 14px;
         min-width: 0;
       }
 
@@ -1160,6 +1159,41 @@
 
       .selected-title strong {
         font-size: 20px;
+      }
+
+      .selected-quick-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-bottom: 2px;
+      }
+      .selected-quick-metrics .pill {
+        min-height: 24px;
+        font-size: 11px;
+        padding: 0 8px;
+      }
+      .hz-pill {
+        background: var(--spc-prep) !important;
+        color: #fff !important;
+      }
+      .selected-next-action {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f0f7f4;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .selected-next-action strong {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 2px;
+      }
+      .selected-next-action span {
+        color: var(--text-primary);
       }
 
       .chips {
@@ -2170,22 +2204,22 @@
 
       .curve-layout {
         display: grid;
-        grid-template-columns: 320px minmax(0, 1fr);
+        grid-template-columns: 240px minmax(0, 1fr);
         gap: 14px;
       }
 
       .curve-list {
         display: grid;
-        gap: 8px;
-        max-height: 560px;
+        gap: 5px;
+        max-height: 640px;
         overflow: auto;
         padding-right: 4px;
       }
 
       .curve-item {
         display: grid;
-        gap: 5px;
-        padding: 10px;
+        gap: 2px;
+        padding: 7px 10px;
         box-shadow: none;
         text-align: left;
       }
@@ -2196,12 +2230,12 @@
       }
 
       .curve-item strong {
-        font-size: 13px;
+        font-size: 12px;
       }
 
       .curve-item span {
         color: var(--muted);
-        font-size: 12px;
+        font-size: 11px;
       }
 
       .curve-viewer {
@@ -2216,21 +2250,21 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        padding: 12px 14px;
+        padding: 10px 14px;
         border-bottom: 1px solid var(--line);
       }
 
       .curve-img-wrap {
         display: grid;
-        min-height: 420px;
+        min-height: 500px;
         place-items: center;
-        padding: 12px;
+        padding: 10px;
       }
 
       .curve-img-wrap img {
         display: block;
         width: 100%;
-        max-height: 620px;
+        max-height: 700px;
         object-fit: contain;
         border-radius: 6px;
         background: #ffffff;
@@ -3203,16 +3237,16 @@
         margin-top: 8px;
       }
       .small-button {
-        font-size: 11px;
-        padding: 2px 8px;
+        font-size: 10px;
+        padding: 1px 6px;
         border: 1px solid var(--border-color);
-        border-radius: 4px;
+        border-radius: 3px;
         background: var(--bg-secondary);
         color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.15s ease;
         font-family: inherit;
-        line-height: 1.6;
+        line-height: 1.5;
       }
       .small-button:hover {
         background: var(--bg-hover);

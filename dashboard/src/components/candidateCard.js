@@ -135,19 +135,12 @@ export function renderSelected() {
     return;
   }
   state.selected = candidate;
-  if (els.selectedCardTitle) {
-    els.selectedCardTitle.textContent = `Ausgewaehlter Kandidat`;
-  }
-  if (els.selectedCardTic) {
-    els.selectedCardTic.textContent = `TIC ${candidate.tic}`;
-  }
-  const matrixStatus = formatMaybe(candidate.matrixStatus);
-  const matrixClass = formatMaybe(candidate.matrixClass);
-  const evidence = formatMaybe(candidate.evidenceScore);
-  const matrixReason = formatMaybe(candidate.decisionReason, candidate.reason || "-");
-  const matrixNext = formatMaybe(candidate.nextStep);
-  const depthText = Number.isFinite(Number(candidate.depthPpt)) ? `${formatFloat(candidate.depthPpt, 2)} ppt` : "-";
-  const durationText = Number.isFinite(Number(candidate.durationHours)) ? `${formatFloat(candidate.durationHours, 2)} h` : "-";
+  const nextAction = candidate.nextStep || candidate.decisionReason || candidate.reason || "-";
+  const evidence = candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? formatFloat(candidate.evidenceScore, 0) : "-";
+  const hzLabel = candidate.hz || "-";
+  const distLabel = candidate.distance ? `${candidate.distance} ly` : "-";
+  const snrLabel = candidate.snr ? formatFloat(candidate.snr, 1) : "-";
+  const periodLabel = candidate.period ? `${formatFloat(candidate.period, 4)} d` : "-";
   const raText = Number.isFinite(Number(candidate.raDeg)) ? `${formatFloat(candidate.raDeg, 5)}°` : "-";
   const decText = Number.isFinite(Number(candidate.decDeg)) ? `${formatFloat(candidate.decDeg, 5)}°` : "-";
   const localizedBaseColor = localizedBaseColorLabel(candidate);
@@ -158,20 +151,38 @@ export function renderSelected() {
     candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
     ...displayLabels.map((label) => `<span class="chip ${candidateVisualClass(candidate)}">${label}</span>`),
     candidate.matrixStatus && !displayLabels.includes(candidate.matrixStatus) ? `<span class="chip ${candidateVisualClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
-    candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? `<span class="chip ${candidateVisualClass(candidate)}">${t("chip_evidence_prefix", { value: candidate.evidenceScore })}</span>` : "",
     candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
   ].filter(Boolean).join("");
+
+  if (els.selectedCardTitle) {
+    els.selectedCardTitle.textContent = `TIC ${candidate.tic}`;
+  }
+  if (els.selectedCardTic) {
+    const meta = [];
+    meta.push(`E ${evidence}`);
+    if (hzLabel !== "-") meta.push(hzLabel);
+    meta.push(distLabel);
+    els.selectedCardTic.textContent = meta.join(" · ");
+  }
+
   els.selectedCard.innerHTML = `
     ${renderNewFdPanel(candidate)}
-    <div class="selected-title">
-      <strong>TIC ${candidate.tic}</strong>
-      <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
-    </div>
     <div class="chips">${chips}</div>
+    <div class="selected-quick-metrics">
+      <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
+      <span class="pill">E ${evidence}</span>
+      ${candidate.hz ? `<span class="pill hz-pill">${candidate.hz}</span>` : ""}
+      <span class="pill">${distLabel}</span>
+      <span class="pill">SNR ${snrLabel}</span>
+    </div>
+    <div class="selected-next-action">
+      <strong>N\u00e4chste Aktion</strong>
+      <span>${nextAction}</span>
+    </div>
     <div class="details-grid compact">
-      <div class="detail"><span>${t("detail_distance")}</span><strong>${candidate.distance} ly</strong></div>
-      <div class="detail"><span>${t("detail_period")}</span><strong>${candidate.period} d</strong></div>
-      <div class="detail"><span>${t("detail_snr")}</span><strong>${candidate.snr}</strong></div>
+      <div class="detail"><span>${t("detail_distance")}</span><strong>${distLabel}</strong></div>
+      <div class="detail"><span>${t("detail_period")}</span><strong>${periodLabel}</strong></div>
+      <div class="detail"><span>${t("detail_snr")}</span><strong>${snrLabel}</strong></div>
       <div class="detail"><span>${t("detail_transits_visible")}</span><strong>${candidate.visibleTransits}/${candidate.transits}</strong></div>
       <div class="detail"><span>${t("detail_radius")}</span><strong>${candidate.radius || "-"} R_E</strong></div>
       <div class="detail"><span>${t("detail_ra")}</span><strong>${raText}</strong></div>

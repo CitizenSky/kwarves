@@ -142,10 +142,9 @@
                   <div>
                     <h2>Kandidaten</h2>
                     <div class="table-sort-row">
-                      <button class="small-button active" type="button" data-sort="evidence">Evidence</button>
-                      <button class="small-button" type="button" data-sort="distance">Distanz</button>
+                      <button class="small-button active" type="button" data-sort="evidence">E</button>
+                      <button class="small-button" type="button" data-sort="distance">Dist</button>
                       <button class="small-button" type="button" data-sort="snr">SNR</button>
-                      <button class="small-button" type="button" data-sort="transits">Transits</button>
                       <button class="small-button" type="button" data-sort="hz">HZ</button>
                     </div>
                   </div>
@@ -154,30 +153,27 @@
                     <button class="small-button" type="button" data-table-limit="250">250</button>
                     <button class="small-button" type="button" data-table-limit="all">Alle</button>
                   </div>
-                  <div class="filter-row">
+                    <div class="filter-row">
                     <button class="small-button active" type="button" data-color-filter="all">Alle</button>
-                    <button class="small-button" type="button" data-color-filter="green">Grün/SPC</button>
-                    <button class="small-button" type="button" data-color-filter="spc-prep">Gelb/Recheck</button>
+                    <button class="small-button" type="button" data-color-filter="green">Grün</button>
+                    <button class="small-button" type="button" data-color-filter="spc-prep">Gelb</button>
                     <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
-                    <button class="small-button" type="button" data-color-filter="red">Rot/FP</button>
-                    <button class="small-button" type="button" data-color-filter="violet">Violett/HZ</button>
+                    <button class="small-button" type="button" data-color-filter="red">Rot</button>
+                    <button class="small-button" type="button" data-color-filter="violet">Violett</button>
                   </div>
                 </div>
                 <div class="table-wrap">
                   <label class="search" style="max-width:none; display:flex; margin:0 0 10px 0;">
                     <i data-lucide="search"></i>
-                    <input id="globalSearch" type="search" placeholder="TIC, Farbe, HZ, Status" />
+                    <input id="globalSearch" type="search" placeholder="TIC, HZ, Status" />
                   </label>
                   <table>
                     <thead>
                       <tr>
                         <th>TIC</th>
-                        <th>Farbe</th>
-                        <th>Final</th>
                         <th>Evidence</th>
                         <th>HZ</th>
                         <th>Distanz</th>
-                        <th>Periode</th>
                         <th>N\u00e4chster Schritt</th>
                       </tr>
                     </thead>
@@ -207,43 +203,18 @@
           </div>
           <!-- C-H) Detail Sections -->
 
-          <details class="panel about-project" id="aboutProjectPanel">
-            <summary class="panel-header" style="cursor:pointer;">
-              <div>
-                <h2>Über CitizenSky / Methodik anzeigen</h2>
-              </div>
-              <span class="about-toggle"><i data-lucide="chevron-down"></i></span>
-            </summary>
-            <div class="panel-body">
-              <div id="aboutProjectContent"></div>
-            </div>
-          </details>
-
-          <section class="panel" id="treePanel">
-            <div class="panel-header">
-              <div>
-                <h2>Baumstruktur der Entscheidung</h2>
-                <p class="panel-subtitle">Von der ersten Farbe bis zur n\u00e4chsten Aktion.</p>
-              </div>
-              <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
-                <i data-lucide="refresh-cw"></i>
-              </button>
-            </div>
-            <div class="panel-body tree" id="tree"></div>
-          </section>
-
           <section class="panel" id="curvesPanel">
             <div class="panel-header">
               <div>
                 <h2>Lichtkurven</h2>
-                <p class="panel-subtitle">Alle Kandidaten sind links ausw\u00e4hlbar; rechts erscheint die kombinierte Kurve.</p>
               </div>
               <div class="panel-actions">
-                <button class="small-button active" type="button" data-curve-filter="all">Alle Kandidaten</button>
-                <button class="small-button" type="button" data-curve-filter="green">Gr\u00fcn</button>
-                <button class="small-button" type="button" data-curve-filter="violet">Lila</button>
+                <button class="small-button active" type="button" data-curve-filter="all">Alle</button>
+                <button class="small-button" type="button" data-curve-filter="green">Grün</button>
                 <button class="small-button" type="button" data-curve-filter="spc-prep">Gelb</button>
                 <button class="small-button" type="button" data-curve-filter="orange">Orange</button>
+                <button class="small-button" type="button" data-curve-filter="red">Rot</button>
+                <button class="small-button" type="button" data-curve-filter="violet">Violett</button>
               </div>
             </div>
             <div class="panel-body curve-layout">
@@ -267,6 +238,31 @@
                 <div class="curve-img-wrap" id="curveImageWrap"></div>
               </div>
             </div>
+          </section>
+
+          <details class="panel about-project" id="aboutProjectPanel">
+            <summary class="panel-header" style="cursor:pointer;">
+              <div>
+                <h2>Über CitizenSky / Methodik anzeigen</h2>
+              </div>
+              <span class="about-toggle"><i data-lucide="chevron-down"></i></span>
+            </summary>
+            <div class="panel-body">
+              <div id="aboutProjectContent"></div>
+            </div>
+          </details>
+
+          <section class="panel" id="treePanel">
+            <div class="panel-header">
+              <div>
+                <h2>Baumstruktur der Entscheidung</h2>
+                <p class="panel-subtitle">Von der ersten Farbe bis zur n\u00e4chsten Aktion.</p>
+              </div>
+              <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+            <div class="panel-body tree" id="tree"></div>
           </section>
 
           <section class="panel" id="mapPanel">
