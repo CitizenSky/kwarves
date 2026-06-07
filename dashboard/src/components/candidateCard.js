@@ -216,53 +216,12 @@ function renderActionCard(candidate) {
   `;
 }
 
-function renderDetailSidebar(candidate) {
-  const sidebar = document.getElementById("detailSidebar");
-  if (!sidebar) return;
-  const evidence = candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? formatFloat(candidate.evidenceScore, 0) : "-";
-  const hzLabel = candidate.hz || "-";
-  const distLabel = candidate.distance ? `${candidate.distance} ly` : "-";
-  const snrLabel = candidate.snr ? formatFloat(candidate.snr, 1) : "-";
-  const fd = candidate.finalDecision;
-  const statusText = fd ? (fd.status || "?") : "?";
-  const signalText = fd ? (fd.signal_quality || "?") : "?";
-  const dataText = fd ? (fd.data_quality || "?") : "?";
-  const nextAction = fd ? (fd.next_action || "—") : "—";
-  const blockers = fd && fd.blockers ? fd.blockers : [];
-  const folder = candidate.folder || "-";
-
-  sidebar.innerHTML = `
-    <div class="sidebar-section">
-      <h4>Status</h4>
-      <div class="compact-metric"><span class="label">Farbe</span><span class="value"><span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span></span></div>
-      <div class="compact-metric"><span class="label">Decision</span><span class="value">${statusText}</span></div>
-      <div class="compact-metric"><span class="label">Signal</span><span class="value">${signalText}</span></div>
-      <div class="compact-metric"><span class="label">Daten</span><span class="value">${dataText}</span></div>
-    </div>
-    <div class="sidebar-section">
-      <h4>Klassifikation</h4>
-      <div class="compact-metric"><span class="label">Evidence</span><span class="value">${evidence}</span></div>
-      <div class="compact-metric"><span class="label">HZ</span><span class="value">${hzLabel}</span></div>
-      <div class="compact-metric"><span class="label">Distanz</span><span class="value">${distLabel}</span></div>
-      <div class="compact-metric"><span class="label">SNR</span><span class="value">${snrLabel}</span></div>
-    </div>
-    ${blockers.length ? `<div class="sidebar-section"><h4>Blocker</h4>${blockers.map(b => `<div class="compact-metric"><span class="value" style="color:var(--red);">${b}</span></div>`).join("")}</div>` : ""}
-    ${nextAction !== "—" ? `<div class="sidebar-section"><h4>Nächste Aktion</h4><div class="compact-metric"><span class="value">${nextAction}</span></div></div>` : ""}
-    <div class="sidebar-section">
-      <h4>Ordner</h4>
-      <div class="compact-metric"><span class="value" style="font-size:11px;word-break:break-all;">${folder}</span></div>
-    </div>
-  `;
-}
-
 export function renderSelected() {
   const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
   if (!candidate) {
     if (els.selectedCardTitle) els.selectedCardTitle.textContent = "Kein Kandidat";
     if (els.selectedCardTic) els.selectedCardTic.textContent = "-";
     if (els.selectedCard) els.selectedCard.innerHTML = "";
-    const sidebar = document.getElementById("detailSidebar");
-    if (sidebar) sidebar.innerHTML = '<div class="muted">Kein Kandidat ausgewählt</div>';
     return;
   }
   state.selected = candidate;
@@ -306,6 +265,7 @@ export function renderSelected() {
       <span class="pill">${distLabel}</span>
       <span class="pill">SNR ${snrLabel}</span>
     </div>
+    ${renderActionCard(candidate)}
     <div class="details-grid compact">
       <div class="detail"><span>${t("detail_distance")}</span><strong>${distLabel}</strong></div>
       <div class="detail"><span>${t("detail_period")}</span><strong>${periodLabel}</strong></div>
@@ -320,7 +280,6 @@ export function renderSelected() {
       <strong>Ordner:</strong> ${candidate.folder || "-"}
     </div>
   `;
-  renderDetailSidebar(candidate);
   initPanelListeners(els.selectedCard);
 }
 
