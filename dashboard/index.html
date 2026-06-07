@@ -21,6 +21,12 @@
     <link rel="stylesheet" href="src/styles/main.css" />
   </head>
   <body>
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p>Lade Kandidatendaten...</p>
+      </div>
+    </div>
     <div class="app">
       <aside class="sidebar" aria-label="Navigation">
         <div class="brand">
@@ -34,37 +40,21 @@
         </div>
 
         <nav class="nav" aria-label="Dashboard Bereiche">
-          <button class="active" type="button" title="Baumstruktur" data-nav-target="treePanel">
-            <i data-lucide="network"></i>
-            <span>Baumstruktur</span>
-          </button>
-          <button type="button" title="Sternkarte" data-nav-target="mapPanel">
-            <i data-lucide="orbit"></i>
-            <span>Sternkarte</span>
-          </button>
-          <button type="button" title="TESS Mission" data-nav-target="tessPanel">
-            <i data-lucide="sun-medium"></i>
-            <span>TESS Mission</span>
-          </button>
-          <button type="button" title="Lichtkurven" data-nav-target="curvesPanel">
-            <i data-lucide="activity"></i>
-            <span>Lichtkurven</span>
-          </button>
-          <button type="button" title="Kandidaten" data-nav-target="tablePanel">
+          <button class="active" type="button" title="Kandidaten" data-nav-target="tablePanel">
             <i data-lucide="table-2"></i>
             <span>Kandidaten</span>
           </button>
-          <button type="button" title="Projektlogik" data-nav-target="docsPanel">
+          <button type="button" title="Analyse" data-nav-target="treePanel">
+            <i data-lucide="search"></i>
+            <span>Analyse</span>
+          </button>
+          <button type="button" title="TESS" data-nav-target="tessPanel">
+            <i data-lucide="sun-medium"></i>
+            <span>TESS</span>
+          </button>
+          <button type="button" title="Projekt" data-nav-target="docsPanel">
             <i data-lucide="book-open-text"></i>
-            <span>Projektlogik</span>
-          </button>
-          <button type="button" title="Impressum" data-nav-target="impressumPanel">
-            <i data-lucide="file-text"></i>
-            <span>Impressum</span>
-          </button>
-          <button type="button" title="ExoFOP Review" data-nav-target="adminPanel">
-            <i data-lucide="shield-check"></i>
-            <span>ExoFOP Review</span>
+            <span>Projekt</span>
           </button>
         </nav>
 
@@ -81,10 +71,6 @@
 
       <main class="content">
         <header class="topbar">
-          <label class="search">
-            <i data-lucide="search"></i>
-            <input id="globalSearch" type="search" placeholder="Suche: TIC, Farbe, HZ, Status" />
-          </label>
           <span class="date" id="dateLabel">Heute</span>
           <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache">
             <button class="small-button active" type="button" data-lang="de" aria-label="Deutsch">
@@ -110,332 +96,134 @@
           </button>
         </header>
         <section class="page">
-          <div class="title-row">
+          <!-- A) Compact Dashboard Header -->
+          <div class="dashboard-header">
             <div>
-              <p class="eyebrow">Exoplanet Candidate Explorer</p>
-              <h1>CitizenSky Exoplanet Candidate Dashboard</h1>
-              <p class="lede">
-                Analyse echter TESS-Daten mit Farbklassifikation,
-                Lichtkurven-Vetting und interaktiver Sternkarte.
-              </p>
+              <h1>Kwarves Candidate Vetting</h1>
+              <p class="dashboard-subtitle">TESS/Gaia Exoplanet Candidate Screening Dashboard</p>
             </div>
+            <span class="date" id="dashboardDateLabel">Heute</span>
           </div>
 
-          <p class="seo-intro">
-            CitizenSky is an independent citizen-science dashboard for screening nearby exoplanet candidates in public TESS and Gaia data. The project focuses on K-dwarf systems, habitable-zone candidates, SPC cases, and follow-up prioritization.
-          </p>
-
-          <section class="keyword-strip" aria-label="Project keywords">
-            <span>Project keywords</span>
-            <span>TESS</span>
-            <span>Gaia DR3</span>
-            <span>TIC</span>
-            <span>exoplanet candidates</span>
-            <span>habitable zone</span>
-            <span>K-dwarfs</span>
-            <span>citizen science</span>
-            <span>BLS</span>
-            <span>TLS</span>
-            <span>follow-up priority</span>
-          </section>
-
-          <section class="intro-grid" aria-label="Projektueberblick">
-            <article class="intro-panel">
-              <p class="eyebrow" id="introEyebrow">Citizen-science Exoplanet Screening</p>
-              <h2>CitizenSky / Kwarves</h2>
-              <p class="intro-claim" id="introClaim">Independent citizen-science dashboard for TESS/Gaia based exoplanet candidate screening.</p>
-              <p id="introText">
-                Wir analysieren oeffentlich verfuegbare Gaia- und TESS-Daten, filtern nahe K-Zwerge
-                und bewerten moegliche Transit-Kandidaten nach Datenqualitaet, Signalstabilitaet
-                und Habitable-Zone-Kontext. Die Matrix zeigt nicht nur Lichtkurven-Dips, sondern
-                eine mehrstufige Vorpruefung gegen Artefakte, schwache Datenfenster und EB-Risiken.
-              </p>
-            </article>
-            <aside class="disclaimer-box">
-              <p id="introDisclaimer"><strong>Transparenz:</strong> CitizenSky/Kwarves ist ein unabhaengiges Citizen-Science-Projekt. Ergebnisse sind vorlaeufige automatisierte Screenings auf Basis oeffentlicher Gaia- und TESS-Daten. Kandidatenklassifikationen sind keine bestaetigten Planeten. Die Analyse ist unvollstaendig und erfordert manuelles Vetting, weitere Daten und professionelles Follow-up.</p>
-            </aside>
-          </section>
-
-          <section class="panel" id="visitorStatusPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="visitorStatusTitle">Projektstatus & Kurzlogik</h2>
-                <p class="panel-subtitle" id="visitorStatusSub">Kandidatenlage, Farbcode und Follow-up-Regeln auf einen Blick.</p>
-              </div>
-            </div>
-            <div class="panel-body status-overview">
-              <div class="visitor-kpis" id="visitorKpis"></div>
-              <div class="decision-strip" id="decisionSummary">
-                <article class="decision-card">
-                  <strong>Orange</strong>
-                  <p>Normale Recheck-Kandidaten: wissenschaftlich interessant, aber noch nicht Follow-up-ready.</p>
-                </article>
-                <article class="decision-card">
-                  <strong>Gelb / SPC Prep</strong>
-                  <p>Interne Follow-up-Kandidaten. Weiter verfolgen, aber nicht automatisch ExoFOP-ready.</p>
-                </article>
-                <article class="decision-card">
-                  <strong>Violett</strong>
-                  <p>HZ-Fokus als Zusatzmarker. Violett ersetzt keine Ampelfarbe.</p>
-                </article>
-                <article class="decision-card">
-                  <strong>ExoFOP</strong>
-                  <p>Upload erst bei strenger gruener Freigabe; orange/gelb bleiben intern.</p>
-                </article>
-              </div>
-            </div>
-          </section>
-
+          <!-- KPIs -->
           <div class="kpis" aria-label="Kennzahlen">
             <article class="card">
-              <div class="card-top">
-                <span>Alle Kandidaten</span>
-                <div class="icon-box"><i data-lucide="database"></i></div>
-              </div>
-              <p class="big-number" id="kpiTotal">0</p>
-              <span class="metric-line"><i data-lucide="folder-tree"></i> aus Manifest</span>
+              <p class="big-number" id="kpiTotal">...</p>
+              <span class="metric-line">Kandidaten</span>
             </article>
             <article class="card">
-              <div class="card-top">
-                <span>Gruen</span>
-                <div class="icon-box"><i data-lucide="badge-check"></i></div>
-              </div>
-              <p class="big-number" id="kpiGreen">0</p>
-              <span class="metric-line"><i data-lucide="arrow-up-right"></i> SPC-Kandidaten</span>
+              <p class="big-number" id="kpiGreen">...</p>
+              <span class="metric-line">SPC</span>
             </article>
             <article class="card">
-              <div class="card-top">
-                <span>Orange</span>
-                <div class="icon-box"><i data-lucide="clock-3"></i></div>
-              </div>
-              <p class="big-number" id="kpiYellow">0</p>
-              <span class="metric-line"><i data-lucide="hourglass"></i> normales Recheck-Orange</span>
+              <p class="big-number" id="kpiYellow">...</p>
+              <span class="metric-line">Recheck</span>
             </article>
             <article class="card">
-              <div class="card-top">
-                <span>SPC Prep</span>
-                <div class="icon-box"><i data-lucide="clipboard-check"></i></div>
-              </div>
-              <p class="big-number" id="kpiSpcPrep">0</p>
-              <span class="metric-line"><i data-lucide="list-checks"></i> gelb getrennt</span>
+              <p class="big-number" id="kpiRed">...</p>
+              <span class="metric-line">FP</span>
             </article>
             <article class="card">
-              <div class="card-top">
-                <span>Rot</span>
-                <div class="icon-box"><i data-lucide="octagon-alert"></i></div>
-              </div>
-              <p class="big-number" id="kpiRed">0</p>
-              <span class="metric-line"><i data-lucide="ban"></i> FP/Systematik</span>
+              <p class="big-number" id="kpiSpcPrep">...</p>
+              <span class="metric-line">SPC Prep</span>
             </article>
             <article class="card">
-              <div class="card-top">
-                <span>Violett</span>
-                <div class="icon-box"><i data-lucide="sparkles"></i></div>
-              </div>
-              <p class="big-number" id="kpiViolet">0</p>
-              <span class="metric-line"><i data-lucide="sun-medium"></i> HZ/Top-Tier</span>
+              <p class="big-number" id="kpiViolet">...</p>
+              <span class="metric-line">HZ/Top</span>
             </article>
           </div>
 
-          <section class="panel compact-hidden" id="methodPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="methodTitle">Methodik</h2>
-                <p class="panel-subtitle" id="methodSub">Von Gaia-Sternparametern bis zur vorlaeufigen SPC/SPC_ART-Klassifikation.</p>
-              </div>
-            </div>
-            <div class="panel-body">
-              <div class="method-steps" id="methodSteps">
-                <article class="method-step"><span>1</span><strong>Gaia DR3</strong><p class="mini">Sternparameter, Distanz und Astrometrie.</p></article>
-                <article class="method-step"><span>2</span><strong>K-Zwerg Filter</strong><p class="mini">Nahe K-, G- und M-Sterne strukturieren.</p></article>
-                <article class="method-step"><span>3</span><strong>TESS Sectors</strong><p class="mini">Lichtkurven und Datenfenster pruefen.</p></article>
-                <article class="method-step"><span>4</span><strong>BLS/TLS Search</strong><p class="mini">Periodische Transit-Signale suchen.</p></article>
-                <article class="method-step"><span>5</span><strong>Evidence Score</strong><p class="mini">Datenlage und Signalqualitaet bewerten.</p></article>
-                <article class="method-step"><span>6</span><strong>SPC / SPC_ART</strong><p class="mini">Starke Kandidaten von Artefakt-Risiken trennen.</p></article>
-                <article class="method-step"><span>7</span><strong>HZ Review</strong><p class="mini">Habitable-Zone-Kontext und Follow-up priorisieren.</p></article>
-              </div>
-              <div class="notice" id="methodNotice" style="margin-top: 12px;">
-                Gaia liefert Sternparameter und Distanz. TESS liefert Lichtkurven/Sektoren. BLS/TLS sucht periodische Transit-Signale.
-                Der Evidence Score bewertet Datenlage und Signalqualitaet. SPC bedeutet starker Planetenkandidat; SPC_ART bedeutet starker Kandidat mit Artefakt- oder Systematikverdacht.
-              </div>
-            </div>
-          </section>
-
-          <section class="panel compact-hidden" id="labelLegendPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="labelLegendTitle">Kandidatenlabels</h2>
-                <p class="panel-subtitle" id="labelLegendSub">Kurze Leseregel fuer die wichtigsten Kwarves-Statuswerte.</p>
-              </div>
-            </div>
-            <div class="panel-body table-wrap">
-              <table class="legend-table" aria-label="Kandidatenlabels">
-                <thead><tr id="labelLegendHeader"><th>Label</th><th>Bedeutung</th></tr></thead>
-                <tbody id="labelLegendRows"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="panel" id="topCandidatesPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="topCandidatesTitle">Top Kandidaten</h2>
-                <p class="panel-subtitle" id="topCandidatesSub">Sortiert nach Evidence Score, HZ-Prioritaet und Follow-up-Reife. Klick bereitet ein Kandidatenprofil vor.</p>
-              </div>
-            </div>
-            <div class="panel-body table-wrap">
-              <table class="top-table" aria-label="Top Kandidaten">
-                <thead id="topCandidatesHead">
-                  <tr>
-                    <th>Rank</th>
-                    <th>TIC</th>
-                    <th>Distance ly</th>
-                    <th>Period days</th>
-                    <th>HZ class</th>
-                    <th>Evidence</th>
-                    <th>Label</th>
-                    <th>Next step</th>
-                  </tr>
-                </thead>
-                <tbody id="topCandidateRows"></tbody>
-              </table>
-              <article class="followup-subpanel" aria-label="Follow-up Kandidaten">
-                <div class="followup-subpanel-header">
+          <!-- B) Two-Column Main Layout -->
+          <div class="main-split">
+            <!-- Left: Candidate List -->
+            <div class="main-left">
+              <section class="panel" id="tablePanel">
+                <div class="panel-header">
                   <div>
-                    <h3 id="followupCandidatesTitle">Follow-up Kandidaten</h3>
-                    <p id="followupCandidatesSub" class="mini">Alle internen Follow-up-Faelle, getrennt von normalem Orange.</p>
+                    <h2>Kandidaten</h2>
+                    <div class="table-sort-row">
+                      <button class="small-button active" type="button" data-sort="evidence">Evidence</button>
+                      <button class="small-button" type="button" data-sort="distance">Distanz</button>
+                      <button class="small-button" type="button" data-sort="snr">SNR</button>
+                      <button class="small-button" type="button" data-sort="transits">Transits</button>
+                      <button class="small-button" type="button" data-sort="hz">HZ</button>
+                    </div>
                   </div>
-                  <div class="followup-subpanel-actions">
-                    <span class="pill spc-prep" id="followupCandidateCount">0</span>
-                    <button class="icon-button" type="button" id="toggleFollowupList" title="Follow-up einklappen" aria-expanded="true">
-                      <i data-lucide="chevron-up"></i>
+                  <div class="panel-actions">
+                    <button class="small-button active" type="button" data-table-limit="80">Top 80</button>
+                    <button class="small-button" type="button" data-table-limit="250">250</button>
+                    <button class="small-button" type="button" data-table-limit="all">Alle</button>
+                  </div>
+                  <div class="filter-row">
+                    <button class="small-button active" type="button" data-color-filter="all">Alle</button>
+                    <button class="small-button" type="button" data-color-filter="green">Grün/SPC</button>
+                    <button class="small-button" type="button" data-color-filter="spc-prep">Gelb/Recheck</button>
+                    <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
+                    <button class="small-button" type="button" data-color-filter="red">Rot/FP</button>
+                    <button class="small-button" type="button" data-color-filter="violet">Violett/HZ</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <label class="search" style="max-width:none; display:flex; margin:0 0 10px 0;">
+                    <i data-lucide="search"></i>
+                    <input id="globalSearch" type="search" placeholder="TIC, Farbe, HZ, Status" />
+                  </label>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>TIC</th>
+                        <th>Farbe</th>
+                        <th>Final</th>
+                        <th>Evidence</th>
+                        <th>HZ</th>
+                        <th>Distanz</th>
+                        <th>Periode</th>
+                        <th>N\u00e4chster Schritt</th>
+                      </tr>
+                    </thead>
+                    <tbody id="candidateRows"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <!-- Right: Selected Candidate -->
+            <div class="main-right">
+              <div class="selected-card-section" id="selectedCardSection">
+                <div class="selected-card-head">
+                  <div class="selected-card-head-info">
+                    <h3 id="selectedCardTitle">Ausgew\u00e4hlter Kandidat</h3>
+                    <span class="selected-card-tic" id="selectedCardTic">-</span>
+                  </div>
+                  <div class="selected-card-head-actions">
+                    <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
+                      <i data-lucide="activity"></i>
                     </button>
                   </div>
                 </div>
-                <div class="followup-list" id="followupCandidateRows"></div>
-              </article>
-            </div>
-          </section>
-
-          <section class="panel compact-hidden" id="statisticsPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="statisticsTitle">Statistik-Plots</h2>
-                <p class="panel-subtitle" id="statisticsSub">Verteilungen aus den vorhandenen Matrix- und Kandidatenfeldern.</p>
+                <div class="selected-card" id="selectedCard"></div>
               </div>
             </div>
-            <div class="panel-body chart-grid">
-              <article class="chart-card"><h3>Evidence Score</h3><canvas id="chartEvidence"></canvas></article>
-              <article class="chart-card"><h3>Transitanzahl</h3><canvas id="chartTransits"></canvas></article>
-              <article class="chart-card"><h3>Distanz</h3><canvas id="chartDistance"></canvas></article>
-              <article class="chart-card"><h3>HZ-Klassen</h3><canvas id="chartHz"></canvas></article>
-              <article class="chart-card"><h3>Label-Verteilung</h3><canvas id="chartLabels"></canvas></article>
-              <article class="chart-card"><h3>TESS-Sektoren</h3><canvas id="chartSectors"></canvas></article>
-            </div>
-          </section>
+          </div>
+          <!-- C-H) Detail Sections -->
 
-          <section class="panel compact-hidden" id="signalMatrixPanel">
-            <div class="panel-header">
+          <details class="panel about-project" id="aboutProjectPanel">
+            <summary class="panel-header" style="cursor:pointer;">
               <div>
-                <h2 id="signalMatrixTitle">Datenlage vs. Signal</h2>
-                <p class="panel-subtitle" id="signalMatrixSub">Warum starke Signale trotzdem gelb bleiben koennen, wenn die Datenlage unsicher ist.</p>
+                <h2>Über CitizenSky / Methodik anzeigen</h2>
               </div>
-            </div>
-            <div class="panel-body signal-matrix" id="signalMatrixGrid">
-              <div class="matrix-axis"></div>
-              <div class="matrix-axis">Signal schwach</div>
-              <div class="matrix-axis">Signal mittel</div>
-              <div class="matrix-axis">Signal stark</div>
-              <div class="matrix-axis">Daten gut</div>
-              <article class="matrix-cell yellow"><span>Gute Daten + schwach</span><strong>Beobachten / Recheck</strong><p class="mini">Signal reicht noch nicht fuer Follow-up.</p></article>
-              <article class="matrix-cell yellow"><span>Gute Daten + mittel</span><strong>SPC_ART / Review</strong><p class="mini">Manuelle Pruefung entscheidet.</p></article>
-              <article class="matrix-cell green"><span>Gute Daten + stark</span><strong>SPC / Follow-up</strong><p class="mini">Beste oeffentliche Kandidatenliste.</p></article>
-              <div class="matrix-axis">Daten mittel</div>
-              <article class="matrix-cell yellow"><span>Mittel + schwach</span><strong>Low Recheck</strong><p class="mini">Neue Sektoren koennen helfen.</p></article>
-              <article class="matrix-cell yellow"><span>Mittel + mittel</span><strong>SPC_ART</strong><p class="mini">Artefakt- oder Systematikrisiko offen.</p></article>
-              <article class="matrix-cell yellow"><span>Mittel + stark</span><strong>SPC_ART / mehr Daten</strong><p class="mini">Nicht gruen ohne stabile Datenlage.</p></article>
-              <div class="matrix-axis">Daten schlecht</div>
-              <article class="matrix-cell red"><span>Schlecht + schwach</span><strong>Ignorieren / low priority</strong><p class="mini">Keine belastbare Evidenz.</p></article>
-              <article class="matrix-cell yellow"><span>Schlecht + mittel</span><strong>NEEDS_MORE_TESS_DATA</strong><p class="mini">Zu wenig Abdeckung.</p></article>
-              <article class="matrix-cell yellow"><span>Schlecht + stark</span><strong>SPC_ART / mehr Daten noetig</strong><p class="mini">Starkes Signal, aber noch nicht sicher.</p></article>
-            </div>
-          </section>
-
-          <section class="panel compact-hidden" id="yellowReasonPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="yellowReasonTitle">Why is this candidate yellow?</h2>
-                <p class="panel-subtitle" id="yellowReasonSub">Gelb bedeutet nicht schlecht: wissenschaftlich interessant, aber nicht sauber genug fuer automatisches Gruen.</p>
-              </div>
-            </div>
-            <div class="panel-body yellow-reason-layout">
-              <article class="matrix-stat-box">
-                <h3 id="yellowSelectedTitle">Ausgewaehlter gelber Kandidat</h3>
-                <div id="yellowSelectedReason" class="yellow-rules"></div>
-              </article>
-              <article class="matrix-stat-box">
-                <h3 id="yellowMatrixTitle">Wert vs. Unsicherheitsgrund</h3>
-                <div class="signal-matrix">
-                  <div class="matrix-axis"></div>
-                  <div class="matrix-axis">Datenlage</div>
-                  <div class="matrix-axis">Signalform</div>
-                  <div class="matrix-axis">Aktivitaet</div>
-                  <div class="matrix-axis">Systematik</div>
-                  <div class="matrix-axis">Follow-up offen</div>
-                  <div class="matrix-axis">hoch</div>
-                  <article class="matrix-cell yellow"><strong>HZ_STRONG_FOLLOWUP</strong><p class="mini">Hoher Wert, aber Datenlage unsicher.</p></article>
-                  <article class="matrix-cell yellow"><strong>SPC_ART</strong><p class="mini">Starkes Signal, Form noch nicht final.</p></article>
-                  <article class="matrix-cell yellow"><strong>HZ_ACTIVITY_RECHECK</strong><p class="mini">Aktivitaets-/BY-Dra-Risiko pruefen.</p></article>
-                  <article class="matrix-cell yellow"><strong>SPC_ART</strong><p class="mini">Systematik oder Pipeline-Artefakt offen.</p></article>
-                  <article class="matrix-cell green"><strong>FOLLOWUP_STRONG</strong><p class="mini">Kann trotz Gelb hoch priorisiert sein.</p></article>
-                  <div class="matrix-axis">mittel</div>
-                  <article class="matrix-cell yellow"><strong>HZ_RECHECK</strong><p class="mini">Wenig Transits oder lange Periode.</p></article>
-                  <article class="matrix-cell yellow"><strong>Manual Review</strong><p class="mini">Foldplot und Einzelevents pruefen.</p></article>
-                  <article class="matrix-cell yellow"><strong>Activity Check</strong><p class="mini">Rotation und Sternaktivitaet testen.</p></article>
-                  <article class="matrix-cell yellow"><strong>Systematics Check</strong><p class="mini">SAP/PDCSAP, Apertur und Nachbarn.</p></article>
-                  <article class="matrix-cell yellow"><strong>More TESS</strong><p class="mini">Weitere Abdeckung abwarten.</p></article>
-                  <div class="matrix-axis">niedrig</div>
-                  <article class="matrix-cell red"><strong>LOW_PRIORITY</strong><p class="mini">Mehrere Risiken, schwache Datenlage.</p></article>
-                  <article class="matrix-cell red"><strong>LOW_PRIORITY</strong><p class="mini">Signalform nicht planetar genug.</p></article>
-                  <article class="matrix-cell red"><strong>FP_BYDRA</strong><p class="mini">Aktivitaet dominiert wahrscheinlich.</p></article>
-                  <article class="matrix-cell red"><strong>REJECTED</strong><p class="mini">Artefakt/FP dokumentiert.</p></article>
-                  <article class="matrix-cell yellow"><strong>Archive only</strong><p class="mini">Kein direkter Follow-up-Schritt.</p></article>
-                </div>
-              </article>
-            </div>
-          </section>
-
-          <section class="panel compact-hidden" id="observationTimelinePanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="observationTimelineTitle">TESS-Beobachtungsplan</h2>
-                <p class="panel-subtitle" id="observationTimelineSub">Vorbereitung fuer Sektorverlauf, Year-8 Treffer und Recheck-Planung.</p>
-              </div>
-            </div>
+              <span class="about-toggle"><i data-lucide="chevron-down"></i></span>
+            </summary>
             <div class="panel-body">
-              <div class="timeline-grid" id="visitorTimeline"></div>
-              <div class="notice" id="observationTimelineNotice" style="margin-top: 12px;">
-                Year-8 hit does not mean the target was not observed for eight years. It means the candidate position overlaps with expected or planned Year-8 TESS coverage geometry and should be checked against official sector products.
-                Die Geometrie ist aktuell eine robuste Missionsansicht, aber keine exakte Himmelsprojektion.
-              </div>
+              <div id="aboutProjectContent"></div>
             </div>
-          </section>
+          </details>
 
-          <section class="panel compact-hidden" id="matrixStatsPanel">
-            <div class="panel-header">
-              <div>
-                <h2>Matrix-Statistiken</h2>
-                <p class="panel-subtitle">Statistik, Visualisierung und Ranking aus den vorhandenen Matrix-Feldern.</p>
-              </div>
-            </div>
-            <div class="panel-body matrix-stats" id="matrixStats"></div>
-          </section>
-
-          <section class="panel compact-hidden" id="treePanel">
+          <section class="panel" id="treePanel">
             <div class="panel-header">
               <div>
                 <h2>Baumstruktur der Entscheidung</h2>
-                <p class="panel-subtitle">Von der ersten Farbe bis zur naechsten Aktion.</p>
+                <p class="panel-subtitle">Von der ersten Farbe bis zur n\u00e4chsten Aktion.</p>
               </div>
               <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
                 <i data-lucide="refresh-cw"></i>
@@ -444,11 +232,48 @@
             <div class="panel-body tree" id="tree"></div>
           </section>
 
+          <section class="panel" id="curvesPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Lichtkurven</h2>
+                <p class="panel-subtitle">Alle Kandidaten sind links ausw\u00e4hlbar; rechts erscheint die kombinierte Kurve.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="small-button active" type="button" data-curve-filter="all">Alle Kandidaten</button>
+                <button class="small-button" type="button" data-curve-filter="green">Gr\u00fcn</button>
+                <button class="small-button" type="button" data-curve-filter="violet">Lila</button>
+                <button class="small-button" type="button" data-curve-filter="spc-prep">Gelb</button>
+                <button class="small-button" type="button" data-curve-filter="orange">Orange</button>
+              </div>
+            </div>
+            <div class="panel-body curve-layout">
+              <div>
+                <label class="search" style="max-width: none; margin-bottom: 10px;">
+                  <i data-lucide="search"></i>
+                  <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
+                </label>
+                <div class="curve-list" id="curveList"></div>
+              </div>
+              <div class="curve-viewer">
+                <div class="curve-viewer-header">
+                  <div>
+                    <strong id="curveTitle">Keine Lichtkurve ausgew\u00e4hlt</strong>
+                    <div class="muted" id="curveMeta"></div>
+                  </div>
+                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
+                    <i data-lucide="crosshair"></i>
+                  </button>
+                </div>
+                <div class="curve-img-wrap" id="curveImageWrap"></div>
+              </div>
+            </div>
+          </section>
+
           <section class="panel" id="mapPanel">
             <div class="panel-header">
               <div>
                 <h2>2D/3D Sternkarte</h2>
-                <p class="panel-subtitle">Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung, groessere 2D-Kugeln = bessere SNR. Klicken waehlt Kandidaten aus.</p>
+                <p class="panel-subtitle">Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung, gr\u00f6\u00dfere 2D-Kugeln = bessere SNR. Klicken w\u00e4hlt Kandidaten aus.</p>
               </div>
               <div class="map-header-actions">
                 <div class="map-header-group">
@@ -463,7 +288,7 @@
                 </div>
                 <div class="map-header-group">
                   <button class="small-button active" type="button" data-color-filter="all">Alle</button>
-                  <button class="small-button" type="button" data-color-filter="green">Gruen</button>
+                  <button class="small-button" type="button" data-color-filter="green">Gr\u00fcn</button>
                   <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
                   <button class="small-button" type="button" data-color-filter="spc-prep">SPC Prep</button>
                   <button class="small-button" type="button" data-color-filter="red">Rot</button>
@@ -485,28 +310,28 @@
                       <button type="button" title="Hineinzoomen" data-map-zoom="in">
                         <i data-lucide="plus"></i>
                       </button>
-                      <button type="button" title="Zoom zuruecksetzen" data-map-zoom="reset">
+                      <button type="button" title="Zoom zur\u00fccksetzen" data-map-zoom="reset">
                         <i data-lucide="rotate-ccw"></i>
                       </button>
                     </div>
                   </div>
                   <div class="map-note">
-                    <span class="legend-item"><span class="dot"></span> Gruen = Kandidat</span>
-                    <span class="legend-item"><span class="dot yellow"></span> Orange = in Pruefung</span>
+                    <span class="legend-item"><span class="dot"></span> Gr\u00fcn = Kandidat</span>
+                    <span class="legend-item"><span class="dot yellow"></span> Orange = in Pr\u00fcfung</span>
                     <span class="legend-item"><span class="dot spc-prep"></span> Gelb = SPC Prep</span>
                     <span class="legend-item"><span class="dot red"></span> Rot = FP/Rejected</span>
                     <span class="legend-item"><span class="dot violet"></span> Violett-Ring = HZ-Fokus</span>
-                    <span class="legend-item">Weisser Ring = ausgewaehlt</span>
+                    <span class="legend-item">Weisser Ring = ausgew\u00e4hlt</span>
                     <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
                   </div>
                 </div>
                 <div class="map-side">
                   <div class="notice">
-                    Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.
+                    Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abst\u00e4nde sind symbolisch und nicht astronomisch ma\u00dfstabsgetreu.
                   </div>
                   <div class="map-status">
                     <strong id="mapSelectedTic">-</strong>
-                    <span>Ausgewaehlter Kandidat (weisser Ring/Punkt)</span>
+                    <span>Ausgew\u00e4hlter Kandidat (weisser Ring/Punkt)</span>
                   </div>
                   <div class="map-status">
                     <strong id="mapObservedSectors">-</strong>
@@ -514,7 +339,7 @@
                   </div>
                   <div class="map-status">
                     <strong id="mapNextRecheck">-</strong>
-                    <span>Naechste Beobachtung / Recheck</span>
+                    <span>N\u00e4chste Beobachtung / Recheck</span>
                   </div>
                   <div class="notice mini" id="mapCoverageStatus">
                     Auswahl zeigt, ob der Kandidat im geplanten TESS-Bereich liegt.
@@ -537,7 +362,7 @@
                 <div class="tess-compare-header">
                   <div>
                     <h3>3D TESS-Sektorenkarte</h3>
-                    <p>Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abstaende sind symbolisch und nicht astronomisch masstabsgetreu.</p>
+                    <p>Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abst\u00e4nde sind symbolisch und nicht astronomisch ma\u00dfstabsgetreu.</p>
                   </div>
                   <div class="map-header-group">
                     <button class="small-button" type="button" data-tess-map-mode="2d">
@@ -560,7 +385,7 @@
                       <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
                     </div>
                     <div class="tess-sector-note">
-                      <span class="legend-item"><span class="dot"></span> Gruen = Kandidatensektor</span>
+                      <span class="legend-item"><span class="dot"></span> Gr\u00fcn = Kandidatensektor</span>
                       <span class="legend-item"><span class="dot blue"></span> Blau = beobachtet</span>
                       <span class="legend-item"><span class="dot yellow"></span> Gelb = aktuell/geplant</span>
                       <span class="legend-item"><span class="dot gray"></span> Grau = Hintergrund</span>
@@ -569,7 +394,7 @@
                   <div class="tess-compare-side">
                     <div class="tess-mini-stat">
                       <strong id="tessMatchSelectedTic">-</strong>
-                      <span>ausgewaehlter Kandidat</span>
+                      <span>ausgew\u00e4hlter Kandidat</span>
                     </div>
                     <div class="tess-mini-stat">
                       <strong id="tessMatchSectorList">-</strong>
@@ -581,7 +406,7 @@
                     </div>
                     <div class="tess-mini-stat">
                       <strong id="tessMatchCurrent">-</strong>
-                      <span>aktueller/naechster Mission-Sektor</span>
+                      <span>aktueller/n\u00e4chster Mission-Sektor</span>
                     </div>
                     <div class="tess-mini-stat">
                       <strong id="tessMatchCoverage">-</strong>
@@ -598,7 +423,7 @@
                         <div class="sector-chip-row" id="tessTimelinePlanned"></div>
                       </div>
                       <div class="timeline-row">
-                        <span class="timeline-label">Naechste Beobachtung</span>
+                        <span class="timeline-label">N\u00e4chste Beobachtung</span>
                         <strong class="timeline-value" id="tessTimelineNext">-</strong>
                       </div>
                       <div class="timeline-row">
@@ -609,18 +434,6 @@
                   </div>
                 </div>
               </div>
-              <div class="map-selected-section">
-                <div class="map-selected-head">
-                  <div>
-                    <h3>Ausgewaehlter Kandidat</h3>
-                    <p>Hier steht die Begruendung in Klartext.</p>
-                  </div>
-                  <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
-                    <i data-lucide="activity"></i>
-                  </button>
-                </div>
-                <div class="selected-card" id="selectedCard"></div>
-              </div>
             </div>
           </section>
 
@@ -628,7 +441,7 @@
             <div class="panel-header">
               <div>
                 <h2>TESS Mission und Sektoren</h2>
-                <p class="panel-subtitle">Live-Orientierung: aktueller Sektor, naechste Planung und Anordnung der Sektoren.</p>
+                <p class="panel-subtitle">Live-Orientierung: aktueller Sektor, n\u00e4chste Planung und Anordnung der Sektoren.</p>
               </div>
               <button class="icon-button" type="button" title="TESS-Bereich aktualisieren" id="refreshTess">
                 <i data-lucide="refresh-cw"></i>
@@ -681,79 +494,6 @@
             </div>
           </section>
 
-          <section class="panel" id="curvesPanel">
-            <div class="panel-header">
-              <div>
-                <h2>Lichtkurven</h2>
-                <p class="panel-subtitle">Alle Kandidaten sind links auswaehlbar; rechts erscheint die kombinierte Kurve.</p>
-              </div>
-              <div class="panel-actions">
-                <button class="small-button active" type="button" data-curve-filter="all">Alle Kandidaten</button>
-                <button class="small-button" type="button" data-curve-filter="green">Gruen</button>
-                <button class="small-button" type="button" data-curve-filter="violet">Lila</button>
-                <button class="small-button" type="button" data-curve-filter="spc-prep">Gelb</button>
-                <button class="small-button" type="button" data-curve-filter="orange">Orange</button>
-              </div>
-            </div>
-            <div class="panel-body curve-layout">
-              <div>
-                <label class="search" style="max-width: none; margin-bottom: 10px;">
-                  <i data-lucide="search"></i>
-                  <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
-                </label>
-                <div class="curve-list" id="curveList"></div>
-              </div>
-              <div class="curve-viewer">
-                <div class="curve-viewer-header">
-                  <div>
-                    <strong id="curveTitle">Keine Lichtkurve ausgewaehlt</strong>
-                    <div class="muted" id="curveMeta"></div>
-                  </div>
-                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
-                    <i data-lucide="crosshair"></i>
-                  </button>
-                </div>
-                <div class="curve-img-wrap" id="curveImageWrap"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel" id="tablePanel">
-            <div class="panel-header">
-              <div>
-                <h2>Kandidatenliste mit Begruendung</h2>
-                <p class="panel-subtitle">Sortiert nach Entfernung; Auswahl synchronisiert Baum, Karte und Lichtkurve.</p>
-              </div>
-              <div class="panel-actions">
-                <button class="small-button active" type="button" data-table-limit="80">Top 80</button>
-                <button class="small-button" type="button" data-table-limit="250">250</button>
-                <button class="small-button" type="button" data-table-limit="all">Alle</button>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>TIC</th>
-                    <th>Farbe</th>
-                    <th>Final</th>
-                    <th>Status</th>
-                    <th>Matrix</th>
-                    <th>Evidence</th>
-                    <th>Warum</th>
-                    <th>Naechster Schritt</th>
-                    <th>HZ</th>
-                    <th>Distanz</th>
-                    <th>Periode</th>
-                    <th>SNR</th>
-                    <th>Transits</th>
-                  </tr>
-                </thead>
-                <tbody id="candidateRows"></tbody>
-              </table>
-            </div>
-          </section>
-
           <section class="panel" id="docsPanel">
             <div class="panel-header">
               <div>
@@ -771,14 +511,14 @@
                 <summary>
                   <span>
                     <strong id="docsScriptsTitle">Python-Skripte</strong>
-                    <span id="docsScriptsSub">Technische Skriptuebersicht antippen zum Aufklappen.</span>
+                    <span id="docsScriptsSub">Technische Skript\u00fcbersicht antippen zum Aufklappen.</span>
                   </span>
                   <span class="docs-script-toggle" aria-hidden="true">
                     <i data-lucide="chevron-down"></i>
                   </span>
                 </summary>
                 <div class="table-wrap docs-table-wrap">
-                  <table class="docs-table" aria-label="Skriptuebersicht">
+                  <table class="docs-table" aria-label="Skript\u00fcbersicht">
                     <thead>
                       <tr>
                         <th>Skript</th>
@@ -798,44 +538,11 @@
             </div>
           </section>
 
-          <section class="panel" id="impressumPanel">
-            <div class="panel-header">
-              <div>
-                <h2>Impressum und Hinweise</h2>
-                <p class="panel-subtitle">Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.</p>
-              </div>
-            </div>
-            <div class="panel-body">
-              <div class="docs-legal">
-                <article class="docs-legal-card" id="aboutSection">
-                  <h3>Wissenschaftlicher Hinweis</h3>
-                  <p>Kwarves ist ein unabhängiges Citizen-Science-Projekt zur Analyse öffentlich verfügbarer TESS- und Gaia-Daten.</p>
-                  <p>Die dargestellten Kandidaten, Bewertungen und Klassifizierungen werden automatisiert erzeugt und befinden sich teilweise in einem frühen Forschungsstadium.</p>
-                  <p>Nicht alle verfügbaren Beobachtungen, Follow-up-Messungen, Archivdaten oder wissenschaftlichen Veröffentlichungen werden vollständig berücksichtigt.</p>
-                  <p>Neue Daten können zu einer Neubewertung, Bestätigung oder Ablehnung eines Kandidaten führen.</p>
-                  <p>Die dargestellten Ergebnisse stellen keine Bestätigung eines Exoplaneten dar und erheben keinen Anspruch auf Vollständigkeit oder wissenschaftliche Endgültigkeit.</p>
-                </article>
-                <article class="docs-legal-card" id="impressumSection">
-                  <h3>Impressum</h3>
-                  <p><strong>Verantwortlich für den Inhalt:</strong><br />Konrad Gottschalk</p>
-                  <p>Kwarves ist ein unabhängiges Citizen-Science-Projekt zur Analyse öffentlich verfügbarer astronomischer Daten.</p>
-                  <p><strong>Kontakt:</strong><br /><a href="mailto:astroproject725@gmail.com">astroproject725@gmail.com</a></p>
-                  <p>Bei Verbesserungen, Ideen oder Hinweisen gern per E-Mail melden oder einen Kommentar hinterlassen.</p>
-                </article>
-                <article class="docs-legal-card" id="privacySection">
-                  <h3>Privacy</h3>
-                  <p>Diese Webseite nutzt ein Dashboard mit lokalen Browser-Statistiken und optional externer Reichweitenmessung.</p>
-                  <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
-                </article>
-              </div>
-            </div>
-          </section>
-
           <section class="panel" id="adminPanel">
             <div class="panel-header">
               <div>
                 <h2>Restricted ExoFOP Review</h2>
-                <p class="panel-subtitle">Login-geschuetzter Bereich fuer Kandidaten, die fuer eine moegliche ExoFOP-Meldung vorbereitet werden.</p>
+                <p class="panel-subtitle">Login-gesch\u00fctzter Bereich f\u00fcr Kandidaten, die f\u00fcr eine m\u00f6gliche ExoFOP-Meldung vorbereitet werden.</p>
               </div>
               <div class="panel-actions">
                 <button class="icon-button" type="button" title="Admin aktualisieren" id="refreshAdmin">
@@ -846,7 +553,7 @@
             <div class="panel-body admin-layout">
               <div class="admin-login-card" id="adminLoginCard">
                 <h3>Login</h3>
-                <p class="muted">Zugang fuer ExoFOP-Review, Upload-Vorbereitung und interne Statistik.</p>
+                <p class="muted">Zugang f\u00fcr ExoFOP-Review, Upload-Vorbereitung und interne Statistik.</p>
                 <form class="admin-form" id="adminLoginForm">
                   <label for="adminUserInput">
                     <span id="adminUserLabel">Benutzername</span>
@@ -868,11 +575,11 @@
                 <div class="admin-toolbar">
                   <button class="small-button" type="button" id="adminToggleSelfFilter">
                     <i data-lucide="user-x"></i>
-                    <span id="adminToggleSelfFilterLabel">Eigene Besuche zaehlen</span>
+                    <span id="adminToggleSelfFilterLabel">Eigene Besuche z\u00e4hlen</span>
                   </button>
                   <button class="small-button" type="button" id="adminResetStats">
                     <i data-lucide="eraser"></i>
-                    Statistik zuruecksetzen
+                    Statistik zur\u00fccksetzen
                   </button>
                   <button class="small-button" type="button" id="adminLogout">
                     <i data-lucide="log-out"></i>
@@ -882,21 +589,21 @@
                 <div class="notice" style="margin-top: 10px;">
                   <strong>Globale Analytics:</strong> <span id="adminGlobalStatus">Inaktiv</span><br />
                   <strong>Details:</strong> <span id="adminGlobalDetails">Kein externer Tracking-Endpunkt konfiguriert.</span><br />
-                  <strong>Dashboard:</strong> <a id="adminGlobalDashboardLink" href="#" target="_blank" rel="noopener noreferrer">oeffnen</a><br />
+                  <strong>Dashboard:</strong> <a id="adminGlobalDashboardLink" href="#" target="_blank" rel="noopener noreferrer">\u00f6ffnen</a><br />
                   <strong>Eigenfilter:</strong> <span id="adminSelfFilterStatus">Aus</span>
                 </div>
                 <div class="admin-source-grid">
                   <article class="admin-source-card">
                     <h3 id="adminGoatTitle">GoatCounter</h3>
-                    <p id="adminGoatText">Quelle der Wahrheit fuer oeffentliche Besucherzahlen. Kann durch uBlock/Consent/Browser-Blocking weniger Aufrufe sehen.</p>
+                    <p id="adminGoatText">Quelle der Wahrheit f\u00fcr \u00f6ffentliche Besucherzahlen. Kann durch uBlock/Consent/Browser-Blocking weniger Aufrufe sehen.</p>
                     <a class="button" id="adminGoatButton" href="https://koni.goatcounter.com" target="_blank" rel="noopener noreferrer">
                       <i data-lucide="external-link"></i>
-                      <span id="adminGoatButtonLabel">GoatCounter oeffnen</span>
+                      <span id="adminGoatButtonLabel">GoatCounter \u00f6ffnen</span>
                     </a>
                   </article>
                   <article class="admin-source-card">
                     <h3 id="adminLocalTitle">Lokaler Browser-Fallback</h3>
-                    <p id="adminLocalText">Zaehlt nur dieses Geraet und diesen Browser via localStorage. Diese Werte sind nicht mit GoatCounter synchronisiert.</p>
+                    <p id="adminLocalText">Z\u00e4hlt nur dieses Ger\u00e4t und diesen Browser via localStorage. Diese Werte sind nicht mit GoatCounter synchronisiert.</p>
                   </article>
                 </div>
                 <div class="admin-kpis" style="margin-top: 10px;">
@@ -920,10 +627,10 @@
                 <div class="notice" style="margin-top: 10px;">
                   <strong>Aktuelles Land:</strong> <span id="adminCurrentCountry">-</span><br />
                   <strong>Quelle:</strong> <span id="adminCountrySource">-</span><br />
-                  <strong>Hinweis:</strong> Diese Tabelle ist der lokale Fallback im Browser. Fuer globale Zahlen bitte GoatCounter-Dashboard nutzen.
+                  <strong>Hinweis:</strong> Diese Tabelle ist der lokale Fallback im Browser. F\u00fcr globale Zahlen bitte GoatCounter-Dashboard nutzen.
                 </div>
                 <div class="table-wrap" style="margin-top: 10px;">
-                  <table class="admin-table" id="adminCountryTable" aria-label="Laenderstatistik">
+                  <table class="admin-table" id="adminCountryTable" aria-label="L\u00e4nderstatistik">
                     <thead>
                       <tr>
                         <th>Land</th>
@@ -938,24 +645,24 @@
                 </div>
                 <div class="notice" style="margin-top: 14px;">
                   <strong>ExoFOP Upload Candidates:</strong>
-                  <span>Eingeschraenkte Vorbereitungsliste. Diese Kandidaten sind starke Review-Faelle, aber noch keine bestaetigten Planeten und nicht Teil der oeffentlichen Bestliste.</span>
+                  <span>Eingeschr\u00e4nkte Vorbereitungsliste. Diese Kandidaten sind starke Review-F\u00e4lle, aber noch keine best\u00e4tigten Planeten und nicht Teil der \u00f6ffentlichen Bestliste.</span>
                 </div>
                 <div class="admin-source-grid">
                   <article class="admin-source-card">
                     <h3>Warum gelistet?</h3>
-                    <p>Aufgenommen werden nur Kandidaten, die nach strengem Vetting gruen und ExoFOP-ready sind. Gelbe High-Value-Faelle bleiben intern priorisierte Recheck-Ziele.</p>
+                    <p>Aufgenommen werden nur Kandidaten, die nach strengem Vetting gr\u00fcn und ExoFOP-ready sind. Gelbe High-Value-F\u00e4lle bleiben intern priorisierte Recheck-Ziele.</p>
                   </article>
                   <article class="admin-source-card">
                     <h3>Was fehlt noch?</h3>
-                    <p>Vor einer externen Meldung muessen SAP/PDCSAP, Odd/Even, Secondary Eclipse, Aktivitaet/Systematik und Einzeltransite manuell geprueft werden.</p>
+                    <p>Vor einer externen Meldung m\u00fcssen SAP/PDCSAP, Odd/Even, Secondary Eclipse, Aktivit\u00e4t/Systematik und Einzeltransite manuell gepr\u00fcft werden.</p>
                   </article>
                   <article class="admin-source-card">
                     <h3>Wann ExoFOP-ready?</h3>
-                    <p>Als ExoFOP-ready markieren wir Kandidaten erst, wenn die Matrix gruen ist: genug sichtbare Transits, SAP/PDCSAP konsistent, Odd/Even unauffaellig, kein Secondary-Eclipse-Hinweis, keine starke V-Shape/EB-Warnung, stabile Tiefe und saubere Datenfenster.</p>
+                    <p>Als ExoFOP-ready markieren wir Kandidaten erst, wenn die Matrix gr\u00fcn ist: genug sichtbare Transits, SAP/PDCSAP konsistent, Odd/Even unauff\u00e4llig, kein Secondary-Eclipse-Hinweis, keine starke V-Shape/EB-Warnung, stabile Tiefe und saubere Datenfenster.</p>
                   </article>
                   <article class="admin-source-card">
                     <h3>Wann nur Prep?</h3>
-                    <p>Gelbe Kandidaten mit starkem Signal bleiben intern priorisierte Recheck-/Follow-up-Ziele. Sie sind keine Upload-Empfehlung und werden erst mit gruenem Vetting ExoFOP-ready.</p>
+                    <p>Gelbe Kandidaten mit starkem Signal bleiben intern priorisierte Recheck-/Follow-up-Ziele. Sie sind keine Upload-Empfehlung und werden erst mit gr\u00fcnem Vetting ExoFOP-ready.</p>
                   </article>
                 </div>
                 <div class="table-wrap" style="margin-top: 10px;">
@@ -963,7 +670,7 @@
                     <thead>
                       <tr>
                         <th>TIC</th>
-                        <th>ExoFOP-Kriterien erfuellt?</th>
+                        <th>ExoFOP-Kriterien erf\u00fcllt?</th>
                       </tr>
                     </thead>
                     <tbody id="adminExofopRows"></tbody>
@@ -971,6 +678,246 @@
                 </div>
               </div>
             </div>
+          </section>
+
+          <section class="panel" id="impressumPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Impressum und Hinweise</h2>
+                <p class="panel-subtitle">Projektstatus, Verantwortlichkeit und Datenschutz-Hinweise.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="docs-legal">
+                <article class="docs-legal-card" id="aboutSection">
+                  <h3>Wissenschaftlicher Hinweis</h3>
+                  <p>Kwarves ist ein unabh\u00e4ngiges Citizen-Science-Projekt zur Analyse \u00f6ffentlich verf\u00fcgbarer TESS- und Gaia-Daten.</p>
+                  <p>Die dargestellten Kandidaten, Bewertungen und Klassifizierungen werden automatisiert erzeugt und befinden sich teilweise in einem fr\u00fchen Forschungsstadium.</p>
+                  <p>Nicht alle verf\u00fcgbaren Beobachtungen, Follow-up-Messungen, Archivdaten oder wissenschaftlichen Ver\u00f6ffentlichungen werden vollst\u00e4ndig ber\u00fccksichtigt.</p>
+                  <p>Neue Daten k\u00f6nnen zu einer Neubewertung, Best\u00e4tigung oder Ablehnung eines Kandidaten f\u00fchren.</p>
+                  <p>Die dargestellten Ergebnisse stellen keine Best\u00e4tigung eines Exoplaneten dar und erheben keinen Anspruch auf Vollst\u00e4ndigkeit oder wissenschaftliche Endg\u00fcltigkeit.</p>
+                </article>
+                <article class="docs-legal-card" id="impressumSection">
+                  <h3>Impressum</h3>
+                  <p><strong>Verantwortlich f\u00fcr den Inhalt:</strong><br />Konrad Gottschalk</p>
+                  <p>Kwarves ist ein unabh\u00e4ngiges Citizen-Science-Projekt zur Analyse \u00f6ffentlich verf\u00fcgbarer astronomischer Daten.</p>
+                  <p><strong>Kontakt:</strong><br /><a href="mailto:astroproject725@gmail.com">astroproject725@gmail.com</a></p>
+                  <p>Bei Verbesserungen, Ideen oder Hinweisen gern per E-Mail melden oder einen Kommentar hinterlassen.</p>
+                </article>
+                <article class="docs-legal-card" id="privacySection">
+                  <h3>Privacy</h3>
+                  <p>Diese Webseite nutzt ein Dashboard mit lokalen Browser-Statistiken und optional externer Reichweitenmessung.</p>
+                  <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <!-- Informational panels (kept for JS rendering, visually part of details section) -->
+          <section class="panel compact-hidden" id="topCandidatesPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="topCandidatesTitle">Top Kandidaten</h2>
+                <p class="panel-subtitle" id="topCandidatesSub">Sortiert nach Evidence Score, HZ-Priorit\u00e4t und Follow-up-Reife. Klick bereitet ein Kandidatenprofil vor.</p>
+              </div>
+            </div>
+            <div class="panel-body table-wrap">
+              <table class="top-table" aria-label="Top Kandidaten">
+                <thead id="topCandidatesHead">
+                  <tr>
+                    <th>Rank</th>
+                    <th>TIC</th>
+                    <th>Distance ly</th>
+                    <th>Period days</th>
+                    <th>HZ class</th>
+                    <th>Evidence</th>
+                    <th>Label</th>
+                    <th>Next step</th>
+                  </tr>
+                </thead>
+                <tbody id="topCandidateRows"></tbody>
+              </table>
+              <article class="followup-subpanel" aria-label="Follow-up Kandidaten">
+                <div class="followup-subpanel-header">
+                  <div>
+                    <h3 id="followupCandidatesTitle">Follow-up Kandidaten</h3>
+                    <p id="followupCandidatesSub" class="mini">Alle internen Follow-up-F\u00e4lle, getrennt von normalem Orange.</p>
+                  </div>
+                  <div class="followup-subpanel-actions">
+                    <span class="pill spc-prep" id="followupCandidateCount">0</span>
+                    <button class="icon-button" type="button" id="toggleFollowupList" title="Follow-up einklappen" aria-expanded="true">
+                      <i data-lucide="chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="followup-list" id="followupCandidateRows"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="yellowReasonPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="yellowReasonTitle">Why is this candidate yellow?</h2>
+                <p class="panel-subtitle" id="yellowReasonSub">Gelb bedeutet nicht schlecht: wissenschaftlich interessant, aber nicht sauber genug f\u00fcr automatisches Gr\u00fcn.</p>
+              </div>
+            </div>
+            <div class="panel-body yellow-reason-layout">
+              <article class="matrix-stat-box">
+                <h3 id="yellowSelectedTitle">Ausgew\u00e4hlter gelber Kandidat</h3>
+                <div id="yellowSelectedReason" class="yellow-rules"></div>
+              </article>
+              <article class="matrix-stat-box">
+                <h3 id="yellowMatrixTitle">Wert vs. Unsicherheitsgrund</h3>
+                <div class="signal-matrix">
+                  <div class="matrix-axis"></div>
+                  <div class="matrix-axis">Datenlage</div>
+                  <div class="matrix-axis">Signalform</div>
+                  <div class="matrix-axis">Aktivit\u00e4t</div>
+                  <div class="matrix-axis">Systematik</div>
+                  <div class="matrix-axis">Follow-up offen</div>
+                  <div class="matrix-axis">hoch</div>
+                  <article class="matrix-cell yellow"><strong>HZ_STRONG_FOLLOWUP</strong><p class="mini">Hoher Wert, aber Datenlage unsicher.</p></article>
+                  <article class="matrix-cell yellow"><strong>SPC_ART</strong><p class="mini">Starkes Signal, Form noch nicht final.</p></article>
+                  <article class="matrix-cell yellow"><strong>HZ_ACTIVITY_RECHECK</strong><p class="mini">Aktivit\u00e4ts-/BY-Dra-Risiko pr\u00fcfen.</p></article>
+                  <article class="matrix-cell yellow"><strong>SPC_ART</strong><p class="mini">Systematik oder Pipeline-Artefakt offen.</p></article>
+                  <article class="matrix-cell green"><strong>FOLLOWUP_STRONG</strong><p class="mini">Kann trotz Gelb hoch priorisiert sein.</p></article>
+                  <div class="matrix-axis">mittel</div>
+                  <article class="matrix-cell yellow"><strong>HZ_RECHECK</strong><p class="mini">Wenig Transits oder lange Periode.</p></article>
+                  <article class="matrix-cell yellow"><strong>Manual Review</strong><p class="mini">Foldplot und Einzelevents pr\u00fcfen.</p></article>
+                  <article class="matrix-cell yellow"><strong>Activity Check</strong><p class="mini">Rotation und Sternaktivit\u00e4t testen.</p></article>
+                  <article class="matrix-cell yellow"><strong>Systematics Check</strong><p class="mini">SAP/PDCSAP, Apertur und Nachbarn.</p></article>
+                  <article class="matrix-cell yellow"><strong>More TESS</strong><p class="mini">Weitere Abdeckung abwarten.</p></article>
+                  <div class="matrix-axis">niedrig</div>
+                  <article class="matrix-cell red"><strong>LOW_PRIORITY</strong><p class="mini">Mehrere Risiken, schwache Datenlage.</p></article>
+                  <article class="matrix-cell red"><strong>LOW_PRIORITY</strong><p class="mini">Signalform nicht planetar genug.</p></article>
+                  <article class="matrix-cell red"><strong>FP_BYDRA</strong><p class="mini">Aktivit\u00e4t dominiert wahrscheinlich.</p></article>
+                  <article class="matrix-cell red"><strong>REJECTED</strong><p class="mini">Artefakt/FP dokumentiert.</p></article>
+                  <article class="matrix-cell yellow"><strong>Archive only</strong><p class="mini">Kein direkter Follow-up-Schritt.</p></article>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="visitorStatusPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="visitorStatusTitle">Projektstatus & Kurzlogik</h2>
+                <p class="panel-subtitle" id="visitorStatusSub">Kandidatenlage, Farbcode und Follow-up-Regeln auf einen Blick.</p>
+              </div>
+            </div>
+            <div class="panel-body status-overview">
+              <div class="visitor-kpis" id="visitorKpis"></div>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="statisticsPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="statisticsTitle">Statistik-Plots</h2>
+                <p class="panel-subtitle" id="statisticsSub">Verteilungen aus den vorhandenen Matrix- und Kandidatenfeldern.</p>
+              </div>
+            </div>
+            <div class="panel-body chart-grid">
+              <article class="chart-card"><h3>Evidence Score</h3><canvas id="chartEvidence"></canvas></article>
+              <article class="chart-card"><h3>Transitanzahl</h3><canvas id="chartTransits"></canvas></article>
+              <article class="chart-card"><h3>Distanz</h3><canvas id="chartDistance"></canvas></article>
+              <article class="chart-card"><h3>HZ-Klassen</h3><canvas id="chartHz"></canvas></article>
+              <article class="chart-card"><h3>Label-Verteilung</h3><canvas id="chartLabels"></canvas></article>
+              <article class="chart-card"><h3>TESS-Sektoren</h3><canvas id="chartSectors"></canvas></article>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="signalMatrixPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="signalMatrixTitle">Datenlage vs. Signal</h2>
+                <p class="panel-subtitle" id="signalMatrixSub">Warum starke Signale trotzdem gelb bleiben k\u00f6nnen, wenn die Datenlage unsicher ist.</p>
+              </div>
+            </div>
+            <div class="panel-body signal-matrix" id="signalMatrixGrid">
+              <div class="matrix-axis"></div>
+              <div class="matrix-axis">Signal schwach</div>
+              <div class="matrix-axis">Signal mittel</div>
+              <div class="matrix-axis">Signal stark</div>
+              <div class="matrix-axis">Daten gut</div>
+              <article class="matrix-cell yellow"><span>Gute Daten + schwach</span><strong>Beobachten / Recheck</strong><p class="mini">Signal reicht noch nicht f\u00fcr Follow-up.</p></article>
+              <article class="matrix-cell yellow"><span>Gute Daten + mittel</span><strong>SPC_ART / Review</strong><p class="mini">Manuelle Pr\u00fcfung entscheidet.</p></article>
+              <article class="matrix-cell green"><span>Gute Daten + stark</span><strong>SPC / Follow-up</strong><p class="mini">Beste \u00f6ffentliche Kandidatenliste.</p></article>
+              <div class="matrix-axis">Daten mittel</div>
+              <article class="matrix-cell yellow"><span>Mittel + schwach</span><strong>Low Recheck</strong><p class="mini">Neue Sektoren k\u00f6nnen helfen.</p></article>
+              <article class="matrix-cell yellow"><span>Mittel + mittel</span><strong>SPC_ART</strong><p class="mini">Artefakt- oder Systematikrisiko offen.</p></article>
+              <article class="matrix-cell yellow"><span>Mittel + stark</span><strong>SPC_ART / mehr Daten</strong><p class="mini">Nicht gr\u00fcn ohne stabile Datenlage.</p></article>
+              <div class="matrix-axis">Daten schlecht</div>
+              <article class="matrix-cell red"><span>Schlecht + schwach</span><strong>Ignorieren / low priority</strong><p class="mini">Keine belastbare Evidenz.</p></article>
+              <article class="matrix-cell yellow"><span>Schlecht + mittel</span><strong>NEEDS_MORE_TESS_DATA</strong><p class="mini">Zu wenig Abdeckung.</p></article>
+              <article class="matrix-cell yellow"><span>Schlecht + stark</span><strong>SPC_ART / mehr Daten n\u00f6tig</strong><p class="mini">Starkes Signal, aber noch nicht sicher.</p></article>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="observationTimelinePanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="observationTimelineTitle">TESS-Beobachtungsplan</h2>
+                <p class="panel-subtitle" id="observationTimelineSub">Vorbereitung f\u00fcr Sektorverlauf, Year-8 Treffer und Recheck-Planung.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="timeline-grid" id="visitorTimeline"></div>
+              <div class="notice" id="observationTimelineNotice" style="margin-top: 12px;">
+                Year-8 hit does not mean the target was not observed for eight years. It means the candidate position overlaps with expected or planned Year-8 TESS coverage geometry and should be checked against official sector products.
+                Die Geometrie ist aktuell eine robuste Missionsansicht, aber keine exakte Himmelsprojektion.
+              </div>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="methodPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="methodTitle">Methodik</h2>
+                <p class="panel-subtitle" id="methodSub">Von Gaia-Sternparametern bis zur vorl\u00e4ufigen SPC/SPC_ART-Klassifikation.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="method-steps" id="methodSteps">
+                <article class="method-step"><span>1</span><strong>Gaia DR3</strong><p class="mini">Sternparameter, Distanz und Astrometrie.</p></article>
+                <article class="method-step"><span>2</span><strong>K-Zwerg Filter</strong><p class="mini">Nahe K-, G- und M-Sterne strukturieren.</p></article>
+                <article class="method-step"><span>3</span><strong>TESS Sectors</strong><p class="mini">Lichtkurven und Datenfenster pr\u00fcfen.</p></article>
+                <article class="method-step"><span>4</span><strong>BLS/TLS Search</strong><p class="mini">Periodische Transit-Signale suchen.</p></article>
+                <article class="method-step"><span>5</span><strong>Evidence Score</strong><p class="mini">Datenlage und Signalqualit\u00e4t bewerten.</p></article>
+                <article class="method-step"><span>6</span><strong>SPC / SPC_ART</strong><p class="mini">Starke Kandidaten von Artefakt-Risiken trennen.</p></article>
+                <article class="method-step"><span>7</span><strong>HZ Review</strong><p class="mini">Habitable-Zone-Kontext und Follow-up priorisieren.</p></article>
+              </div>
+              <div class="notice" id="methodNotice" style="margin-top: 12px;">
+                Gaia liefert Sternparameter und Distanz. TESS liefert Lichtkurven/Sektoren. BLS/TLS sucht periodische Transit-Signale.
+                Der Evidence Score bewertet Datenlage und Signalqualit\u00e4t. SPC bedeutet starker Planetenkandidat; SPC_ART bedeutet starker Kandidat mit Artefakt- oder Systematikverdacht.
+              </div>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="labelLegendPanel">
+            <div class="panel-header">
+              <div>
+                <h2 id="labelLegendTitle">Kandidatenlabels</h2>
+                <p class="panel-subtitle" id="labelLegendSub">Kurze Leseregel f\u00fcr die wichtigsten Kwarves-Statuswerte.</p>
+              </div>
+            </div>
+            <div class="panel-body table-wrap">
+              <table class="legend-table" aria-label="Kandidatenlabels">
+                <thead><tr id="labelLegendHeader"><th>Label</th><th>Bedeutung</th></tr></thead>
+                <tbody id="labelLegendRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel compact-hidden" id="matrixStatsPanel">
+            <div class="panel-header">
+              <div>
+                <h2>Matrix-Statistiken</h2>
+                <p class="panel-subtitle">Statistik, Visualisierung und Ranking aus den vorhandenen Matrix-Feldern.</p>
+              </div>
+            </div>
+            <div class="panel-body matrix-stats" id="matrixStats"></div>
           </section>
         </section>
         <footer class="site-footer">

@@ -236,7 +236,7 @@ describe('computeFinalDecision', () => {
     expect(result.status).toBe("NO_PLANET");
   });
 
-  it('returns NO_PLANET when Activity/Rotation HIGH blocks EXOFOP', () => {
+  it('returns RECHECK_ACTIVITY when Activity/Rotation HIGH fails but signal+data are strong', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -244,7 +244,67 @@ describe('computeFinalDecision', () => {
       evidenceScore: 55,
       rotationRisk: "HIGH"
     }));
+    expect(result.status).toBe("RECHECK_ACTIVITY");
+    expect(result.next_action).toBe("rotation_activity_check");
+  });
+
+  it('returns RECHECK_ACTIVITY for STRONG signal + HIGH data + only Activity fail', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: HIGH_SECTORS,
+      matrixVisibleTransits: HIGH_TRANSITS,
+      transitShape: "U_SHAPE",
+      evidenceScore: STRONG_SCORE,
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO",
+      rotationRisk: "HIGH"
+    }));
+    expect(result.status).toBe("RECHECK_ACTIVITY");
+    expect(result.reason).toContain("Starker Transit-Kandidat");
+  });
+
+  it('returns NO_PLANET when Secondary Eclipse is detected (hard FP)', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: STRONG_SCORE,
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "YES"
+    }));
     expect(result.status).toBe("NO_PLANET");
+    expect(result.reason).toContain("False positive indicator");
+  });
+
+  it('returns NO_PLANET when Odd/Even BAD + SAP/PDCSAP MISMATCH (hard FPs)', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: STRONG_SCORE,
+      sapPdcsapMatch: "MISMATCH",
+      oddEvenResult: "BAD",
+      secondaryEclipse: "NO",
+      rotationRisk: "LOW"
+    }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.reason).toContain("False positive indicator");
+  });
+
+  it('returns NO_PLANET for weak signal + Activity fail (soft FP)', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: MIN_SECTORS_FOR_DATA,
+      matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
+      transitShape: "U_SHAPE",
+      evidenceScore: MEDIUM_SCORE - 1,
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO",
+      rotationRisk: "HIGH"
+    }));
+    expect(result.status).toBe("NO_PLANET");
+    expect(result.reason).toContain("Weak signal");
   });
 
   it('returns EXOFOP_CANDIDATE when all checks pass', () => {

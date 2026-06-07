@@ -1,4 +1,4 @@
-import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel } from './state.js';
+import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel, loadSelectedCardCollapsed, SELECTED_CARD_COLLAPSE_KEY } from './state.js';
 import { t, setLanguage, setText, setTitle, setLegendText, buildTessScheduleState, formatNumber, currentLocale, projectFlowStepsI18n, projectLevelsI18n, projectScripts, localizeScriptText, localizeScriptLevel } from './i18n.js';
 import { els, data, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
 import { renderCurveFilterCounts } from './components/lightcurveView.js';
@@ -33,13 +33,16 @@ export function scrollToPanel(panelId) {
 }
 
 export function updateDate() {
-  document.getElementById("dateLabel").textContent = new Intl.DateTimeFormat(currentLocale(), {
+  const dateStr = new Intl.DateTimeFormat(currentLocale(), {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date());
+  document.getElementById("dateLabel").textContent = dateStr;
+  const dashDate = document.getElementById("dashboardDateLabel");
+  if (dashDate) dashDate.textContent = dateStr;
 }
 
 export function selectCandidate(candidate, source = "table") {
@@ -292,6 +295,13 @@ export function applyLanguageToUi() {
         <h3>Privacy</h3>
         <p>This website uses a dashboard with local browser statistics and optional external audience measurement.</p>
         <p>Analytics data is used only to improve the project and does not replace scientific publication.</p>
+      `,
+      aboutProjectHtml: `
+        <h3>Methodology</h3>
+        <p>From Gaia stellar parameters to provisional SPC/SPC_ART classification.</p>
+        <p>Gaia provides stellar parameters and distance. TESS provides light curves and sector windows. BLS/TLS searches for periodic transit signals. The Evidence Score rates data coverage and signal quality. SPC means strong planet candidate; SPC_ART means strong candidate with artifact or systematics concern.</p>
+        <h3>Notice</h3>
+        <p>Kwarves is an independent citizen-science project analyzing publicly available TESS and Gaia data. Displayed results are not a confirmation of an exoplanet and do not claim completeness or scientific finality.</p>
       `
     }
     : state.lang === "fr"
@@ -391,8 +401,15 @@ export function applyLanguageToUi() {
         privacyHtml: `
           <h3>Confidentialite</h3>
           <p>Ce site utilise un dashboard avec statistiques locales navigateur et mesure d'audience externe optionnelle.</p>
-          <p>Les donnees d'analyse servent uniquement a ameliorer le projet et ne remplacent pas une publication scientifique.</p>
-        `
+        <p>Les donnees d'analyse servent uniquement a ameliorer le projet et ne remplacent pas une publication scientifique.</p>
+      `,
+      aboutProjectHtml: `
+        <h3>Methodologie</h3>
+        <p>Des parametres stellaires Gaia a la classification provisoire SPC/SPC_ART.</p>
+        <p>Gaia fournit les parametres stellaires et la distance. TESS fournit les courbes de lumiere et les fenetres de secteurs. BLS/TLS cherche des signaux de transit periodiques. L'Evidence Score evalue la couverture de donnees et la qualite du signal. SPC signifie candidat planetaire fort; SPC_ART signifie candidat fort avec suspicion d'artefact ou de systematique.</p>
+        <h3>Avis</h3>
+        <p>Kwarves est un projet citizen-science independant pour l'analyse de donnees TESS et Gaia publiquement disponibles. Les resultats affiches ne constituent pas une confirmation d'exoplanete et ne pretendent ni a l'exhaustivite ni a une finalite scientifique.</p>
+      `
       }
       : {
         brandSub: "Planethunting",
@@ -490,8 +507,15 @@ export function applyLanguageToUi() {
         privacyHtml: `
           <h3>Privacy</h3>
           <p>Diese Webseite nutzt ein Dashboard mit lokalen Browser-Statistiken und optional externer Reichweitenmessung.</p>
-          <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
-        `
+        <p>Analysedaten dienen nur der Projektverbesserung und ersetzen keine wissenschaftliche Publikation.</p>
+      `,
+      aboutProjectHtml: `
+        <h3>Methodik</h3>
+        <p>Von Gaia-Sternparametern bis zur vorlaeufigen SPC/SPC_ART-Klassifikation.</p>
+        <p>Gaia liefert Sternparameter und Distanz. TESS liefert Lichtkurven und Sektorfenster. BLS/TLS sucht periodische Transit-Signale. Der Evidence Score bewertet Datenlage und Signalqualitaet. SPC bedeutet starker Planetenkandidat; SPC_ART bedeutet starker Kandidat mit Artefakt- oder Systematikverdacht.</p>
+        <h3>Hinweis</h3>
+        <p>Kwarves ist ein unabhaengiges Citizen-Science-Projekt zur Analyse oeffentlich verfuegbarer TESS- und Gaia-Daten. Die dargestellten Ergebnisse stellen keine Bestaetigung eines Exoplaneten dar und erheben keinen Anspruch auf Vollstaendigkeit oder wissenschaftliche Endgueltigkeit.</p>
+      `
       };
 
   const setNav = (panel, text) => {
@@ -501,14 +525,10 @@ export function applyLanguageToUi() {
 
   document.querySelector(".brand span").textContent = labels.brandSub;
   document.querySelector(".nav").setAttribute("aria-label", labels.navAria);
-  setNav("treePanel", t("nav_tree"));
-  setNav("mapPanel", t("nav_map"));
+  setNav("tablePanel", t("nav_kandidaten"));
+  setNav("treePanel", t("nav_analyse"));
   setNav("tessPanel", t("nav_tess"));
-  setNav("curvesPanel", t("nav_curves"));
-  setNav("tablePanel", t("nav_table"));
-  setNav("docsPanel", t("nav_docs"));
-  setNav("impressumPanel", t("nav_impressum"));
-  setNav("adminPanel", t("nav_admin"));
+  setNav("docsPanel", t("nav_projekt"));
 
   setText(".sidebar-note strong", t("sidebar_rule_title"));
   setText(".sidebar-note span", t("sidebar_rule_text"));
@@ -517,6 +537,10 @@ export function applyLanguageToUi() {
   setText(".eyebrow", labels.eyebrow);
   setText(".lede", t("lede"));
   setText("#focusHzLabel", t("hz_focus"));
+  const aboutContent = document.getElementById("aboutProjectContent");
+  if (aboutContent) {
+    aboutContent.innerHTML = labels.aboutProjectHtml || "";
+  }
   const visitorCopy = state.lang === "en"
     ? {
       introEyebrow: "Citizen-science Exoplanet Screening",
@@ -827,6 +851,8 @@ export function applyLanguageToUi() {
 
   setText("#tessPanel h2", labels.tessPanelTitle);
   setText("#tessPanel .panel-subtitle", labels.tessPanelSub);
+  const aboutPanelTitle = document.querySelector("#aboutProjectPanel .panel-header h2");
+  if (aboutPanelTitle) aboutPanelTitle.textContent = t("about_project_title");
   setTitle("#refreshTess", labels.tessRefresh);
   setText("#tessPanel .tess-kpi:nth-child(1) span", labels.tessKpiCurrent);
   setText("#tessPanel .tess-kpi:nth-child(2) span", labels.tessKpiWindow);
@@ -1043,6 +1069,18 @@ if (els.tessCompareToggle) {
   });
 }
 
+if (els.toggleSelectedCard && els.selectedCardSection) {
+  els.toggleSelectedCard.addEventListener("click", () => {
+    const section = els.selectedCardSection;
+    const collapsed = !section.classList.contains("is-collapsed");
+    section.classList.toggle("is-collapsed", collapsed);
+    els.toggleSelectedCard.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    try {
+      localStorage.setItem(SELECTED_CARD_COLLAPSE_KEY, collapsed ? "1" : "0");
+    } catch (_) {}
+  });
+}
+
 document.querySelectorAll("[data-curve-filter]").forEach((button) => {
   button.addEventListener("click", () => {
     state.curveFilter = button.dataset.curveFilter;
@@ -1056,6 +1094,21 @@ document.querySelectorAll("[data-table-limit]").forEach((button) => {
   button.addEventListener("click", () => {
     state.tableLimit = button.dataset.tableLimit === "all" ? "all" : Number(button.dataset.tableLimit);
     document.querySelectorAll("[data-table-limit]").forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    renderTable();
+  });
+});
+
+document.querySelectorAll("[data-sort]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const sortBy = button.dataset.sort;
+    if (state.sortBy === sortBy) {
+      state.sortOrder = state.sortOrder === "desc" ? "asc" : "desc";
+    } else {
+      state.sortBy = sortBy;
+      state.sortOrder = "desc";
+    }
+    document.querySelectorAll("[data-sort]").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
     renderTable();
   });
@@ -1285,7 +1338,17 @@ window.addEventListener("pagehide", () => {
 });
 
 initPanelCollapseControls();
+setPanelCollapsed("tablePanel", false, true);
 setTessCompareCollapsed(loadTessCompareCollapsed(), false);
+(function initSelectedCardCollapse() {
+  const collapsed = loadSelectedCardCollapsed();
+  if (els.selectedCardSection) {
+    els.selectedCardSection.classList.toggle("is-collapsed", collapsed);
+  }
+  if (els.toggleSelectedCard) {
+    els.toggleSelectedCard.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  }
+})();
 analytics.selfFilterEnabled = loadSelfFilterPreference();
 applyLanguageToUi();
 setupGlobalAnalytics();
@@ -1294,6 +1357,9 @@ startAnalyticsTracking();
 state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
 state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
 renderAll();
+document.getElementById("loadingOverlay")?.classList.add("hidden");
+state.sortBy = "evidence";
+state.sortOrder = "desc";
 if (state.tessMapMode === "3d") {
   initTessSector3d();
 }

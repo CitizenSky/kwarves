@@ -4,7 +4,8 @@ const STATUS_LABELS = {
   "EXOFOP_CANDIDATE": "ExoFOP bereit",
   "DATA_LIMITED_SECTORS": "Wenige Daten (Sektoren)",
   "DATA_LIMITED_TRANSITS": "Wenige Daten (Transits)",
-  "NO_PLANET": "Kein Planet"
+  "NO_PLANET": "Kein Planet",
+  "RECHECK_ACTIVITY": "Aktivit\u00e4t pr\u00fcfen"
 };
 
 const HEATMAP_COLORS = {
@@ -32,6 +33,7 @@ const NEXT_LABELS = {
   "wait_for_more_sectors": "Auf weitere Sektoren warten",
   "wait_for_more_transits": "Auf weitere Transits warten",
   "manual_review_required": "Manuelle Überprüfung erforderlich",
+  "rotation_activity_check": "Rotation/Activity separat prüfen",
   "prepare_exofop_upload": "ExoFOP-Upload vorbereiten"
 };
 

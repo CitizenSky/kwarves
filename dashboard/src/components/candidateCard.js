@@ -23,6 +23,7 @@ export function renderFinalDecisionPanel(candidate) {
   else if (statusLabel === "DATA_LIMITED_SECTORS") statusGerman = "Wenige Daten (Sektoren)";
   else if (statusLabel === "DATA_LIMITED_TRANSITS") statusGerman = "Wenige Daten (Transits)";
   else if (statusLabel === "NO_PLANET") statusGerman = "Kein Planet";
+  else if (statusLabel === "RECHECK_ACTIVITY") statusGerman = "Aktivit\u00e4t pr\u00fcfen";
 
   var signalQuality = fd.signal_quality || "unknown";
   var dataQuality = fd.data_quality || "unknown";
@@ -127,8 +128,19 @@ export function renderFinalDecisionPanel(candidate) {
 
 export function renderSelected() {
   const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
-  if (!candidate) return;
+  if (!candidate) {
+    if (els.selectedCardTitle) els.selectedCardTitle.textContent = "Kein Kandidat";
+    if (els.selectedCardTic) els.selectedCardTic.textContent = "-";
+    if (els.selectedCard) els.selectedCard.innerHTML = "";
+    return;
+  }
   state.selected = candidate;
+  if (els.selectedCardTitle) {
+    els.selectedCardTitle.textContent = `Ausgewaehlter Kandidat`;
+  }
+  if (els.selectedCardTic) {
+    els.selectedCardTic.textContent = `TIC ${candidate.tic}`;
+  }
   const matrixStatus = formatMaybe(candidate.matrixStatus);
   const matrixClass = formatMaybe(candidate.matrixClass);
   const evidence = formatMaybe(candidate.evidenceScore);

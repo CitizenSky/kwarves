@@ -25,8 +25,9 @@ export const ADMIN_PASSWORD = "starfield";
 export const ADMIN_LOGIN_KEY = "kwarves_admin_logged_in_v1";
 export const ANALYTICS_STORE_KEY = "kwarves_local_analytics_v1";
 export const ANALYTICS_SELF_FILTER_KEY = "kwarves_analytics_filter_self_v1";
-export const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v3";
+export const PANEL_COLLAPSE_KEY = "kwarves_panel_collapsed_v4";
 export const TESS_COMPARE_COLLAPSE_KEY = "kwarves_tess_compare_collapsed_v2";
+export const SELECTED_CARD_COLLAPSE_KEY = "kwarves_selected_card_collapsed_v1";
 export const GLOBAL_ANALYTICS_CONFIG = {
   provider: "goatcounter",
   endpoint: "https://koni.goatcounter.com/count",
@@ -154,6 +155,15 @@ export function loadTessCompareCollapsed() {
     return value === null ? true : value === "1";
   } catch (_) {
     return true;
+  }
+}
+
+export function loadSelectedCardCollapsed() {
+  try {
+    const value = localStorage.getItem(SELECTED_CARD_COLLAPSE_KEY);
+    return value === null ? false : value === "1";
+  } catch (_) {
+    return false;
   }
 }
 

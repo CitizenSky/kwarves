@@ -283,14 +283,50 @@ export function computeFinalDecision(candidate) {
     };
   }
 
-  // Step 7: Hard vetting check
-  const vettingChecks = ["Odd/Even", "Secondary Eclipse", "SAP/PDCSAP", "Activity/Rotation"];
-  const vettingFails = vettingChecks.filter(function(name) { return checks[name].status === "failed"; });
-  if (vettingFails.length > 0) {
+  // Step 7a: Hard vetting — definitive false positive indicators
+  const hardVettingChecks = ["Odd/Even", "Secondary Eclipse", "SAP/PDCSAP"];
+  const hardVettingFails = hardVettingChecks.filter(function(name) { return checks[name].status === "failed"; });
+  if (hardVettingFails.length > 0) {
     return {
       status: "NO_PLANET",
-      reason: "Vetting failed: " + vettingFails.join(", ") + ".",
-      failed_test: vettingFails[0],
+      reason: "False positive indicator: " + hardVettingFails.join(", ") + ".",
+      failed_test: hardVettingFails[0],
+      next_action: "exclude",
+      signal_quality: signalQuality,
+      data_quality: dataQuality,
+      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "NO_PLANET"),
+      passed_checks: cats.passed,
+      warning_checks: cats.warning,
+      failed_checks: cats.failed,
+      not_run_checks: cats.notRun,
+      blockers: cats.blockers.map(function(b) { return b.check + ": " + b.reason; }),
+      check_tree: checkTree
+    };
+  }
+
+  // Step 7b: Activity/Rotation — soft blocker, not automatically fatal
+  if (checks["Activity/Rotation"].status === "failed") {
+    if ((signalQuality === "strong" || signalQuality === "medium") && (dataQuality === "high" || dataQuality === "sufficient")) {
+      return {
+        status: "RECHECK_ACTIVITY",
+        reason: "Starker Transit-Kandidat, aber Aktivit\u00e4t/Rotation ist ein kritischer St\u00f6rfaktor.",
+        failed_test: "Activity/Rotation",
+        next_action: "rotation_activity_check",
+        signal_quality: signalQuality,
+        data_quality: dataQuality,
+        matrix_cell: determineMatrixCell(signalQuality, dataQuality, "RECHECK_ACTIVITY"),
+        passed_checks: cats.passed,
+        warning_checks: cats.warning,
+        failed_checks: cats.failed,
+        not_run_checks: cats.notRun,
+        blockers: cats.blockers.map(function(b) { return b.check + ": " + b.reason; }),
+        check_tree: checkTree
+      };
+    }
+    return {
+      status: "NO_PLANET",
+      reason: "Weak signal with rotation/activity risk; likely false positive.",
+      failed_test: "Activity/Rotation",
       next_action: "exclude",
       signal_quality: signalQuality,
       data_quality: dataQuality,

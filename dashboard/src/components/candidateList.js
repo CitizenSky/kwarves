@@ -153,7 +153,25 @@ export function renderFollowupCandidates() {
 }
 
 export function renderTable() {
-  const rows = publicMatrixCandidates();
+  let rows = publicMatrixCandidates();
+  const sortBy = state.sortBy || "evidence";
+  const sortOrder = state.sortOrder || "desc";
+  rows = [...rows].sort((a, b) => {
+    let va, vb;
+    switch (sortBy) {
+      case "evidence": va = a.evidenceScore || 0; vb = b.evidenceScore || 0; break;
+      case "distance": va = a.distance || 0; vb = b.distance || 0; break;
+      case "snr": va = a.snr || 0; vb = b.snr || 0; break;
+      case "transits": va = expectedTransits(a) || 0; vb = expectedTransits(b) || 0; break;
+      case "hz": va = a.hz || ""; vb = b.hz || ""; break;
+      default: va = a.evidenceScore || 0; vb = b.evidenceScore || 0;
+    }
+    if (sortBy === "hz") {
+      const order = sortOrder === "asc" ? 1 : -1;
+      return va.localeCompare(vb) * order;
+    }
+    return sortOrder === "desc" ? vb - va : va - vb;
+  });
   const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
   const term = els.globalSearch.value.trim().toLowerCase();
   if (!limited.length) {
