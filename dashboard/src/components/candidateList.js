@@ -175,7 +175,7 @@ export function renderTable() {
   const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
   const term = els.globalSearch.value.trim().toLowerCase();
   if (!limited.length) {
-    els.rows.innerHTML = `<tr><td colspan="5">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
+    els.rows.innerHTML = `<tr><td colspan="4">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
     return;
   }
   els.rows.innerHTML = limited.map((candidate) => `
@@ -184,7 +184,6 @@ export function renderTable() {
       <td>${formatFloat(candidate.evidenceScore, 0)}</td>
       <td>${formatMaybe(candidate.hz)}</td>
       <td>${candidate.distance ? candidate.distance + " ly" : "-"}</td>
-      <td>${candidate.nextStep || candidate.decisionReason || candidate.reason || "-"}</td>
     </tr>
   `).join("");
 }

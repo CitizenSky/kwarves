@@ -126,6 +126,60 @@ export function renderFinalDecisionPanel(candidate) {
   return html;
 }
 
+function renderActionCard(candidate) {
+  const fd = candidate.finalDecision;
+  const evidence = candidate.evidenceScore || 0;
+
+  let priorityLevel = "low";
+  let priorityLabel = "Niedrig";
+  if (evidence >= 80 || (candidate.color === "green" && candidate.hz)) {
+    priorityLevel = "high";
+    priorityLabel = "Hoch";
+  } else if (evidence >= 50 || candidate.color === "green") {
+    priorityLevel = "medium";
+    priorityLabel = "Mittel";
+  }
+
+  const tasks = [];
+  if (candidate.nextStep) tasks.push(candidate.nextStep);
+  if (candidate.decisionReason && !tasks.includes(candidate.decisionReason)) tasks.push(candidate.decisionReason);
+  if (fd) {
+    if (fd.next_action) tasks.push(fd.next_action);
+    if (fd.blockers) fd.blockers.forEach((b) => { if (!tasks.includes(b)) tasks.push(b); });
+    if (fd.check_tree) {
+      fd.check_tree.forEach((check) => {
+        if (check.status === "warning" || check.status === "failed") {
+          const label = check.reason ? `${check.name}: ${check.reason}` : check.name;
+          if (!tasks.includes(label)) tasks.push(label);
+        }
+      });
+    }
+  }
+
+  const reasonParts = [];
+  if (fd && fd.reason) reasonParts.push(fd.reason);
+  if (candidate.reason && !reasonParts.includes(candidate.reason)) reasonParts.push(candidate.reason);
+
+  const signalText = fd ? `Signal: ${fd.signal_quality || "?"}` : "";
+  const dataText = fd ? `Daten: ${fd.data_quality || "?"}` : "";
+  const reasonText = reasonParts.length ? reasonParts.join(" · ") : "";
+
+  return `
+    <div class="action-card">
+      <div class="action-card-header">
+        <strong>N\u00e4chste Aktion</strong>
+        <span class="action-priority priority-${priorityLevel}">${priorityLabel}</span>
+      </div>
+      ${tasks.length ? `<div class="action-tasks">${tasks.map((t) => `<div class="action-task">• ${t}</div>`).join("")}</div>` : ""}
+      <div class="action-meta">
+        ${signalText ? `<span>${signalText}</span>` : ""}
+        ${dataText ? `<span>${dataText}</span>` : ""}
+      </div>
+      ${reasonText ? `<div class="action-reason">${reasonText}</div>` : ""}
+    </div>
+  `;
+}
+
 export function renderSelected() {
   const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
   if (!candidate) {
@@ -135,7 +189,6 @@ export function renderSelected() {
     return;
   }
   state.selected = candidate;
-  const nextAction = candidate.nextStep || candidate.decisionReason || candidate.reason || "-";
   const evidence = candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? formatFloat(candidate.evidenceScore, 0) : "-";
   const hzLabel = candidate.hz || "-";
   const distLabel = candidate.distance ? `${candidate.distance} ly` : "-";
@@ -175,10 +228,7 @@ export function renderSelected() {
       <span class="pill">${distLabel}</span>
       <span class="pill">SNR ${snrLabel}</span>
     </div>
-    <div class="selected-next-action">
-      <strong>N\u00e4chste Aktion</strong>
-      <span>${nextAction}</span>
-    </div>
+    ${renderActionCard(candidate)}
     <div class="details-grid compact">
       <div class="detail"><span>${t("detail_distance")}</span><strong>${distLabel}</strong></div>
       <div class="detail"><span>${t("detail_period")}</span><strong>${periodLabel}</strong></div>

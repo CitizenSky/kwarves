@@ -1176,24 +1176,67 @@
         background: var(--spc-prep) !important;
         color: #fff !important;
       }
-      .selected-next-action {
-        padding: 10px 12px;
+      .action-card {
+        padding: 12px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #f0f7f4;
-        font-size: 13px;
-        line-height: 1.4;
       }
-      .selected-next-action strong {
-        display: block;
-        font-size: 11px;
-        color: var(--muted);
+      .action-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .action-card-header strong {
+        font-size: 13px;
         text-transform: uppercase;
         letter-spacing: 0.3px;
-        margin-bottom: 2px;
+        color: var(--heading);
       }
-      .selected-next-action span {
+      .action-priority {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+      .priority-high {
+        background: #bf3e36;
+        color: #fff;
+      }
+      .priority-medium {
+        background: #b88220;
+        color: #fff;
+      }
+      .priority-low {
+        background: #66736f;
+        color: #fff;
+      }
+      .action-tasks {
+        display: grid;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+      .action-task {
+        font-size: 12px;
+        line-height: 1.4;
         color: var(--text-primary);
+        padding: 2px 0;
+      }
+      .action-meta {
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .action-reason {
+        font-size: 12px;
+        color: var(--muted);
+        font-style: italic;
+        padding-top: 6px;
+        border-top: 1px solid var(--line);
       }
 
       .chips {
@@ -2134,13 +2177,13 @@
 
       table {
         width: 100%;
-        min-width: 900px;
+        min-width: 400px;
         border-collapse: collapse;
       }
 
       th,
       td {
-        padding: 5px 8px;
+        padding: 4px 6px;
         border-bottom: 1px solid var(--line);
         text-align: left;
         white-space: nowrap;
@@ -2148,7 +2191,7 @@
 
       th {
         color: var(--muted);
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 850;
         text-transform: uppercase;
       }
