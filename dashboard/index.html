@@ -426,28 +426,50 @@
               <div class="mini" id="tessUpdatedAt">Quellenstand: -</div>
               <div class="tess-compare" id="tessCompareCard">
                 <div class="tess-compare-header">
-                  <strong id="tessMatchSelectedTic">-</strong>
-                  <span id="tessMatchSectorList"></span>
-                </div>
-                <div class="tess-compare-stats">
-                  <div><strong id="tessMatchYear8Overlap">-</strong><span>Year-8-Abgleich</span></div>
-                  <div><strong id="tessMatchCurrent">-</strong><span>aktueller/naechster Sektor</span></div>
-                  <div><strong id="tessMatchCoverage">-</strong><span>Sektorabdeckung</span></div>
-                </div>
-                <div class="tess-compare-map">
-                  <div class="tess-sector-frame" id="tessSectorFrame">
-                    <canvas id="tessSector2d" aria-label="TESS 2D Sektor"></canvas>
-                    <div id="tessSector3d" aria-label="TESS 3D Sektor"></div>
+                  <div>
+                    <strong id="tessMatchSelectedTic">-</strong>
+                    <span id="tessMatchSectorList"></span>
                   </div>
+                  <button class="icon-button tess-compare-toggle" type="button" id="tessCompareToggle" aria-expanded="true" title="Sektorenkarte ein-/ausklappen">
+                    <i data-lucide="chevron-up"></i>
+                  </button>
                 </div>
-                <div class="tess-compare-toggle">
-                  <button class="icon-button" type="button" id="tessCompareToggle" title="Sektorenkarte ein-/ausklappen"><i data-lucide="chevron-down"></i></button>
-                </div>
-                <div class="tess-timeline">
-                  <div><strong id="tessTimelineObserved">-</strong><span>Beobachtete Sektoren</span></div>
-                  <div><strong id="tessTimelinePlanned">-</strong><span>Geplante Sektoren</span></div>
-                  <div><strong id="tessTimelineNext">-</strong><span>Naechste Beobachtung</span></div>
-                  <div class="mini" id="tessTimelineStatus">-</div>
+                <div class="tess-compare-layout">
+                  <div class="tess-sector-main">
+                    <div class="tess-sector-frame" id="tessSectorFrame">
+                      <canvas id="tessSector2d" aria-label="TESS 2D Sektor"></canvas>
+                      <div id="tessSector3d" aria-label="TESS 3D Sektor"></div>
+                    </div>
+                  </div>
+                  <div class="tess-compare-side">
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchYear8Overlap">-</strong>
+                      <span id="tessMiniOverlapLabel">Year-8-Abgleich</span>
+                    </div>
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchCurrent">-</strong>
+                      <span id="tessMiniCurrentLabel">aktueller/naechster Sektor</span>
+                    </div>
+                    <div class="tess-mini-stat">
+                      <strong id="tessMatchCoverage">-</strong>
+                      <span id="tessMiniCoverageLabel">Kandidaten mit Sektorhistorie</span>
+                    </div>
+                    <div class="coverage-timeline">
+                      <div class="timeline-row">
+                        <div class="timeline-label" id="tessTimelineObservedLabel">Beobachtete Sektoren</div>
+                        <div class="sector-chip-row" id="tessTimelineObserved">-</div>
+                      </div>
+                      <div class="timeline-row">
+                        <div class="timeline-label" id="tessTimelinePlannedLabel">Geplante Sektoren</div>
+                        <div class="sector-chip-row" id="tessTimelinePlanned">-</div>
+                      </div>
+                      <div class="timeline-row">
+                        <div class="timeline-label" id="tessTimelineNextLabel">Naechste Beobachtung</div>
+                        <strong id="tessTimelineNext">-</strong>
+                      </div>
+                      <div class="mini" id="tessTimelineStatus">-</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
