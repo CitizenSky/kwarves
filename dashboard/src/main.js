@@ -1374,6 +1374,7 @@ window.addEventListener("pagehide", () => {
 initPanelCollapseControls();
 setPanelCollapsed("tablePanel", false, true);
 setPanelCollapsed("curvesPanel", false, true);
+setPanelCollapsed("mapPanel", false, true);
 setTessCompareCollapsed(loadTessCompareCollapsed(), false);
 (function initSelectedCardCollapse() {
   const collapsed = loadSelectedCardCollapsed();
