@@ -4,7 +4,7 @@ import { els, data, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, ma
 import { renderCurveFilterCounts } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
 import { init3dMap, update3dData, resize3d } from './components/starMap3D.js';
-import { renderTable, renderTopCandidates, renderFollowupCandidates, renderVisitorKpis, renderKpis, filteredCandidates, publicCandidatePool, publicVisibleCandidates } from './components/candidateList.js';
+import { renderTable, renderTopCandidates, renderFollowupCandidates, renderVisitorKpis, renderKpis, filteredCandidates, publicCandidatePool, publicVisibleCandidates, setFollowupCollapsed } from './components/candidateList.js';
 import { renderSelected, renderYellowReasonPanel } from './components/candidateCard.js';
 import { renderMatrixStats, renderVisitorTimeline, renderLabelLegend } from './components/matrixView.js';
 import { renderCurves } from './components/lightcurveView.js';
@@ -886,7 +886,6 @@ export function applyLanguageToUi() {
   setText('[data-curve-filter="green"]', t("curves_filter_green"));
   setText('[data-curve-filter="spc-prep"]', t("curves_filter_spc_prep"));
   setText('[data-curve-filter="orange"]', t("curves_filter_orange"));
-  setText('[data-curve-filter="red"]', t("curves_filter_red"));
   renderCurveFilterCounts();
   setTitle("#openCurveCandidate", labels.curveOpenCandidate);
 
@@ -1151,6 +1150,11 @@ els.followupCandidateRows.addEventListener("click", (event) => {
     selectCandidate(candidate, "followup");
     scrollToPanel("mapPanel");
   }
+});
+
+els.toggleFollowupList?.addEventListener("click", () => {
+  const panel = document.querySelector(".followup-subpanel");
+  setFollowupCollapsed(!panel?.classList.contains("is-collapsed"));
 });
 
 els.curveList.addEventListener("click", (event) => {

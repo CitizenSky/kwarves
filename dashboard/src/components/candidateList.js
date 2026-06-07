@@ -116,20 +116,22 @@ export function renderVisitorKpis() {
 export function renderTopCandidates() {
   const rows = top20Candidates();
   if (!rows.length) {
-    els.topCandidateRows.innerHTML = `<tr><td colspan="6">${t("top_candidates_empty")}</td></tr>`;
+    els.topCandidateRows.innerHTML = `<tr><td colspan="8">${t("top_candidates_empty")}</td></tr>`;
     renderFollowupCandidates();
     return;
   }
-  els.topCandidateRows.innerHTML = rows.map((candidate) => {
+  els.topCandidateRows.innerHTML = rows.map((candidate, index) => {
     const rowClass = candidateVisualClass(candidate);
     return `
       <tr data-profile-tic="${candidate.tic}">
+        <td>${index + 1}</td>
         <td><strong>TIC ${candidate.tic}</strong></td>
+        <td>${formatFloat(candidate.distance, 2)}</td>
+        <td>${formatFloat(candidate.period, 4)}</td>
+        <td>${formatMaybe(candidate.hz)}</td>
         <td>${formatFloat(candidate.evidenceScore, 0)}</td>
-        <td>${formatMaybe(candidate.hz) || "-"}</td>
-        <td>${formatFloat(candidate.distance, 1)}</td>
-        <td>${formatFloat(candidate.snr, 1)}</td>
         <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
+        <td class="wrap-cell">${shortText(`${candidate.followupStrength === "STRONG" ? "FOLLOWUP_STRONG · " : ""}${candidateNotes(candidate)}`)}</td>
       </tr>
     `;
   }).join("");
@@ -148,8 +150,6 @@ export function renderFollowupCandidates() {
       </span>
     </button>
   `).join("") : `<span class="muted">${t("followup_candidates_empty")}</span>`;
-  const panel = document.getElementById("followupPanel");
-  if (panel && rows.length === 0) panel.open = false;
 }
 
 export function renderTable() {
@@ -193,7 +193,11 @@ export function renderTable() {
 }
 
 export function setFollowupCollapsed(collapsed) {
-  const panel = document.getElementById("followupPanel");
-  if (!panel) return;
-  panel.open = collapsed !== true;
+  const panel = document.querySelector(".followup-subpanel");
+  if (!panel || !els.toggleFollowupList) return;
+  panel.classList.toggle("is-collapsed", Boolean(collapsed));
+  els.toggleFollowupList.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  els.toggleFollowupList.title = collapsed ? t("followup_expand") : t("followup_collapse");
+  els.toggleFollowupList.innerHTML = collapsed ? '<i data-lucide="chevron-down"></i>' : '<i data-lucide="chevron-up"></i>';
+  if (window.lucide) window.lucide.createIcons();
 }

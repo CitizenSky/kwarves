@@ -652,11 +652,54 @@
         background: #f3f8f6;
       }
 
+      .followup-subpanel {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--line);
+      }
+
+      .followup-subpanel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      .followup-subpanel-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .followup-subpanel h3 {
+        margin: 0;
+        color: var(--heading);
+        font-size: 15px;
+      }
+
+      .followup-subpanel .mini {
+        display: none;
+      }
+
+      .followup-subpanel.is-collapsed .followup-list {
+        display: none;
+      }
+
       .followup-list {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-        gap: 6px;
-        padding: 0 14px 10px;
+        gap: 7px;
+        max-height: 132px;
+        overflow: auto;
+        padding-right: 4px;
+      }
+
+      #followupCandidateRows.followup-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        overflow: auto;
       }
 
       .followup-item {
@@ -3272,130 +3315,4 @@
         width: 18px;
         height: 18px;
         flex-shrink: 0;
-      }
-
-      .dashboard-main {
-        display: grid;
-        grid-template-columns: 280px minmax(0, 1fr) 360px;
-        gap: 16px;
-        align-items: start;
-      }
-      .col-left {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .col-center {
-        min-width: 0;
-      }
-      .col-right {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .top-table {
-        min-width: 0;
-        width: 100%;
-      }
-      .top-table th,
-      .top-table td {
-        padding: 4px 6px;
-        font-size: 11px;
-      }
-      .top-table th {
-        font-size: 10px;
-      }
-      .top-table td:first-child {
-        font-weight: 600;
-      }
-
-      .followup-panel {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--surface);
-        overflow: hidden;
-      }
-      .followup-panel[open] {
-        padding-bottom: 10px;
-      }
-      .followup-summary {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 14px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 13px;
-        user-select: none;
-      }
-      .followup-summary::-webkit-details-marker {
-        display: none;
-      }
-      .followup-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        padding: 0 14px 10px;
-      }
-      .followup-item {
-        font-size: 12px;
-        padding: 6px 10px;
-      }
-
-      .secondary-panels {
-        margin-top: 20px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--surface);
-      }
-      .secondary-panels[open] {
-        padding-bottom: 14px;
-      }
-      .secondary-panels-summary {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 16px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        user-select: none;
-      }
-      .secondary-panels-summary::-webkit-details-marker {
-        display: none;
-      }
-      .secondary-toggle {
-        margin-left: auto;
-        display: flex;
-        align-items: center;
-      }
-      .secondary-panels-body {
-        padding: 0 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      @media (max-width: 1240px) {
-        .dashboard-main {
-          grid-template-columns: 240px minmax(0, 1fr);
-        }
-        .col-right {
-          grid-column: 1 / -1;
-        }
-      }
-      @media (max-width: 900px) {
-        .dashboard-main {
-          grid-template-columns: minmax(0, 1fr);
-        }
-        .col-left {
-          order: 2;
-        }
-        .col-center {
-          order: 1;
-        }
-        .col-right {
-          order: 3;
-        }
       }
