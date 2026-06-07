@@ -13,6 +13,8 @@ export const els = {
   visitorKpis: document.getElementById("visitorKpis"),
   labelLegendRows: document.getElementById("labelLegendRows"),
   topCandidateRows: document.getElementById("topCandidateRows"),
+  topCandidatesRow: document.getElementById("topCandidatesRow"),
+  topCandidatesCount: document.getElementById("topCandidatesCount"),
   followupCandidateRows: document.getElementById("followupCandidateRows"),
   followupCandidateCount: document.getElementById("followupCandidateCount"),
   toggleFollowupList: document.getElementById("toggleFollowupList"),

@@ -117,6 +117,7 @@ export function renderTopCandidates() {
   const rows = top20Candidates();
   if (!rows.length) {
     els.topCandidateRows.innerHTML = `<tr><td colspan="8">${t("top_candidates_empty")}</td></tr>`;
+    if (els.topCandidatesRow) els.topCandidatesRow.innerHTML = `<span class="muted">${t("top_candidates_empty")}</span>`;
     renderFollowupCandidates();
     return;
   }
@@ -135,6 +136,21 @@ export function renderTopCandidates() {
       </tr>
     `;
   }).join("");
+  if (els.topCandidatesRow) {
+    els.topCandidatesRow.innerHTML = rows.slice(0, 20).map((candidate) => {
+      const rowClass = candidateVisualClass(candidate);
+      return `
+        <button class="top-candidate-chip" type="button" data-tic="${candidate.tic}">
+          <strong>TIC ${candidate.tic}</strong>
+          <span class="pill ${rowClass}">${candidateLabel(candidate)}</span>
+          <span class="top-chip-meta">E ${formatFloat(candidate.evidenceScore, 0)} · ${candidate.distance} ly</span>
+        </button>
+      `;
+    }).join("");
+  }
+  if (els.topCandidatesCount) {
+    els.topCandidatesCount.textContent = formatNumber(rows.length);
+  }
   renderFollowupCandidates();
 }
 

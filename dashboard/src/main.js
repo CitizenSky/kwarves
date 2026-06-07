@@ -1152,6 +1152,15 @@ els.followupCandidateRows.addEventListener("click", (event) => {
   }
 });
 
+els.topCandidatesRow?.addEventListener("click", (event) => {
+  const chip = event.target.closest("[data-tic]");
+  if (!chip) return;
+  const candidate = data.candidates.find((item) => item.tic === Number(chip.dataset.tic));
+  if (candidate) {
+    selectCandidate(candidate, "profile");
+  }
+});
+
 els.toggleFollowupList?.addEventListener("click", () => {
   const panel = document.querySelector(".followup-subpanel");
   setFollowupCollapsed(!panel?.classList.contains("is-collapsed"));
@@ -1341,6 +1350,7 @@ window.addEventListener("pagehide", () => {
 
 initPanelCollapseControls();
 setPanelCollapsed("tablePanel", false, true);
+setPanelCollapsed("curvesPanel", false, true);
 setTessCompareCollapsed(loadTessCompareCollapsed(), false);
 (function initSelectedCardCollapse() {
   const collapsed = loadSelectedCardCollapsed();

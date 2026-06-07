@@ -126,6 +126,42 @@ export function renderFinalDecisionPanel(candidate) {
   return html;
 }
 
+function renderExecutiveSummary(candidate) {
+  const items = [];
+  const fd = candidate.finalDecision;
+
+  if (candidate.hz) items.push({ type: "good", text: `HZ Kandidat (${candidate.hz})` });
+  if (candidate.distance) items.push({ type: "good", text: `${candidate.distance} Lichtjahre` });
+  if (candidate.snr) items.push({ type: "good", text: `SNR ${formatFloat(candidate.snr, 1)}` });
+  if (candidate.visibleTransits) items.push({ type: "good", text: `${candidate.visibleTransits} sichtbare Transits` });
+  if (candidate.isViolet) items.push({ type: "good", text: "HZ-Fokus Kandidat" });
+  if (candidate.evidenceScore >= 80) items.push({ type: "good", text: `Evidence ${formatFloat(candidate.evidenceScore, 0)} — hohe Priorität` });
+
+  if (fd && fd.check_tree) {
+    fd.check_tree.forEach((check) => {
+      if (check.status === "warning") items.push({ type: "warn", text: check.reason || check.name });
+      if (check.status === "failed") items.push({ type: "bad", text: check.reason || check.name });
+    });
+  }
+  if (fd && fd.blockers) {
+    fd.blockers.forEach((b) => items.push({ type: "warn", text: b }));
+  }
+
+  if (!items.length) return "";
+
+  const icons = { good: "✓", warn: "⚠", bad: "✗" };
+  return `
+    <div class="executive-summary">
+      ${items.map((item) => `
+        <div class="executive-item executive-${item.type}">
+          <span class="executive-icon">${icons[item.type]}</span>
+          <span>${item.text}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderActionCard(candidate) {
   const fd = candidate.finalDecision;
   const evidence = candidate.evidenceScore || 0;
@@ -220,6 +256,7 @@ export function renderSelected() {
 
   els.selectedCard.innerHTML = `
     ${renderNewFdPanel(candidate)}
+    ${renderExecutiveSummary(candidate)}
     <div class="chips">${chips}</div>
     <div class="selected-quick-metrics">
       <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
