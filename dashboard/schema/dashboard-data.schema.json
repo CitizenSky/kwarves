@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kwarves.science/schemas/dashboard-data.json",
+  "title": "Kwarves Dashboard Data",
+  "description": "Schema for the static JSON bundle used by the Kwarves exoplanet candidate dashboard.",
+  "type": "object",
+  "required": ["summary", "candidates", "tree"],
+  "properties": {
+    "summary": {
+      "type": "object",
+      "description": "Aggregated counts and metadata about the candidate set.",
+      "properties": {
+        "totalCandidates": { "type": "integer" },
+        "greenCandidates": { "type": "integer" },
+        "yellowCandidates": { "type": "integer" },
+        "redCandidates": { "type": "integer" },
+        "violetCandidates": { "type": "integer" },
+        "spcPrepCandidates": { "type": "integer" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "dataVersion": { "type": "string" }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "description": "List of exoplanet candidates with computed properties.",
+      "items": {
+        "type": "object",
+        "required": ["tic"],
+        "properties": {
+          "tic": { "type": "integer", "description": "TESS Input Catalog identifier" },
+          "color": { "type": "string", "enum": ["green", "yellow", "red", "violet", "gray"] },
+          "status": { "type": "string" },
+          "matrixStatus": { "type": "string" },
+          "matrixClass": { "type": "string" },
+          "distance": { "type": "number" },
+          "period": { "type": "number" },
+          "snr": { "type": "number" },
+          "evidenceScore": { "type": "number", "minimum": 0, "maximum": 100 },
+          "hz": { "type": "string" },
+          "isViolet": { "type": "boolean" },
+          "display": { "type": "boolean" },
+          "baseColorLabel": { "type": "string" },
+          "displayLabels": { "type": "array", "items": { "type": "string" } },
+          "decisionReason": { "type": "string" },
+          "nextStep": { "type": "string" },
+          "reason": { "type": "string" },
+          "notes": { "type": "string" },
+          "recheckStatus": { "type": "string" },
+          "observedSectors": { "type": ["array", "null"], "items": { "type": "integer" } },
+          "plannedSectors": { "type": ["array", "null"], "items": { "type": "integer" } },
+          "observedSectorCount": { "type": "integer" },
+          "matrixSectors": { "type": "integer" },
+          "finalDecision": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "summary": { "type": "string" },
+              "reasons": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "map": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "z": { "type": "number" }
+            }
+          },
+          "rvNeeded": { "type": "boolean" },
+          "userFeedback": { "type": "string" }
+        }
+      }
+    },
+    "tree": {
+      "type": "array",
+      "description": "Decision tree nodes.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "children": { "type": "array", "items": { "$ref": "#/properties/tree/items" } }
+        }
+      }
+    }
+  }
+}
