@@ -168,6 +168,8 @@ export function renderFollowupCandidates() {
   `).join("") : `<span class="muted">${t("followup_candidates_empty")}</span>`;
 }
 
+const PAGE_SIZE = 10;
+
 export function renderTable() {
   let rows = publicMatrixCandidates();
   const sortBy = state.sortBy || "evidence";
@@ -188,15 +190,22 @@ export function renderTable() {
     }
     return sortOrder === "desc" ? vb - va : va - vb;
   });
-  const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
+  const total = rows.length;
   const term = els.globalSearch.value.trim().toLowerCase();
   const tableCount = document.getElementById("tableCount");
-  if (tableCount) tableCount.textContent = `${formatNumber(rows.length)} ${t("table_count_label")}`;
-  if (!limited.length) {
+  if (tableCount) tableCount.textContent = `${formatNumber(total)} ${t("table_count_label")}`;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (state.tablePage >= totalPages) state.tablePage = totalPages - 1;
+  if (state.tablePage < 0) state.tablePage = 0;
+  const start = state.tablePage * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+  if (!total) {
     els.rows.innerHTML = `<tr><td colspan="5">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
+    const nav = document.getElementById("tablePageNav");
+    if (nav) nav.innerHTML = "";
     return;
   }
-  els.rows.innerHTML = limited.map((candidate) => {
+  els.rows.innerHTML = pageRows.map((candidate) => {
     const rowClass = candidateVisualClass(candidate);
     const hzBadge = candidate.hz ? `<span class="table-hz-badge">${candidate.hz}</span>` : "";
     let prio = "—";
@@ -215,6 +224,19 @@ export function renderTable() {
     </tr>
   `;
   }).join("");
+  renderPageNav(totalPages);
+}
+
+function renderPageNav(totalPages) {
+  const nav = document.getElementById("tablePageNav");
+  if (!nav) return;
+  if (totalPages <= 1) { nav.innerHTML = ""; return; }
+  const cur = state.tablePage;
+  nav.innerHTML = `
+    <button class="small-button page-btn" type="button" data-page="prev" ${cur === 0 ? "disabled" : ""}>‹</button>
+    <span class="page-info">${cur + 1} / ${totalPages}</span>
+    <button class="small-button page-btn" type="button" data-page="next" ${cur >= totalPages - 1 ? "disabled" : ""}>›</button>
+  `;
 }
 
 export function setFollowupCollapsed(collapsed) {

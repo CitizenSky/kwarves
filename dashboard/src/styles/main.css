@@ -3468,6 +3468,23 @@
       .prio-high { background: #bf3e36; color: #fff; }
       .prio-mid { background: #b88220; color: #fff; }
       .prio-low { background: #e2e3e5; color: #66736f; }
+      .page-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 0 2px;
+      }
+      .page-info {
+        font-size: 11px;
+        font-weight: 780;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+      .page-btn:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
 
       /* ========== Executive Summary ========== */
       .executive-summary {

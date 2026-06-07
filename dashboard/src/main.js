@@ -1012,6 +1012,7 @@ document.querySelectorAll("[data-color-filter]").forEach((button) => {
     state.colorFilter = button.dataset.colorFilter;
     document.querySelectorAll("[data-color-filter]").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
+    state.tablePage = 0;
     draw2dMap();
     update3dData();
     renderTable();
@@ -1101,6 +1102,14 @@ document.querySelectorAll("[data-table-limit]").forEach((button) => {
   });
 });
 
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".page-btn");
+  if (!btn) return;
+  const dir = btn.dataset.page;
+  if (dir === "prev" && state.tablePage > 0) { state.tablePage--; renderTable(); }
+  if (dir === "next") { state.tablePage++; renderTable(); }
+});
+
 document.querySelectorAll("[data-sort]").forEach((button) => {
   button.addEventListener("click", () => {
     const sortBy = button.dataset.sort;
@@ -1117,6 +1126,7 @@ document.querySelectorAll("[data-sort]").forEach((button) => {
 });
 
 els.globalSearch.addEventListener("input", () => {
+  state.tablePage = 0;
   renderTable();
   renderAdmin();
   draw2dMap();

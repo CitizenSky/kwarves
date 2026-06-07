@@ -4,6 +4,7 @@ export const state = {
   colorFilter: "all",
   curveFilter: "all",
   tableLimit: "all",
+  tablePage: 0,
   selected: null,
   selectedCurve: null,
   mapMode: "2d",
