@@ -190,6 +190,8 @@ export function renderTable() {
   });
   const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
   const term = els.globalSearch.value.trim().toLowerCase();
+  const tableCount = document.getElementById("tableCount");
+  if (tableCount) tableCount.textContent = `${formatNumber(rows.length)} ${t("table_count_label")}`;
   if (!limited.length) {
     els.rows.innerHTML = `<tr><td colspan="5">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
     return;

@@ -3,7 +3,7 @@ export const DASHBOARD_UI_VERSION = "2026-06-02-r";
 export const state = {
   colorFilter: "all",
   curveFilter: "all",
-  tableLimit: 80,
+  tableLimit: "all",
   selected: null,
   selectedCurve: null,
   mapMode: "2d",
