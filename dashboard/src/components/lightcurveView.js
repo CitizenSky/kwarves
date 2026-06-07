@@ -12,7 +12,7 @@ export function curveMatchesFilter(candidate, filter = state.curveFilter) {
 }
 
 export function filteredCurves() {
-  const term = els.curveSearch.value.trim().toLowerCase();
+  const term = els.curveSearch ? els.curveSearch.value.trim().toLowerCase() : "";
   return data.lightcurveCandidates.filter((candidate) => {
     const matchesFilter = curveMatchesFilter(candidate, state.curveFilter);
     return matchesFilter && matchesCandidate(candidate, term);
@@ -46,14 +46,16 @@ export function renderCurves(reset = true, syncScroll = false) {
   if (reset || !state.selectedCurve || !curves.some((item) => item.tic === state.selectedCurve.tic)) {
     state.selectedCurve = curves.find((item) => state.selected && item.tic === state.selected.tic) || curves[0] || null;
   }
-  els.curveList.innerHTML = curves.map((candidate) => `
-    <button class="curve-item ${state.selectedCurve && state.selectedCurve.tic === candidate.tic ? "active" : ""}" type="button" data-curve-tic="${candidate.tic}">
-      <strong>TIC ${candidate.tic}</strong>
-      <span>${colorName(candidate)} · ${candidate.hz || t("not_hz")} · SNR ${candidate.snr}</span>
-    </button>
-  `).join("");
+  if (els.curveList) {
+    els.curveList.innerHTML = curves.map((candidate) => `
+      <button class="curve-item ${state.selectedCurve && state.selectedCurve.tic === candidate.tic ? "active" : ""}" type="button" data-curve-tic="${candidate.tic}">
+        <strong>TIC ${candidate.tic}</strong>
+        <span>${colorName(candidate)} · ${candidate.hz || t("not_hz")} · SNR ${candidate.snr}</span>
+      </button>
+    `).join("");
+  }
   renderCurveViewer();
-  if (syncScroll) {
+  if (syncScroll && els.curveList) {
     window.requestAnimationFrame(() => scrollSelectedCurveIntoView());
   }
 }

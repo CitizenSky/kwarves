@@ -63,7 +63,6 @@ export function selectCandidate(candidate, source = "table") {
       });
     }
     renderCurves(false, true);
-    setPanelCollapsed("curvesPanel", false, true);
   }
 }
 
@@ -783,7 +782,7 @@ export function applyLanguageToUi() {
   setText("#yellowMatrixTitle", yellowCopy.matrix);
   setTitle("#showHints", t("hint_button_title"));
   document.getElementById("globalSearch").placeholder = t("search_placeholder");
-  document.getElementById("curveSearch").placeholder = labels.curveSearch;
+  if (els.curveSearch) els.curveSearch.placeholder = labels.curveSearch;
 
   const langSwitch = document.getElementById("langSwitch");
   if (langSwitch) {
@@ -1146,7 +1145,7 @@ els.globalSearch.addEventListener("input", () => {
   update3dData();
 });
 
-els.curveSearch.addEventListener("input", () => renderCurves());
+els.curveSearch?.addEventListener("input", () => renderCurves());
 
 els.rows.addEventListener("click", (event) => {
   const row = event.target.closest("tr[data-tic]");
@@ -1235,13 +1234,11 @@ els.mapCanvas.addEventListener("click", (event) => {
   }
 });
 
-document.getElementById("showSelectedCurve").addEventListener("click", () => {
+document.getElementById("showSelectedCurve")?.addEventListener("click", () => {
   const curve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic);
   if (curve) {
     state.selectedCurve = curve;
     renderCurves(false, true);
-    setNavButtonActive("curvesPanel");
-    document.getElementById("curvesPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
     showToast(t("toast_no_curve_for_candidate"));
   }
@@ -1373,7 +1370,6 @@ window.addEventListener("pagehide", () => {
 
 initPanelCollapseControls();
 setPanelCollapsed("tablePanel", false, true);
-setPanelCollapsed("curvesPanel", false, true);
 setTessCompareCollapsed(loadTessCompareCollapsed(), false);
 (function initSelectedCardCollapse() {
   const collapsed = loadSelectedCardCollapsed();
