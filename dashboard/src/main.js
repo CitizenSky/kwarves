@@ -1374,7 +1374,6 @@ window.addEventListener("pagehide", () => {
 initPanelCollapseControls();
 setPanelCollapsed("tablePanel", false, true);
 setPanelCollapsed("curvesPanel", false, true);
-setPanelCollapsed("mapPanel", false, true);
 setTessCompareCollapsed(loadTessCompareCollapsed(), false);
 (function initSelectedCardCollapse() {
   const collapsed = loadSelectedCardCollapsed();
@@ -1403,6 +1402,7 @@ loadData().then((ok) => {
   console.log('[kwarves] Data loaded successfully, starting render');
   state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
   state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
+  setPanelCollapsed("mapPanel", false, true);
   renderAll();
   state.sortBy = "evidence";
   state.sortOrder = "desc";
