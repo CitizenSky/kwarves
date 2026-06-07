@@ -191,17 +191,28 @@ export function renderTable() {
   const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
   const term = els.globalSearch.value.trim().toLowerCase();
   if (!limited.length) {
-    els.rows.innerHTML = `<tr><td colspan="4">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
+    els.rows.innerHTML = `<tr><td colspan="5">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
     return;
   }
-  els.rows.innerHTML = limited.map((candidate) => `
+  els.rows.innerHTML = limited.map((candidate) => {
+    const rowClass = candidateVisualClass(candidate);
+    const hzBadge = candidate.hz ? `<span class="table-hz-badge">${candidate.hz}</span>` : "";
+    let prio = "—";
+    let prioClass = "";
+    const evidence = candidate.evidenceScore || 0;
+    if (evidence >= 80 || (candidate.color === "green" && candidate.hz)) { prio = "Hoch"; prioClass = "prio-high"; }
+    else if (evidence >= 50 || candidate.color === "green") { prio = "Mittel"; prioClass = "prio-mid"; }
+    else { prio = "Niedrig"; prioClass = "prio-low"; }
+    return `
     <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
-      <td><strong>TIC ${candidate.tic}</strong></td>
+      <td><strong>TIC ${candidate.tic}</strong>${hzBadge}</td>
+      <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
       <td>${formatFloat(candidate.evidenceScore, 0)}</td>
-      <td>${formatMaybe(candidate.hz)}</td>
       <td>${candidate.distance ? candidate.distance + " ly" : "-"}</td>
+      <td><span class="prio-pill ${prioClass}">${prio}</span></td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 }
 
 export function setFollowupCollapsed(collapsed) {

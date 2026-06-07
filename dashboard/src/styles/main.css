@@ -2177,13 +2177,13 @@
 
       table {
         width: 100%;
-        min-width: 400px;
+        min-width: 350px;
         border-collapse: collapse;
       }
 
       th,
       td {
-        padding: 4px 6px;
+        padding: 3px 5px;
         border-bottom: 1px solid var(--line);
         text-align: left;
         white-space: nowrap;
@@ -2191,7 +2191,7 @@
 
       th {
         color: var(--muted);
-        font-size: 10px;
+        font-size: 9px;
         font-weight: 850;
         text-transform: uppercase;
       }
@@ -3422,6 +3422,31 @@
         color: var(--muted);
         font-size: 10px;
       }
+      .table-hz-badge {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 0 5px;
+        border-radius: 3px;
+        background: #b88220;
+        color: #fff;
+        font-size: 8px;
+        font-weight: 700;
+        vertical-align: middle;
+        line-height: 1.6;
+      }
+      .prio-pill {
+        display: inline-block;
+        min-width: 36px;
+        padding: 1px 6px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.5;
+      }
+      .prio-high { background: #bf3e36; color: #fff; }
+      .prio-mid { background: #b88220; color: #fff; }
+      .prio-low { background: #e2e3e5; color: #66736f; }
 
       /* ========== Executive Summary ========== */
       .executive-summary {
