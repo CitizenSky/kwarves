@@ -193,6 +193,16 @@
                   <div id="tablePageNav" class="page-nav"></div>
                 </div>
               </section>
+              <div class="curve-detail-card">
+                <div class="detail-card-header">
+                  <strong id="curveTitle">Keine Lichtkurve ausgewählt</strong>
+                  <div class="muted" id="curveMeta"></div>
+                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
+                    <i data-lucide="crosshair"></i>
+                  </button>
+                </div>
+                <div class="curve-img-wrap" id="curveImageWrap"></div>
+              </div>
             </div>
 
             <!-- Right: Selected Candidate -->
@@ -211,11 +221,23 @@
                 </div>
                 <div class="selected-card" id="selectedCard"></div>
               </div>
+              <section class="panel" id="treePanel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Baumstruktur der Entscheidung</h2>
+                    <p class="panel-subtitle">Von der ersten Farbe bis zur nächsten Aktion.</p>
+                  </div>
+                  <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
+                    <i data-lucide="refresh-cw"></i>
+                  </button>
+                </div>
+                <div class="panel-body tree" id="tree"></div>
+              </section>
             </div>
           </div>
           <!-- C-H) Detail Sections -->
 
-          <section class="panel" id="curvesPanel">
+          <section class="panel compact-hidden" id="curvesPanel">
             <div class="panel-header">
               <div>
                 <h2>Lichtkurven</h2>
@@ -229,26 +251,12 @@
                 <button class="small-button" type="button" data-curve-filter="violet">Violett</button>
               </div>
             </div>
-            <div class="panel-body curve-layout">
-              <div>
-                <label class="search" style="max-width: none; margin-bottom: 10px;">
-                  <i data-lucide="search"></i>
-                  <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
-                </label>
-                <div class="curve-list" id="curveList"></div>
-              </div>
-              <div class="curve-viewer">
-                <div class="curve-viewer-header">
-                  <div>
-                    <strong id="curveTitle">Keine Lichtkurve ausgewählt</strong>
-                    <div class="muted" id="curveMeta"></div>
-                  </div>
-                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
-                    <i data-lucide="crosshair"></i>
-                  </button>
-                </div>
-                <div class="curve-img-wrap" id="curveImageWrap"></div>
-              </div>
+            <div class="panel-body">
+              <label class="search" style="max-width: none; margin-bottom: 10px;">
+                <i data-lucide="search"></i>
+                <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
+              </label>
+              <div class="curve-list" id="curveList"></div>
             </div>
           </section>
 
@@ -263,19 +271,6 @@
               <div id="aboutProjectContent"></div>
             </div>
           </details>
-
-          <section class="panel" id="treePanel">
-            <div class="panel-header">
-              <div>
-                <h2>Baumstruktur der Entscheidung</h2>
-                <p class="panel-subtitle">Von der ersten Farbe bis zur nächsten Aktion.</p>
-              </div>
-              <button class="icon-button" type="button" title="Baum aktualisieren" id="refreshTree">
-                <i data-lucide="refresh-cw"></i>
-              </button>
-            </div>
-            <div class="panel-body tree" id="tree"></div>
-          </section>
 
           <section class="panel" id="mapPanel">
             <div class="panel-header">

@@ -374,7 +374,49 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 20px;
-        align-items: start;
+      }
+
+      .main-left,
+      .main-right {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+
+      .curve-detail-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        overflow: hidden;
+      }
+
+      .detail-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        flex-wrap: wrap;
+      }
+
+      .detail-card-header strong {
+        font-size: 15px;
+      }
+
+      .detail-card-header .icon-button {
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      .curve-detail-card .curve-img-wrap {
+        min-height: 120px;
+        background: var(--bg-secondary);
+      }
+
+      .curve-detail-card .curve-img-wrap img {
+        display: block;
+        max-width: 100%;
+        height: auto;
       }
 
       .selected-card-section {

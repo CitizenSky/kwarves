@@ -1,9 +1,9 @@
 import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel, loadSelectedCardCollapsed, SELECTED_CARD_COLLAPSE_KEY } from './state.js';
 import { t, setLanguage, setText, setTitle, setLegendText, buildTessScheduleState, formatNumber, currentLocale, projectFlowStepsI18n, projectLevelsI18n, projectScripts, localizeScriptText, localizeScriptLevel } from './i18n.js';
 import { els, data, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
-import { renderCurveFilterCounts } from './components/lightcurveView.js';
+import { renderCurveFilterCounts, curveMatchesFilter } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
-import { init3dMap, update3dData, resize3d } from './components/starMap3D.js';
+import { init3dMap, update3dData, update3dSelection, resize3d } from './components/starMap3D.js';
 import { renderTable, renderTopCandidates, renderFollowupCandidates, renderVisitorKpis, renderKpis, filteredCandidates, publicCandidatePool, publicVisibleCandidates, setFollowupCollapsed } from './components/candidateList.js';
 import { renderSelected, renderYellowReasonPanel } from './components/candidateCard.js';
 import { renderMatrixStats, renderVisitorTimeline, renderLabelLegend } from './components/matrixView.js';
