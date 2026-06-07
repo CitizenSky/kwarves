@@ -96,7 +96,7 @@
           </button>
         </header>
         <section class="page">
-          <!-- A) Compact Dashboard Header -->
+          <!-- Dashboard Header -->
           <div class="dashboard-header">
             <div>
               <h1>Kwarves Candidate Vetting</h1>
@@ -133,62 +133,252 @@
             </article>
           </div>
 
-          <!-- B) Two-Column Main Layout -->
-          <div class="main-split">
-            <!-- Left: Candidate List -->
-            <div class="main-left">
-              <section class="panel" id="tablePanel">
+          <!-- 3-Column Dashboard Main -->
+          <div class="dashboard-main">
+            <!-- LEFT: Top Candidates + Follow-Up -->
+            <div class="col-left">
+              <section class="panel" id="topCandidatesPanel">
                 <div class="panel-header">
                   <div>
-                    <h2>Kandidaten</h2>
-                    <div class="table-sort-row">
-                      <button class="small-button active" type="button" data-sort="evidence">Evidence</button>
-                      <button class="small-button" type="button" data-sort="distance">Distanz</button>
-                      <button class="small-button" type="button" data-sort="snr">SNR</button>
-                      <button class="small-button" type="button" data-sort="transits">Transits</button>
-                      <button class="small-button" type="button" data-sort="hz">HZ</button>
-                    </div>
-                  </div>
-                  <div class="panel-actions">
-                    <button class="small-button active" type="button" data-table-limit="80">Top 80</button>
-                    <button class="small-button" type="button" data-table-limit="250">250</button>
-                    <button class="small-button" type="button" data-table-limit="all">Alle</button>
-                  </div>
-                  <div class="filter-row">
-                    <button class="small-button active" type="button" data-color-filter="all">Alle</button>
-                    <button class="small-button" type="button" data-color-filter="green">Grün/SPC</button>
-                    <button class="small-button" type="button" data-color-filter="spc-prep">Gelb/Recheck</button>
-                    <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
-                    <button class="small-button" type="button" data-color-filter="red">Rot/FP</button>
-                    <button class="small-button" type="button" data-color-filter="violet">Violett/HZ</button>
+                    <h2 id="topCandidatesTitle">Top Kandidaten</h2>
                   </div>
                 </div>
-                <div class="table-wrap">
-                  <label class="search" style="max-width:none; display:flex; margin:0 0 10px 0;">
-                    <i data-lucide="search"></i>
-                    <input id="globalSearch" type="search" placeholder="TIC, Farbe, HZ, Status" />
-                  </label>
-                  <table>
-                    <thead>
+                <div class="panel-body" style="padding: 4px 10px 10px;">
+                  <table class="top-table">
+                    <thead id="topCandidatesHead">
                       <tr>
                         <th>TIC</th>
-                        <th>Farbe</th>
-                        <th>Final</th>
-                        <th>Evidence</th>
+                        <th>Priority</th>
                         <th>HZ</th>
                         <th>Distanz</th>
-                        <th>Periode</th>
-                        <th>N\u00e4chster Schritt</th>
+                        <th>SNR</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
-                    <tbody id="candidateRows"></tbody>
+                    <tbody id="topCandidateRows"></tbody>
                   </table>
+                </div>
+              </section>
+
+              <details class="followup-panel" id="followupPanel">
+                <summary class="followup-summary">
+                  <span>▶ Follow-Up Kandidaten</span>
+                  <span class="pill spc-prep" id="followupCandidateCount">0</span>
+                </summary>
+                <div class="followup-list" id="followupCandidateRows"></div>
+              </details>
+            </div>
+
+            <!-- CENTER: Star Map -->
+            <div class="col-center">
+              <section class="panel" id="mapPanel">
+                <div class="panel-header">
+                  <div>
+                    <h2>2D/3D Sternkarte</h2>
+                    <p class="panel-subtitle">Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung, gr\u00f6\u00dfere 2D-Kugeln = bessere SNR. Klicken w\u00e4hlt Kandidaten aus.</p>
+                  </div>
+                  <div class="map-header-actions">
+                    <div class="map-header-group">
+                      <button class="small-button active" type="button" data-map-mode="2d">
+                        <i data-lucide="map"></i>
+                        2D
+                      </button>
+                      <button class="small-button" type="button" data-map-mode="3d">
+                        <i data-lucide="box"></i>
+                        3D
+                      </button>
+                    </div>
+                    <div class="map-header-group">
+                      <button class="small-button active" type="button" data-color-filter="all">Alle</button>
+                      <button class="small-button" type="button" data-color-filter="green">Gr\u00fcn</button>
+                      <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
+                      <button class="small-button" type="button" data-color-filter="spc-prep">SPC Prep</button>
+                      <button class="small-button" type="button" data-color-filter="red">Rot</button>
+                      <button class="small-button" type="button" data-color-filter="violet">Violett</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="map-layout">
+                    <div class="map-main">
+                      <div class="map-frame mode-2d" id="mapFrame">
+                        <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
+                        <div id="map3d" aria-label="3D Sternkarte"></div>
+                        <div class="map-zoom-controls" aria-label="Sternkarte Zoom">
+                          <button type="button" title="Herauszoomen" data-map-zoom="out">
+                            <i data-lucide="minus"></i>
+                          </button>
+                          <span class="map-zoom-value" id="mapZoomValue">1.0x</span>
+                          <button type="button" title="Hineinzoomen" data-map-zoom="in">
+                            <i data-lucide="plus"></i>
+                          </button>
+                          <button type="button" title="Zoom zur\u00fccksetzen" data-map-zoom="reset">
+                            <i data-lucide="rotate-ccw"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="map-note">
+                        <span class="legend-item"><span class="dot"></span> Gr\u00fcn = Kandidat</span>
+                        <span class="legend-item"><span class="dot yellow"></span> Orange = in Pr\u00fcfung</span>
+                        <span class="legend-item"><span class="dot spc-prep"></span> Gelb = SPC Prep</span>
+                        <span class="legend-item"><span class="dot red"></span> Rot = FP/Rejected</span>
+                        <span class="legend-item"><span class="dot violet"></span> Violett-Ring = HZ-Fokus</span>
+                        <span class="legend-item">Weisser Ring = ausgew\u00e4hlt</span>
+                        <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
+                      </div>
+                    </div>
+                    <div class="map-side">
+                      <div class="notice">
+                        Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abst\u00e4nde sind symbolisch und nicht astronomisch ma\u00dfstabsgetreu.
+                      </div>
+                      <div class="map-status">
+                        <strong id="mapSelectedTic">-</strong>
+                        <span>Ausgew\u00e4hlter Kandidat (weisser Ring/Punkt)</span>
+                      </div>
+                      <div class="map-status">
+                        <strong id="mapObservedSectors">-</strong>
+                        <span>Bisher beobachtete Sektoren</span>
+                      </div>
+                      <div class="map-status">
+                        <strong id="mapNextRecheck">-</strong>
+                        <span>N\u00e4chste Beobachtung / Recheck</span>
+                      </div>
+                      <div class="notice mini" id="mapCoverageStatus">
+                        Auswahl zeigt, ob der Kandidat im geplanten TESS-Bereich liegt.
+                      </div>
+                      <div class="map-stat">
+                        <strong id="visibleCount">0</strong>
+                        <span>sichtbare Punkte nach Filter</span>
+                      </div>
+                      <div class="map-stat">
+                        <strong id="lcCount">0</strong>
+                        <span>Lichtkurven mit PNG</span>
+                      </div>
+                      <div class="map-stat">
+                        <strong id="generatedAt">-</strong>
+                        <span>Datenstand</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tess-compare" id="tessCompareCard">
+                    <div class="tess-compare-header">
+                      <div>
+                        <h3>3D TESS-Sektorenkarte</h3>
+                        <p>Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abst\u00e4nde sind symbolisch und nicht astronomisch ma\u00dfstabsgetreu.</p>
+                      </div>
+                      <div class="map-header-group">
+                        <button class="small-button" type="button" data-tess-map-mode="2d">
+                          <i data-lucide="map"></i>
+                          2D
+                        </button>
+                        <button class="small-button active" type="button" data-tess-map-mode="3d">
+                          <i data-lucide="orbit"></i>
+                          3D
+                        </button>
+                        <button class="icon-button tess-compare-toggle" type="button" id="tessCompareToggle" title="3D TESS-Sektorenkarte einklappen" aria-expanded="true" aria-controls="tessSectorFrame">
+                          <i data-lucide="chevron-up"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="tess-compare-layout">
+                      <div class="tess-sector-main">
+                        <div class="tess-sector-frame mode-3d" id="tessSectorFrame">
+                          <canvas id="tessSector2d" aria-label="2D TESS-Sektorenkarte"></canvas>
+                          <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
+                        </div>
+                        <div class="tess-sector-note">
+                          <span class="legend-item"><span class="dot"></span> Gr\u00fcn = Kandidatensektor</span>
+                          <span class="legend-item"><span class="dot blue"></span> Blau = beobachtet</span>
+                          <span class="legend-item"><span class="dot yellow"></span> Gelb = aktuell/geplant</span>
+                          <span class="legend-item"><span class="dot gray"></span> Grau = Hintergrund</span>
+                        </div>
+                      </div>
+                      <div class="tess-compare-side">
+                        <div class="tess-mini-stat">
+                          <strong id="tessMatchSelectedTic">-</strong>
+                          <span>ausgew\u00e4hlter Kandidat</span>
+                        </div>
+                        <div class="tess-mini-stat">
+                          <strong id="tessMatchSectorList">-</strong>
+                          <span>Sektorhistorie</span>
+                        </div>
+                        <div class="tess-mini-stat">
+                          <strong id="tessMatchYear8Overlap">-</strong>
+                          <span>Year-8-Abgleich</span>
+                        </div>
+                        <div class="tess-mini-stat">
+                          <strong id="tessMatchCurrent">-</strong>
+                          <span>aktueller/n\u00e4chster Mission-Sektor</span>
+                        </div>
+                        <div class="tess-mini-stat">
+                          <strong id="tessMatchCoverage">-</strong>
+                          <span>Kandidaten mit Sektorhistorie</span>
+                        </div>
+                        <div class="coverage-timeline">
+                          <h4>TESS Coverage Timeline</h4>
+                          <div class="timeline-row">
+                            <span class="timeline-label">Bisher beobachtet</span>
+                            <div class="sector-chip-row" id="tessTimelineObserved"></div>
+                          </div>
+                          <div class="timeline-row">
+                            <span class="timeline-label">Geplant</span>
+                            <div class="sector-chip-row" id="tessTimelinePlanned"></div>
+                          </div>
+                          <div class="timeline-row">
+                            <span class="timeline-label">N\u00e4chste Beobachtung</span>
+                            <strong class="timeline-value" id="tessTimelineNext">-</strong>
+                          </div>
+                          <div class="timeline-row">
+                            <span class="timeline-label">Status</span>
+                            <strong class="timeline-value" id="tessTimelineStatus">-</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>
 
-            <!-- Right: Selected Candidate -->
-            <div class="main-right">
+            <!-- RIGHT: Lightcurves + Selected Candidate -->
+            <div class="col-right">
+              <section class="panel" id="curvesPanel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Lichtkurven</h2>
+                  </div>
+                  <div class="panel-actions">
+                    <button class="small-button active" type="button" data-curve-filter="all">Alle</button>
+                    <button class="small-button" type="button" data-curve-filter="green">Gr\u00fcn</button>
+                    <button class="small-button" type="button" data-curve-filter="spc-prep">Gelb</button>
+                    <button class="small-button" type="button" data-curve-filter="orange">Orange</button>
+                    <button class="small-button" type="button" data-curve-filter="red">Rot</button>
+                    <button class="small-button" type="button" data-curve-filter="violet">Violett</button>
+                  </div>
+                </div>
+                <div class="panel-body curve-layout">
+                  <div>
+                    <label class="search" style="max-width:none; margin-bottom:10px;">
+                      <i data-lucide="search"></i>
+                      <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
+                    </label>
+                    <div class="curve-list" id="curveList"></div>
+                  </div>
+                  <div class="curve-viewer">
+                    <div class="curve-viewer-header">
+                      <div>
+                        <strong id="curveTitle">Keine Lichtkurve ausgew\u00e4hlt</strong>
+                        <div class="muted" id="curveMeta"></div>
+                      </div>
+                      <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
+                        <i data-lucide="crosshair"></i>
+                      </button>
+                    </div>
+                    <div class="curve-img-wrap" id="curveImageWrap"></div>
+                  </div>
+                </div>
+              </section>
+
               <div class="selected-card-section" id="selectedCardSection">
                 <div class="selected-card-head">
                   <div class="selected-card-head-info">
@@ -205,7 +395,64 @@
               </div>
             </div>
           </div>
-          <!-- C-H) Detail Sections -->
+
+          <!-- Secondary Panels (collapsible) -->
+          <details class="secondary-panels" id="secondaryPanels">
+            <summary class="secondary-panels-summary">
+              <span>Weitere Bereiche</span>
+              <span class="mini">Tabelle, Analyse, TESS, Projekt</span>
+              <span class="secondary-toggle"><i data-lucide="chevron-down"></i></span>
+            </summary>
+            <div class="secondary-panels-body">
+
+          <section class="panel" id="tablePanel">
+            <div class="panel-header">
+              <div>
+                <h2>Kandidaten</h2>
+                <div class="table-sort-row">
+                  <button class="small-button active" type="button" data-sort="evidence">Evidence</button>
+                  <button class="small-button" type="button" data-sort="distance">Distanz</button>
+                  <button class="small-button" type="button" data-sort="snr">SNR</button>
+                  <button class="small-button" type="button" data-sort="transits">Transits</button>
+                  <button class="small-button" type="button" data-sort="hz">HZ</button>
+                </div>
+              </div>
+              <div class="panel-actions">
+                <button class="small-button active" type="button" data-table-limit="80">Top 80</button>
+                <button class="small-button" type="button" data-table-limit="250">250</button>
+                <button class="small-button" type="button" data-table-limit="all">Alle</button>
+              </div>
+              <div class="filter-row">
+                <button class="small-button active" type="button" data-color-filter="all">Alle</button>
+                <button class="small-button" type="button" data-color-filter="green">Gr\u00fcn/SPC</button>
+                <button class="small-button" type="button" data-color-filter="spc-prep">Gelb/Recheck</button>
+                <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
+                <button class="small-button" type="button" data-color-filter="red">Rot/FP</button>
+                <button class="small-button" type="button" data-color-filter="violet">Violett/HZ</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <label class="search" style="max-width:none; display:flex; margin:0 0 10px 0;">
+                <i data-lucide="search"></i>
+                <input id="globalSearch" type="search" placeholder="TIC, Farbe, HZ, Status" />
+              </label>
+              <table>
+                <thead>
+                  <tr>
+                    <th>TIC</th>
+                    <th>Farbe</th>
+                    <th>Final</th>
+                    <th>Evidence</th>
+                    <th>HZ</th>
+                    <th>Distanz</th>
+                    <th>Periode</th>
+                    <th>N\u00e4chster Schritt</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </section>
 
           <details class="panel about-project" id="aboutProjectPanel">
             <summary class="panel-header" style="cursor:pointer;">
@@ -230,211 +477,6 @@
               </button>
             </div>
             <div class="panel-body tree" id="tree"></div>
-          </section>
-
-          <section class="panel" id="curvesPanel">
-            <div class="panel-header">
-              <div>
-                <h2>Lichtkurven</h2>
-                <p class="panel-subtitle">Alle Kandidaten sind links ausw\u00e4hlbar; rechts erscheint die kombinierte Kurve.</p>
-              </div>
-              <div class="panel-actions">
-                <button class="small-button active" type="button" data-curve-filter="all">Alle Kandidaten</button>
-                <button class="small-button" type="button" data-curve-filter="green">Gr\u00fcn</button>
-                <button class="small-button" type="button" data-curve-filter="violet">Lila</button>
-                <button class="small-button" type="button" data-curve-filter="spc-prep">Gelb</button>
-                <button class="small-button" type="button" data-curve-filter="orange">Orange</button>
-              </div>
-            </div>
-            <div class="panel-body curve-layout">
-              <div>
-                <label class="search" style="max-width: none; margin-bottom: 10px;">
-                  <i data-lucide="search"></i>
-                  <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
-                </label>
-                <div class="curve-list" id="curveList"></div>
-              </div>
-              <div class="curve-viewer">
-                <div class="curve-viewer-header">
-                  <div>
-                    <strong id="curveTitle">Keine Lichtkurve ausgew\u00e4hlt</strong>
-                    <div class="muted" id="curveMeta"></div>
-                  </div>
-                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
-                    <i data-lucide="crosshair"></i>
-                  </button>
-                </div>
-                <div class="curve-img-wrap" id="curveImageWrap"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel" id="mapPanel">
-            <div class="panel-header">
-              <div>
-                <h2>2D/3D Sternkarte</h2>
-                <p class="panel-subtitle">Punkte aus dem Projekt: Farbe = Status, Tiefe = Entfernung, gr\u00f6\u00dfere 2D-Kugeln = bessere SNR. Klicken w\u00e4hlt Kandidaten aus.</p>
-              </div>
-              <div class="map-header-actions">
-                <div class="map-header-group">
-                  <button class="small-button active" type="button" data-map-mode="2d">
-                    <i data-lucide="map"></i>
-                    2D
-                  </button>
-                  <button class="small-button" type="button" data-map-mode="3d">
-                    <i data-lucide="box"></i>
-                    3D
-                  </button>
-                </div>
-                <div class="map-header-group">
-                  <button class="small-button active" type="button" data-color-filter="all">Alle</button>
-                  <button class="small-button" type="button" data-color-filter="green">Gr\u00fcn</button>
-                  <button class="small-button" type="button" data-color-filter="yellow">Orange</button>
-                  <button class="small-button" type="button" data-color-filter="spc-prep">SPC Prep</button>
-                  <button class="small-button" type="button" data-color-filter="red">Rot</button>
-                  <button class="small-button" type="button" data-color-filter="violet">Violett</button>
-                </div>
-              </div>
-            </div>
-            <div class="panel-body">
-              <div class="map-layout">
-                <div class="map-main">
-                  <div class="map-frame mode-2d" id="mapFrame">
-                    <canvas id="starMap2d" aria-label="2D Sternkarte"></canvas>
-                    <div id="map3d" aria-label="3D Sternkarte"></div>
-                    <div class="map-zoom-controls" aria-label="Sternkarte Zoom">
-                      <button type="button" title="Herauszoomen" data-map-zoom="out">
-                        <i data-lucide="minus"></i>
-                      </button>
-                      <span class="map-zoom-value" id="mapZoomValue">1.0x</span>
-                      <button type="button" title="Hineinzoomen" data-map-zoom="in">
-                        <i data-lucide="plus"></i>
-                      </button>
-                      <button type="button" title="Zoom zur\u00fccksetzen" data-map-zoom="reset">
-                        <i data-lucide="rotate-ccw"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="map-note">
-                    <span class="legend-item"><span class="dot"></span> Gr\u00fcn = Kandidat</span>
-                    <span class="legend-item"><span class="dot yellow"></span> Orange = in Pr\u00fcfung</span>
-                    <span class="legend-item"><span class="dot spc-prep"></span> Gelb = SPC Prep</span>
-                    <span class="legend-item"><span class="dot red"></span> Rot = FP/Rejected</span>
-                    <span class="legend-item"><span class="dot violet"></span> Violett-Ring = HZ-Fokus</span>
-                    <span class="legend-item">Weisser Ring = ausgew\u00e4hlt</span>
-                    <span class="legend-item"><span class="dot sun"></span> Sonne/Erde (Standpunkt)</span>
-                  </div>
-                </div>
-                <div class="map-side">
-                  <div class="notice">
-                    Vereinfachte Sternkarten-Planungsansicht. Positionen, Winkel und Abst\u00e4nde sind symbolisch und nicht astronomisch ma\u00dfstabsgetreu.
-                  </div>
-                  <div class="map-status">
-                    <strong id="mapSelectedTic">-</strong>
-                    <span>Ausgew\u00e4hlter Kandidat (weisser Ring/Punkt)</span>
-                  </div>
-                  <div class="map-status">
-                    <strong id="mapObservedSectors">-</strong>
-                    <span>Bisher beobachtete Sektoren</span>
-                  </div>
-                  <div class="map-status">
-                    <strong id="mapNextRecheck">-</strong>
-                    <span>N\u00e4chste Beobachtung / Recheck</span>
-                  </div>
-                  <div class="notice mini" id="mapCoverageStatus">
-                    Auswahl zeigt, ob der Kandidat im geplanten TESS-Bereich liegt.
-                  </div>
-                  <div class="map-stat">
-                    <strong id="visibleCount">0</strong>
-                    <span>sichtbare Punkte nach Filter</span>
-                  </div>
-                  <div class="map-stat">
-                    <strong id="lcCount">0</strong>
-                    <span>Lichtkurven mit PNG</span>
-                  </div>
-                  <div class="map-stat">
-                    <strong id="generatedAt">-</strong>
-                    <span>Datenstand</span>
-                  </div>
-                </div>
-              </div>
-              <div class="tess-compare" id="tessCompareCard">
-                <div class="tess-compare-header">
-                  <div>
-                    <h3>3D TESS-Sektorenkarte</h3>
-                    <p>Vereinfachte TESS-Planungsansicht. Positionen, Winkel und Abst\u00e4nde sind symbolisch und nicht astronomisch ma\u00dfstabsgetreu.</p>
-                  </div>
-                  <div class="map-header-group">
-                    <button class="small-button" type="button" data-tess-map-mode="2d">
-                      <i data-lucide="map"></i>
-                      2D
-                    </button>
-                    <button class="small-button active" type="button" data-tess-map-mode="3d">
-                      <i data-lucide="orbit"></i>
-                      3D
-                    </button>
-                    <button class="icon-button tess-compare-toggle" type="button" id="tessCompareToggle" title="3D TESS-Sektorenkarte einklappen" aria-expanded="true" aria-controls="tessSectorFrame">
-                      <i data-lucide="chevron-up"></i>
-                    </button>
-                  </div>
-                </div>
-                <div class="tess-compare-layout">
-                  <div class="tess-sector-main">
-                    <div class="tess-sector-frame mode-3d" id="tessSectorFrame">
-                      <canvas id="tessSector2d" aria-label="2D TESS-Sektorenkarte"></canvas>
-                      <div id="tessSector3d" aria-label="3D TESS-Sektorenkarte"></div>
-                    </div>
-                    <div class="tess-sector-note">
-                      <span class="legend-item"><span class="dot"></span> Gr\u00fcn = Kandidatensektor</span>
-                      <span class="legend-item"><span class="dot blue"></span> Blau = beobachtet</span>
-                      <span class="legend-item"><span class="dot yellow"></span> Gelb = aktuell/geplant</span>
-                      <span class="legend-item"><span class="dot gray"></span> Grau = Hintergrund</span>
-                    </div>
-                  </div>
-                  <div class="tess-compare-side">
-                    <div class="tess-mini-stat">
-                      <strong id="tessMatchSelectedTic">-</strong>
-                      <span>ausgew\u00e4hlter Kandidat</span>
-                    </div>
-                    <div class="tess-mini-stat">
-                      <strong id="tessMatchSectorList">-</strong>
-                      <span>Sektorhistorie</span>
-                    </div>
-                    <div class="tess-mini-stat">
-                      <strong id="tessMatchYear8Overlap">-</strong>
-                      <span>Year-8-Abgleich</span>
-                    </div>
-                    <div class="tess-mini-stat">
-                      <strong id="tessMatchCurrent">-</strong>
-                      <span>aktueller/n\u00e4chster Mission-Sektor</span>
-                    </div>
-                    <div class="tess-mini-stat">
-                      <strong id="tessMatchCoverage">-</strong>
-                      <span>Kandidaten mit Sektorhistorie</span>
-                    </div>
-                    <div class="coverage-timeline">
-                      <h4>TESS Coverage Timeline</h4>
-                      <div class="timeline-row">
-                        <span class="timeline-label">Bisher beobachtet</span>
-                        <div class="sector-chip-row" id="tessTimelineObserved"></div>
-                      </div>
-                      <div class="timeline-row">
-                        <span class="timeline-label">Geplant</span>
-                        <div class="sector-chip-row" id="tessTimelinePlanned"></div>
-                      </div>
-                      <div class="timeline-row">
-                        <span class="timeline-label">N\u00e4chste Beobachtung</span>
-                        <strong class="timeline-value" id="tessTimelineNext">-</strong>
-                      </div>
-                      <div class="timeline-row">
-                        <span class="timeline-label">Status</span>
-                        <strong class="timeline-value" id="tessTimelineStatus">-</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </section>
 
           <section class="panel" id="tessPanel">
@@ -713,48 +755,7 @@
             </div>
           </section>
 
-          <!-- Informational panels (kept for JS rendering, visually part of details section) -->
-          <section class="panel compact-hidden" id="topCandidatesPanel">
-            <div class="panel-header">
-              <div>
-                <h2 id="topCandidatesTitle">Top Kandidaten</h2>
-                <p class="panel-subtitle" id="topCandidatesSub">Sortiert nach Evidence Score, HZ-Priorit\u00e4t und Follow-up-Reife. Klick bereitet ein Kandidatenprofil vor.</p>
-              </div>
-            </div>
-            <div class="panel-body table-wrap">
-              <table class="top-table" aria-label="Top Kandidaten">
-                <thead id="topCandidatesHead">
-                  <tr>
-                    <th>Rank</th>
-                    <th>TIC</th>
-                    <th>Distance ly</th>
-                    <th>Period days</th>
-                    <th>HZ class</th>
-                    <th>Evidence</th>
-                    <th>Label</th>
-                    <th>Next step</th>
-                  </tr>
-                </thead>
-                <tbody id="topCandidateRows"></tbody>
-              </table>
-              <article class="followup-subpanel" aria-label="Follow-up Kandidaten">
-                <div class="followup-subpanel-header">
-                  <div>
-                    <h3 id="followupCandidatesTitle">Follow-up Kandidaten</h3>
-                    <p id="followupCandidatesSub" class="mini">Alle internen Follow-up-F\u00e4lle, getrennt von normalem Orange.</p>
-                  </div>
-                  <div class="followup-subpanel-actions">
-                    <span class="pill spc-prep" id="followupCandidateCount">0</span>
-                    <button class="icon-button" type="button" id="toggleFollowupList" title="Follow-up einklappen" aria-expanded="true">
-                      <i data-lucide="chevron-up"></i>
-                    </button>
-                  </div>
-                </div>
-                <div class="followup-list" id="followupCandidateRows"></div>
-              </article>
-            </div>
-          </section>
-
+          <!-- Informational panels -->
           <section class="panel compact-hidden" id="yellowReasonPanel">
             <div class="panel-header">
               <div>
@@ -919,6 +920,9 @@
             </div>
             <div class="panel-body matrix-stats" id="matrixStats"></div>
           </section>
+
+            </div>
+          </details>
         </section>
         <footer class="site-footer">
           <p class="site-footer-alert">⚠️ Vorläufige Forschungsergebnisse. Kandidatenbewertungen können sich durch neue TESS-Daten, Follow-up-Beobachtungen oder externe Analysen ändern.</p>
