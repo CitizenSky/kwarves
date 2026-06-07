@@ -3,8 +3,8 @@ import { t, normalizeSectorList, formatDateRange, daysDiff, formatDate, formatNu
 import { isSpcPrepCandidate, matrixText, localizedBaseColorLabel } from './logic/colorFor.js';
 
 export const DASHBOARD_UI_VERSION = "2026-06-02-r";
-export const data = window.ASTRO_DASHBOARD_DATA || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] };
-export const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
+export const data = window.ASTRO_DASHBOARD_DATA || (console.warn("[kwarves] window.ASTRO_DASHBOARD_DATA not found – using empty fallback"), { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] });
+export const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || (console.warn("[kwarves] window.ASTRO_DASHBOARD_NOTIFICATIONS not found – using empty fallback"), { generatedAt: "", total: 0, counts: {}, items: [] });
 
 export const els = {
   globalSearch: document.getElementById("globalSearch"),
