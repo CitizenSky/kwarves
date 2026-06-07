@@ -3,8 +3,36 @@ import { t, normalizeSectorList, formatDateRange, daysDiff, formatDate, formatNu
 import { isSpcPrepCandidate, matrixText, localizedBaseColorLabel } from './logic/colorFor.js';
 
 export const DASHBOARD_UI_VERSION = "2026-06-02-r";
-export const data = window.ASTRO_DASHBOARD_DATA || (console.warn("[kwarves] window.ASTRO_DASHBOARD_DATA not found – using empty fallback"), { summary: {}, tree: [], candidates: [], lightcurveCandidates: [] });
-export const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || (console.warn("[kwarves] window.ASTRO_DASHBOARD_NOTIFICATIONS not found – using empty fallback"), { generatedAt: "", total: 0, counts: {}, items: [] });
+
+const raw = window.ASTRO_DASHBOARD_DATA;
+if (!raw || !raw.candidates || !raw.candidates.length) {
+  console.error("[kwarves] window.ASTRO_DASHBOARD_DATA not found or empty at import time.");
+  console.error("[kwarves] typeof window.ASTRO_DASHBOARD_DATA:", typeof window.ASTRO_DASHBOARD_DATA);
+  console.error("[kwarves] Value:", raw);
+}
+export const data = raw || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [], priorityCandidates: [] };
+export const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
+
+console.log("[kwarves] Data loaded:", data.candidates?.length || 0, "candidates");
+console.log("[kwarves] Summary:", JSON.stringify(data.summary));
+
+export function loadData() {
+  const statusEl = document.getElementById("dataStatus");
+  const count = data.candidates?.length || 0;
+  if (statusEl) {
+    if (count > 0) {
+      statusEl.textContent = "Daten geladen: " + count + " Kandidaten";
+      statusEl.style.background = "#00b894";
+      statusEl.style.color = "#fff";
+      setTimeout(() => { statusEl.style.opacity = "0"; setTimeout(() => statusEl.remove(), 500); }, 3000);
+    } else {
+      statusEl.textContent = "Datenfehler: 0 Kandidaten geladen";
+      statusEl.style.background = "#ff4444";
+      statusEl.style.color = "#fff";
+    }
+  }
+  return Promise.resolve(count > 0);
+}
 
 export const els = {
   globalSearch: document.getElementById("globalSearch"),

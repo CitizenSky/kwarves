@@ -1,6 +1,6 @@
 import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel, loadSelectedCardCollapsed, SELECTED_CARD_COLLAPSE_KEY } from './state.js';
 import { t, setLanguage, setText, setTitle, setLegendText, buildTessScheduleState, formatNumber, currentLocale, projectFlowStepsI18n, projectLevelsI18n, projectScripts, localizeScriptText, localizeScriptLevel } from './i18n.js';
-import { els, data, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
+import { els, data, loadData, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
 import { renderCurveFilterCounts, curveMatchesFilter } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
 import { init3dMap, update3dData, update3dSelection, resize3d } from './components/starMap3D.js';
@@ -68,6 +68,11 @@ export function selectCandidate(candidate, source = "table") {
 }
 
 export function renderAll() {
+  console.log('[kwarves] renderAll called, candidates:', data.candidates?.length || 0);
+  if (!data.candidates || data.candidates.length === 0) {
+    console.error('[kwarves] renderAll: no candidates, skipping render');
+    return;
+  }
   updateMapZoomLabel();
   renderKpis();
   renderVisitorKpis();
@@ -80,6 +85,13 @@ export function renderAll() {
   renderDocs();
   renderTess();
   renderAdmin();
+  
+  // Setze ersten Kandidaten als ausgewählt wenn noch keiner gesetzt
+  if (!state.selected && data.candidates.length > 0) {
+    console.log('[kwarves] Setting first candidate as selected');
+    state.selected = data.candidates[0];
+  }
+  
   renderSelected();
   renderTable();
   renderCurveFilterCounts();
@@ -141,6 +153,7 @@ export function renderVisitorCharts() {
 }
 
 export function renderTree() {
+  if (!els.tree) return;
   els.tree.innerHTML = data.tree.map((node) => `
     <article class="tree-node">
       <div class="tree-node-main">
@@ -1252,13 +1265,13 @@ document.getElementById("refreshData").addEventListener("click", () => {
   showToast(t("toast_refresh_data"));
 });
 
-document.getElementById("refreshTree").addEventListener("click", () => {
+document.getElementById("refreshTree")?.addEventListener("click", () => {
   renderTree();
   window.lucide?.createIcons();
   showToast(t("toast_tree_updated"));
 });
 
-document.getElementById("refreshDocs").addEventListener("click", () => {
+document.getElementById("refreshDocs")?.addEventListener("click", () => {
   renderDocs();
   showToast(t("toast_docs_updated"));
 });
@@ -1376,15 +1389,26 @@ applyLanguageToUi();
 setupGlobalAnalytics();
 updateDate();
 startAnalyticsTracking();
-state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
-state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
-renderAll();
-document.getElementById("loadingOverlay")?.classList.add("hidden");
-state.sortBy = "evidence";
-state.sortOrder = "desc";
-if (state.tessMapMode === "3d") {
-  initTessSector3d();
-}
+
+loadData().then((ok) => {
+  if (!ok) {
+    console.error('[kwarves] Data load failed - showing error');
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#ff4444;color:white;padding:20px;border-radius:8px;font-size:18px;z-index:9999;';
+    errorDiv.textContent = 'Fehler: Keine Daten geladen. Prüfe die Browser-Konsole (F12).';
+    document.body.appendChild(errorDiv);
+    return;
+  }
+  console.log('[kwarves] Data loaded successfully, starting render');
+  state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
+  state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
+  renderAll();
+  state.sortBy = "evidence";
+  state.sortOrder = "desc";
+  if (state.tessMapMode === "3d") {
+    initTessSector3d();
+  }
+});
 setInterval(() => {
   updateDate();
   renderTess();

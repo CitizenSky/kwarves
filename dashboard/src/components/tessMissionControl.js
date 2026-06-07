@@ -178,6 +178,7 @@ export function animateTessSector3d() {
 }
 
 export function renderMapCoverageSummary(coverage) {
+  if (!els.mapSelectedTic) return;
   const candidate = coverage.candidate;
   els.mapSelectedTic.textContent = candidate ? `TIC ${candidate.tic}` : "-";
   els.mapObservedSectors.textContent = coverage.observed.length
@@ -211,6 +212,7 @@ export function renderMapCoverageSummary(coverage) {
 }
 
 export function renderTessSectorSummary(scheduleState) {
+  if (!els.tessMatchSelectedTic) return;
   const withSectorHistory = (data.candidates || []).filter((item) => normalizeSectorList(item.observedSectors).length > 0).length;
   const coverage = buildCandidateCoverageModel(scheduleState);
   const candidate = coverage.candidate;
@@ -267,6 +269,7 @@ export function renderTessSectorSummary(scheduleState) {
 }
 
 export function renderTess() {
+  if (!els.tessCurrentSector) return;
   const {
     now,
     schedule,

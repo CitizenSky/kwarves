@@ -59,6 +59,8 @@ export function publicCandidatePool() {
 
 export function renderKpis() {
   const publicRows = publicVisibleCandidates();
+  
+
   document.getElementById("kpiTotal").textContent = formatNumber(data.summary.total);
   document.getElementById("kpiGreen").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "green"));
   document.getElementById("kpiYellow").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "yellow" && !isSpcPrepCandidate(candidate)));
@@ -168,7 +170,7 @@ export function renderFollowupCandidates() {
   `).join("") : `<span class="muted">${t("followup_candidates_empty")}</span>`;
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 export function renderTable() {
   let rows = publicMatrixCandidates();

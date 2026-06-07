@@ -383,6 +383,41 @@
         align-content: start;
       }
 
+      /* 2x2 Quad Grid Layout */
+      .quad-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 16px;
+        width: 100%;
+      }
+
+      .quad-cell {
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .quad-cell .panel,
+      .quad-cell .selected-card-section,
+      .quad-cell .curve-detail-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .quad-cell .table-wrap,
+      .quad-cell .selected-card,
+      .quad-cell .curve-img-wrap,
+      .quad-cell .panel-body {
+        flex: 1;
+        overflow: auto;
+      }
+
+      .quad-cell .map-frame {
+        height: 400px;
+      }
+
       .curve-detail-card {
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -3303,7 +3338,7 @@
       .loading-overlay {
         position: fixed;
         inset: 0;
-        background: var(--bg-primary);
+        background: var(--bg);
         display: flex;
         align-items: center;
         justify-content: center;
