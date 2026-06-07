@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   root: '.',
-  base: './',
+  base: '/kwarves/dashboard/',
   publicDir: 'data',
   build: {
     outDir: 'dist',
