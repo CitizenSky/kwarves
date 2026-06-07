@@ -144,10 +144,25 @@
             </div>
           </div>
 
-          <!-- C) Two-Column Main Layout -->
+          <!-- C) Two-Column Main Layout: Detail View + Compact Sidebar -->
           <div class="main-split">
-            <!-- Left: Candidate List -->
+            <!-- Left: Candidate Detail + Table -->
             <div class="main-left">
+              <!-- Detail Section: Lightcurve, Transit, Overview, Heatmap -->
+              <div class="candidate-detail" id="candidateDetail">
+                <div class="detail-curve">
+                  <div class="detail-curve-head">
+                    <strong id="curveTitle">Keine Lichtkurve ausgewählt</strong>
+                    <div class="muted" id="curveMeta"></div>
+                    <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
+                      <i data-lucide="crosshair"></i>
+                    </button>
+                  </div>
+                  <div class="curve-img-wrap" id="curveImageWrap"></div>
+                </div>
+                <div class="detail-overview" id="selectedCard"></div>
+              </div>
+              <!-- Candidate Table -->
               <section class="panel" id="tablePanel">
                 <div class="panel-header">
                   <div class="toolbar-left">
@@ -195,30 +210,28 @@
               </section>
             </div>
 
-            <!-- Right: Selected Candidate -->
-            <div class="main-right">
-              <div class="selected-card-section" id="selectedCardSection">
-                <div class="selected-card-head">
-                  <div class="selected-card-head-info">
-                    <h3 id="selectedCardTitle">Ausgewählter Kandidat</h3>
-                    <span class="selected-card-tic" id="selectedCardTic">-</span>
-                  </div>
-                  <div class="selected-card-head-actions">
-                    <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
-                      <i data-lucide="activity"></i>
-                    </button>
-                  </div>
+            <!-- Right: Compact Detail Sidebar -->
+            <aside class="main-right detail-sidebar">
+              <div class="detail-card" id="selectedCardSection">
+                <div class="detail-card-head">
+                  <h3 id="selectedCardTitle">Ausgewählter Kandidat</h3>
+                  <button class="icon-button" type="button" title="Lichtkurve zeigen" id="showSelectedCurve">
+                    <i data-lucide="activity"></i>
+                  </button>
                 </div>
-                <div class="selected-card" id="selectedCard"></div>
+                <div class="detail-card-tic" id="selectedCardTic">-</div>
+                <div class="detail-card-body" id="detailSidebar"></div>
               </div>
-            </div>
+            </aside>
           </div>
           <!-- C-H) Detail Sections -->
 
+          <!-- Lightcurve List Panel (Viewer moved to main-left candidate-detail) -->
           <section class="panel" id="curvesPanel">
             <div class="panel-header">
               <div>
                 <h2>Lichtkurven</h2>
+                <span class="muted" style="font-size:12px;">Durchsuchen und auswählen</span>
               </div>
               <div class="panel-actions">
                 <button class="small-button active" type="button" data-curve-filter="all">Alle</button>
@@ -229,26 +242,12 @@
                 <button class="small-button" type="button" data-curve-filter="violet">Violett</button>
               </div>
             </div>
-            <div class="panel-body curve-layout">
-              <div>
-                <label class="search" style="max-width: none; margin-bottom: 10px;">
-                  <i data-lucide="search"></i>
-                  <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
-                </label>
-                <div class="curve-list" id="curveList"></div>
-              </div>
-              <div class="curve-viewer">
-                <div class="curve-viewer-header">
-                  <div>
-                    <strong id="curveTitle">Keine Lichtkurve ausgewählt</strong>
-                    <div class="muted" id="curveMeta"></div>
-                  </div>
-                  <button class="icon-button" id="openCurveCandidate" type="button" title="Kandidat markieren">
-                    <i data-lucide="crosshair"></i>
-                  </button>
-                </div>
-                <div class="curve-img-wrap" id="curveImageWrap"></div>
-              </div>
+            <div class="panel-body">
+              <label class="search" style="max-width: none; margin-bottom: 10px;">
+                <i data-lucide="search"></i>
+                <input id="curveSearch" type="search" placeholder="Lichtkurve suchen" />
+              </label>
+              <div class="curve-list" id="curveList"></div>
             </div>
           </section>
 
