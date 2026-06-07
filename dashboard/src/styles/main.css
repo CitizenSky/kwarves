@@ -2100,13 +2100,13 @@
 
       table {
         width: 100%;
-        min-width: 1450px;
+        min-width: 900px;
         border-collapse: collapse;
       }
 
       th,
       td {
-        padding: 13px 14px;
+        padding: 5px 8px;
         border-bottom: 1px solid var(--line);
         text-align: left;
         white-space: nowrap;
@@ -2114,13 +2114,13 @@
 
       th {
         color: var(--muted);
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 850;
         text-transform: uppercase;
       }
 
       td {
-        font-size: 14px;
+        font-size: 12px;
       }
 
       .wrap-cell {

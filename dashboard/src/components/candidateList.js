@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatFloat, formatMaybe, formatDate, formatSectorList, currentLocale } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, recheckChip, matrixColorClass, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates } from '../dataLoader.js';
 
 export function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -175,7 +175,7 @@ export function renderTable() {
   const limited = state.tableLimit === "all" ? rows : rows.slice(0, state.tableLimit);
   const term = els.globalSearch.value.trim().toLowerCase();
   if (!limited.length) {
-    els.rows.innerHTML = `<tr><td colspan="13">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
+    els.rows.innerHTML = `<tr><td colspan="8">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
     return;
   }
   els.rows.innerHTML = limited.map((candidate) => `
@@ -183,18 +183,10 @@ export function renderTable() {
       <td><strong>TIC ${candidate.tic}</strong></td>
       <td><span class="pill ${colorClass(candidate)}">${colorName(candidate)}</span></td>
       <td>${candidate.finalDecision ? (function(){var s=candidate.finalDecision.status||"";var g=s;if(s==="EXOFOP_CANDIDATE")g="ExoFOP";else if(s==="DATA_LIMITED_SECTORS")g="Wenige Daten";else if(s==="DATA_LIMITED_TRANSITS")g="Wenige Transits";else if(s==="NO_PLANET")g="Kein Planet";return '<span class="final-decision-badge '+(s||"").toLowerCase().replace(/_/g,'-')+'">'+g+'</span>'})() : "-"}</td>
-      <td>
-        <div><strong>${formatMaybe(candidate.status)}</strong></div>
-        <div class="mini">${formatMaybe(candidate.markierungsKlasse)}</div>
-      </td>
-      <td><span class="pill ${matrixColorClass(candidate)}">${formatMaybe(candidate.matrixStatus)}</span></td>
-      <td>${formatMaybe(candidate.matrixClass)}</td>
       <td>${formatFloat(candidate.evidenceScore, 0)}</td>
-      <td>${candidate.period}</td>
-      <td>${candidate.distance}</td>
-      <td>${expectedTransits(candidate)}</td>
       <td>${formatMaybe(candidate.hz)}</td>
-      <td>${recheckChip(candidate)}</td>
+      <td>${candidate.distance}</td>
+      <td>${candidate.period}</td>
       <td>${candidate.nextStep || candidate.decisionReason || candidate.reason || "-"}</td>
     </tr>
   `).join("");
