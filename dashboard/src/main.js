@@ -693,10 +693,12 @@ export function applyLanguageToUi() {
   setText("#introEyebrow", visitorCopy.introEyebrow);
   setText("#introClaim", visitorCopy.introClaim);
   setText("#introText", visitorCopy.introText);
-  document.getElementById("introDisclaimer").innerHTML = visitorCopy.disclaimer;
+  const introDisclaimerEl = document.getElementById("introDisclaimer");
+  if (introDisclaimerEl) introDisclaimerEl.innerHTML = visitorCopy.disclaimer;
   setText("#visitorStatusTitle", visitorCopy.statusTitle);
   setText("#visitorStatusSub", visitorCopy.statusSub);
-  document.getElementById("decisionSummary").innerHTML = visitorCopy.decisionCards.map(([title, text]) => `
+  const decisionSummaryEl = document.getElementById("decisionSummary");
+  if (decisionSummaryEl) decisionSummaryEl.innerHTML = visitorCopy.decisionCards.map(([title, text]) => `
     <article class="decision-card">
       <strong>${title}</strong>
       <p>${text}</p>
