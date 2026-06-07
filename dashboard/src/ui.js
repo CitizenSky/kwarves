@@ -28,6 +28,7 @@ export function setPanelCollapsed(panelId, collapsed, store = true) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
   panel.classList.toggle("is-collapsed", Boolean(collapsed));
+  if (!collapsed) panel.classList.remove("compact-hidden");
   const button = document.querySelector(`.panel-collapse-toggle[data-collapse-target="${panelId}"]`);
   collapseButtonState(button, Boolean(collapsed));
   if (store) {
