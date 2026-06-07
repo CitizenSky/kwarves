@@ -163,7 +163,6 @@ export function renderSelected() {
   ].filter(Boolean).join("");
   els.selectedCard.innerHTML = `
     ${renderNewFdPanel(candidate)}
-    ${renderFinalDecisionPanel(candidate)}
     <div class="selected-title">
       <strong>TIC ${candidate.tic}</strong>
       <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
