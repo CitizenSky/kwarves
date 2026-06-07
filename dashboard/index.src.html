@@ -11,15 +11,14 @@
     <meta property="og:url" content="https://citizensky.github.io/kwarves/dashboard/" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
-    <link rel="icon" type="image/svg+xml" href="/kwarves/dashboard/assets/favicon-Clkh-SoA.svg" />
-    <link rel="shortcut icon" href="/kwarves/dashboard/assets/favicon-Clkh-SoA.svg" />
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <link rel="shortcut icon" href="../favicon.svg" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="dashboard-data.js"></script>
     <script src="dashboard-notifications.js?v=20260601a"></script>
-    <script type="module" crossorigin src="/kwarves/dashboard/assets/index-mLqP0lDY.js"></script>
-    <link rel="stylesheet" crossorigin href="/kwarves/dashboard/assets/index-D9adLbEf.css">
+    <link rel="stylesheet" href="/src/styles/main.css" />
   </head>
   <body>
     <div id="dataStatus" style="position:fixed;bottom:8px;right:8px;padding:4px 10px;border-radius:4px;font-size:12px;z-index:9999;background:#ffeaa7;color:#2d3436;">Lade Daten…</div>
@@ -27,7 +26,7 @@
       <aside class="sidebar" aria-label="Navigation">
         <div class="brand">
           <div class="brand-mark">
-            <img class="brand-logo" src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20256%20256'%20role='img'%20aria-labelledby='title%20desc'%3e%3ctitle%20id='title'%3eKwarves%20Symbol%3c/title%3e%3cdesc%20id='desc'%3eA%20stylized%20K%20inside%20an%20orbital%20ring.%3c/desc%3e%3crect%20x='8'%20y='8'%20width='240'%20height='240'%20rx='52'%20fill='%2310201e'/%3e%3ccircle%20cx='128'%20cy='128'%20r='82'%20fill='none'%20stroke='%236fd6ca'%20stroke-width='12'/%3e%3cpath%20d='M98%2078V178M98%20126L160%2078M98%20126L166%20178'%20fill='none'%20stroke='%23f4c96d'%20stroke-width='14'%20stroke-linecap='round'%20stroke-linejoin='round'/%3e%3ccircle%20cx='186'%20cy='94'%20r='10'%20fill='%232ca98c'/%3e%3ccircle%20cx='72'%20cy='158'%20r='8'%20fill='%235c8cf6'/%3e%3c/svg%3e" alt="Kwarves Symbol" />
+            <img class="brand-logo" src="../favicon.svg" alt="Kwarves Symbol" />
           </div>
           <div>
             <strong>Astro Dashboard</strong>
@@ -934,5 +933,6 @@
       <div class="notification-list" id="notificationList"></div>
     </section>
 
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

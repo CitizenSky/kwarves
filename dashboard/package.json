@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/kwarves/dashboard/dist/ && cp dashboard-data.js dist/ && cp dashboard-notifications.js dist/",
+    "dev:restore": "cp index.src.html index.html && rm -rf assets/ schema/",
+    "build": "vite build --base=/kwarves/dashboard/ && cp dashboard-data.js dist/ && cp dashboard-notifications.js dist/",
+    "deploy": "cp index.html index.src.html && cp -r dist/* . && rm -rf dist/",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
