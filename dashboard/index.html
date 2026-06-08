@@ -18,8 +18,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="dashboard-data.js"></script>
     <script src="dashboard-notifications.js?v=20260601a"></script>
-    <script type="module" crossorigin src="./assets/index-Cz-yFu7X.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DgvHKqLb.css">
+    <script type="module" crossorigin src="./assets/index-DRhOPDtW.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Dup0s1zI.css">
   </head>
   <body>
     <div id="dataStatus" style="position:fixed;bottom:8px;right:8px;padding:4px 10px;border-radius:4px;font-size:12px;z-index:9999;background:#ffeaa7;color:#2d3436;">Lade Daten…</div>
@@ -101,45 +101,6 @@
             <span class="date" id="dashboardDateLabel">Heute</span>
           </div>
 
-          <!-- KPIs -->
-          <div class="kpis" aria-label="Kennzahlen">
-            <article class="card">
-              <p class="big-number" id="kpiTotal">...</p>
-              <span class="metric-line">Kandidaten</span>
-            </article>
-            <article class="card">
-              <p class="big-number" id="kpiGreen">...</p>
-              <span class="metric-line">SPC</span>
-            </article>
-            <article class="card">
-              <p class="big-number" id="kpiYellow">...</p>
-              <span class="metric-line">Recheck</span>
-            </article>
-            <article class="card">
-              <p class="big-number" id="kpiRed">...</p>
-              <span class="metric-line">FP</span>
-            </article>
-            <article class="card">
-              <p class="big-number" id="kpiSpcPrep">...</p>
-              <span class="metric-line">SPC Prep</span>
-            </article>
-            <article class="card">
-              <p class="big-number" id="kpiViolet">...</p>
-              <span class="metric-line">HZ/Top</span>
-            </article>
-          </div>
-
-          <!-- B) Top Candidates Quick Picks -->
-          <div class="top-candidates-bar">
-            <div class="top-candidates-head">
-              <span class="top-candidates-label">Top Kandidaten</span>
-              <span class="pill spc-prep" id="topCandidatesCount">0</span>
-            </div>
-            <div class="top-candidates-scroll">
-              <div class="top-candidates-row" id="topCandidatesRow"></div>
-            </div>
-          </div>
-
           <!-- C) 2x2 Quad Layout -->
           <div class="quad-grid">
             <!-- Top Left: Candidate List -->
@@ -193,6 +154,33 @@
 
             <!-- Top Right: Selected Candidate -->
             <div class="quad-cell">
+              <!-- KPIs -->
+              <div class="kpis" aria-label="Kennzahlen">
+                <article class="card">
+                  <p class="big-number" id="kpiTotal">...</p>
+                  <span class="metric-line">Kandidaten</span>
+                </article>
+                <article class="card">
+                  <p class="big-number" id="kpiGreen">...</p>
+                  <span class="metric-line">SPC</span>
+                </article>
+                <article class="card">
+                  <p class="big-number" id="kpiYellow">...</p>
+                  <span class="metric-line">Recheck</span>
+                </article>
+                <article class="card">
+                  <p class="big-number" id="kpiRed">...</p>
+                  <span class="metric-line">FP</span>
+                </article>
+                <article class="card">
+                  <p class="big-number" id="kpiSpcPrep">...</p>
+                  <span class="metric-line">SPC Prep</span>
+                </article>
+                <article class="card">
+                  <p class="big-number" id="kpiViolet">...</p>
+                  <span class="metric-line">HZ/Top</span>
+                </article>
+              </div>
               <div class="selected-card-section" id="selectedCardSection">
                 <div class="selected-card-head">
                   <div class="selected-card-head-info">
