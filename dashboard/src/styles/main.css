@@ -4529,11 +4529,12 @@
 
       /* ========== Scientific vetting 2x2 grid ========== */
       .quad-grid {
+        --quad-window-height: clamp(380px, 42vh, 560px);
         grid-template-areas:
           "candidates details"
           "lightcurve starmap";
-        grid-template-columns: minmax(400px, 1.08fr) minmax(360px, 0.92fr);
-        grid-template-rows: minmax(360px, auto) minmax(430px, auto);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(2, var(--quad-window-height));
         align-items: stretch;
       }
 
@@ -4557,6 +4558,7 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
+        height: var(--quad-window-height);
       }
 
       .quad-grid > .quad-cell:nth-child(1) #tablePanel,
@@ -4564,6 +4566,7 @@
       .quad-grid > .quad-cell:nth-child(3) .curve-detail-card,
       .quad-grid > .quad-cell:nth-child(4) #mapPanel {
         flex: 1 1 auto;
+        height: 100%;
         min-height: 0;
       }
 
@@ -4586,8 +4589,9 @@
       }
 
       #tablePanel .table-wrap {
-        flex: 0 1 auto;
-        max-height: clamp(280px, 38vh, 480px);
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
       }
 
       #tablePanel .panel-header,
@@ -4598,15 +4602,16 @@
       }
 
       #selectedCardSection .selected-card {
-        max-height: clamp(300px, 42vh, 520px);
+        min-height: 0;
+        max-height: none;
       }
 
       .curve-detail-card {
-        min-height: clamp(380px, 48vh, 640px);
+        min-height: 0;
       }
 
       .curve-detail-card .curve-img-wrap {
-        min-height: clamp(320px, 42vh, 560px);
+        min-height: 0;
         display: grid;
         place-items: center;
       }
@@ -4618,8 +4623,8 @@
       }
 
       #mapPanel {
-        min-height: clamp(320px, 42vh, 520px);
-        max-height: clamp(380px, 52vh, 560px);
+        min-height: 0;
+        max-height: none;
       }
 
       #mapPanel .panel-body {
@@ -4649,7 +4654,7 @@
 
       @media (min-width: 1181px) {
         .quad-grid {
-          grid-template-columns: minmax(460px, 1.08fr) minmax(380px, 0.92fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
 
@@ -4666,12 +4671,10 @@
       @media (max-width: 1180px) {
         .quad-grid {
           grid-template-areas:
-            "candidates"
-            "details"
-            "lightcurve"
-            "starmap";
-          grid-template-columns: minmax(0, 1fr);
-          grid-template-rows: auto;
+            "candidates details"
+            "lightcurve starmap";
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-rows: repeat(2, var(--quad-window-height));
         }
 
         #tablePanel .table-wrap,
@@ -4680,11 +4683,11 @@
         }
 
         .curve-detail-card {
-          min-height: clamp(360px, 48vw, 560px);
+          min-height: 0;
         }
 
         .curve-detail-card .curve-img-wrap {
-          min-height: clamp(300px, 44vw, 500px);
+          min-height: 0;
         }
 
         #mapPanel {
@@ -4696,45 +4699,44 @@
         .quad-grid {
           grid-template-areas:
             "candidates details"
-            "lightcurve lightcurve"
-            "starmap starmap";
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            "lightcurve starmap";
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         #tablePanel .table-wrap,
         #selectedCardSection .selected-card {
-          max-height: clamp(300px, 42vh, 460px);
+          max-height: none;
         }
       }
 
       @media (max-width: 700px) {
         .quad-grid {
+          --quad-window-height: clamp(300px, 76vw, 430px);
           grid-template-areas:
-            "candidates"
-            "details"
-            "lightcurve"
-            "starmap";
-          gap: 12px;
+            "candidates details"
+            "lightcurve starmap";
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
         }
 
         #tablePanel .table-wrap {
-          max-height: clamp(320px, 64vh, 520px);
-        }
-
-        #selectedCardSection .selected-card {
           max-height: none;
         }
 
+        #selectedCardSection .selected-card {
+          max-height: clamp(240px, 40vh, 420px);
+        }
+
         .curve-detail-card {
-          min-height: clamp(320px, 78vw, 480px);
+          min-height: 0;
         }
 
         .curve-detail-card .curve-img-wrap {
-          min-height: clamp(260px, 68vw, 420px);
+          min-height: 0;
         }
 
         .curve-detail-card .curve-img-wrap img {
-          max-height: clamp(240px, 64vw, 400px);
+          max-height: clamp(200px, 50vw, 360px);
         }
 
         #mapPanel .map-layout {
@@ -4743,7 +4745,7 @@
 
         #mapPanel .map-frame,
         .quad-cell .map-frame {
-          height: clamp(220px, 62vw, 320px);
+          height: clamp(200px, 48vw, 300px);
         }
       }
 
