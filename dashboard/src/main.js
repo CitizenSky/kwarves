@@ -1,7 +1,7 @@
 import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel, loadSelectedCardCollapsed, SELECTED_CARD_COLLAPSE_KEY } from './state.js';
 import { t, setLanguage, setText, setTitle, setLegendText, buildTessScheduleState, formatNumber, currentLocale, projectFlowStepsI18n, projectLevelsI18n, projectScripts, localizeScriptText, localizeScriptLevel } from './i18n.js';
 import { els, data, loadData, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
-import { renderCurveFilterCounts, curveMatchesFilter } from './components/lightcurveView.js';
+import { renderCurveFilterCounts, curveMatchesFilter, curveForCandidate } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
 import { init3dMap, update3dData, update3dSelection, resize3d } from './components/starMap3D.js';
 import { renderTable, renderTopCandidates, renderFollowupCandidates, renderVisitorKpis, renderKpis, filteredCandidates, publicCandidatePool, publicVisibleCandidates, setFollowupCollapsed } from './components/candidateList.js';
@@ -53,7 +53,7 @@ export function selectCandidate(candidate, source = "table") {
   draw2dMap();
   update3dSelection();
   renderTess();
-  const curve = data.lightcurveCandidates.find((item) => item.tic === candidate.tic);
+  const curve = curveForCandidate(candidate);
   if (curve && source !== "curve") {
     state.selectedCurve = curve;
     if (!curveMatchesFilter(curve, state.curveFilter)) {
@@ -1235,7 +1235,7 @@ els.mapCanvas.addEventListener("click", (event) => {
 });
 
 document.getElementById("showSelectedCurve")?.addEventListener("click", () => {
-  const curve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic);
+  const curve = curveForCandidate(state.selected);
   if (curve) {
     state.selectedCurve = curve;
     renderCurves(false, true);
@@ -1397,7 +1397,7 @@ loadData().then((ok) => {
   }
   console.log('[kwarves] Data loaded successfully, starting render');
   state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
-  state.selectedCurve = data.lightcurveCandidates.find((item) => state.selected && item.tic === state.selected.tic) || data.lightcurveCandidates[0] || null;
+  state.selectedCurve = curveForCandidate(state.selected) || data.lightcurveCandidates[0] || null;
   setPanelCollapsed("mapPanel", false, true);
   renderAll();
   state.sortBy = "evidence";

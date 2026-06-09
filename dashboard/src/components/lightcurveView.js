@@ -19,6 +19,22 @@ export function filteredCurves() {
   });
 }
 
+export function candidateHasCurveSource(candidate) {
+  if (!candidate) return false;
+  return Boolean(
+    String(candidate.lightcurveImgDeploy || "").trim() ||
+    String(candidate.lightcurveImg || "").trim() ||
+    String(candidate.lightcurveImgLocal || "").trim() ||
+    String(candidate.folder || "").trim()
+  );
+}
+
+export function curveForCandidate(candidate) {
+  if (!candidate) return null;
+  return data.lightcurveCandidates.find((item) => item.tic === candidate.tic) ||
+    (candidateHasCurveSource(candidate) ? candidate : null);
+}
+
 export function curveFilterCount(filter) {
   return countWhere(data.lightcurveCandidates || [], (candidate) => curveMatchesFilter(candidate, filter));
 }
@@ -44,8 +60,9 @@ export function scrollSelectedCurveIntoView(behavior = "smooth") {
 
 export function renderCurves(reset = true, syncScroll = false) {
   const curves = filteredCurves();
+  const selectedFallback = curveForCandidate(state.selected);
   if (reset || !state.selectedCurve || !curves.some((item) => item.tic === state.selectedCurve.tic)) {
-    state.selectedCurve = curves.find((item) => state.selected && item.tic === state.selected.tic) || curves[0] || null;
+    state.selectedCurve = curves.find((item) => state.selected && item.tic === state.selected.tic) || selectedFallback || curves[0] || null;
   }
   if (els.curveList) {
     els.curveList.innerHTML = curves.map((candidate) => `
