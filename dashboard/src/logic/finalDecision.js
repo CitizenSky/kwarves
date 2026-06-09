@@ -118,7 +118,7 @@ export function isSpcArtCandidate(candidate) {
 export function classifyFoldedLightCurve(candidate) {
   const shape = (candidate.transitShape || "").toUpperCase();
   const depthStability = (candidate.depthStability || "").toUpperCase();
-  if (["U_SHAPE", "U_SHAPED", "BOX", "BOX_SHAPED", "CLEAR"].includes(shape)) return "CLEAR";
+  if (["SHAPE_CLEAR", "U_SHAPE", "U_SHAPED", "BOX", "BOX_SHAPED", "CLEAR"].includes(shape)) return "CLEAR";
   if (["V_SHAPE", "V_SHAPED"].includes(shape)) return "V_SHAPED";
   if (["NOISE", "NOISY"].includes(shape)) return "NOISY";
   if (["ARTIFACT", "ARTIFACT_LIKE", "SPURIOUS", "INVERTED", "IRREGULAR", "INVALID"].includes(shape)) return "ARTIFACT_LIKE";
@@ -240,6 +240,9 @@ export function evaluateSpcArtStage2(candidate) {
   const depthStabilityStatus = normalizeStage2MissingStatus(depthStability, candidate);
   const transitShapeStatus = normalizeStage2MissingStatus(candidate.transitShape, candidate);
   const shapeClass = classifyFoldedLightCurve(candidate);
+  const transitShapeScore = candidate.transitShapeScore ?? candidate.foldedLightCurveShape?.transitShapeScore ?? null;
+  const transitShapeSource = candidate.transitShapeSource || candidate.foldedLightCurveShape?.transitShapeSource || "";
+  const shapeBlockingIssues = candidate.foldedLightCurveShape?.shapeBlockingIssues || [];
   const activityRisk = (candidate.rotationRisk || "").toUpperCase();
   const sectorEdgeRisk = (candidate.sectorEdgeRisk || "").toUpperCase();
   const dataGapRisk = (candidate.dataGapRisk || "").toUpperCase();
@@ -280,6 +283,7 @@ export function evaluateSpcArtStage2(candidate) {
     if (transitShapeStatus === "MISSING_RAW_DATA") blockingIssues.push("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.");
     else if (transitShapeStatus === "INSUFFICIENT_TRANSITS") blockingIssues.push("Transit shape not computed because fewer than two visible transits are available.");
     else if (transitShapeStatus === "NOT_COMPUTED") blockingIssues.push("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
+    blockingIssues.push(...shapeBlockingIssues);
     const plotStatus = individualStats.plotStatus || candidate.individualTransitPlotStatus || "PLOT_NOT_AVAILABLE";
     if (plotStatus === "PLOT_NOT_AVAILABLE") missingChecks.push("PLOT_NOT_AVAILABLE");
     const activityFlag = ["HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"].includes(activityRisk);
@@ -320,6 +324,9 @@ export function evaluateSpcArtStage2(candidate) {
       rawDepthStability: depthStabilityStatus || "UNKNOWN",
       transitShape: transitShapeStatus,
       rawTransitShape: candidate.rawTransitShape || candidate.transitShape || "UNKNOWN",
+      transitShapeScore,
+      transitShapeSource,
+      shapeBlockingIssues,
       foldedLightCurveStatus: shapeClass,
       transitShapeClass: shapeClass,
       activityStatus,
@@ -368,6 +375,7 @@ export function evaluateSpcArtStage2(candidate) {
   if (transitShapeStatus === "MISSING_RAW_DATA") blockingIssues.push("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.");
   else if (transitShapeStatus === "INSUFFICIENT_TRANSITS") blockingIssues.push("Transit shape not computed because fewer than two visible transits are available.");
   else if (transitShapeStatus === "NOT_COMPUTED") blockingIssues.push("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
+  blockingIssues.push(...shapeBlockingIssues);
   if (depthStabilityStatus === "MISSING_RAW_DATA") blockingIssues.push("Depth stability not computed because individual-transit depth measurements are missing from the data export.");
   else if (depthStabilityStatus === "INSUFFICIENT_TRANSITS") blockingIssues.push("Depth stability not computed because fewer than two visible transits are available.");
   else if (depthStabilityStatus === "NOT_COMPUTED") blockingIssues.push("Depth stability metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
@@ -413,6 +421,9 @@ export function evaluateSpcArtStage2(candidate) {
     rawDepthStability: candidate.rawDepthStability || depthStability || "UNKNOWN",
     transitShape: transitShapeStatus,
     rawTransitShape: candidate.rawTransitShape || candidate.transitShape || "UNKNOWN",
+    transitShapeScore,
+    transitShapeSource,
+    shapeBlockingIssues,
     foldedLightCurveStatus: shapeClass,
     transitShapeClass: shapeClass,
     activityStatus,

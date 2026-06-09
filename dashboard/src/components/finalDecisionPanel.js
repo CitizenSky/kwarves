@@ -114,6 +114,8 @@ function renderSpcArtStage2(stage2) {
   var depthScatter = stage2.depthScatterPpt ?? "-";
   var medianSingleSnr = stage2.medianSingleTransitSnr ?? "-";
   var plotAvailable = stage2.plotStatus === "PLOT_AVAILABLE" ? "Ja" : "Nein";
+  var shapeSource = stage2.transitShapeSource || "-";
+  var shapeScore = stage2.transitShapeScore ?? "-";
   var source = stage2.source || (stage2.fallbackUsed ? "RUNTIME_FALLBACK" : "DATA_BUILD");
   return '' +
     '<div class="fd-section"><div class="fd-section-title">SPC_ART Stage 2</div>' +
@@ -132,6 +134,8 @@ function renderSpcArtStage2(stage2) {
       '<div class="fd-kv"><span>Plot verfügbar</span><strong>' + plotAvailable + ' · ' + (stage2.plotStatus || "-") + '</strong></div>' +
       '<div class="fd-kv"><span>Depth Stability</span><strong>' + (stage2.depthStability || "-") + ' · Score ' + (stage2.depthStabilityScore ?? "-") + '</strong></div>' +
       '<div class="fd-kv"><span>Folded LC</span><strong>' + (stage2.foldedLightCurveStatus || "-") + ' · Shape ' + (stage2.transitShape || stage2.transitShapeClass || "-") + '</strong></div>' +
+      '<div class="fd-kv"><span>Shape-Quelle</span><strong>' + shapeSource + '</strong></div>' +
+      '<div class="fd-kv"><span>Shape-Score</span><strong>' + shapeScore + '</strong></div>' +
       '<div class="fd-kv"><span>Activity</span><strong>' + (stage2.activityStatus || stage2.activityRotationStatus || "-") + '</strong></div>' +
     '</div>';
 }

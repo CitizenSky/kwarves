@@ -784,7 +784,12 @@ def load_db_rows() -> tuple[
             matrix_rows = conn.execute(
                 """
                 SELECT tic_id, n_transits, n_sectors, depth_ppt, duration_hours,
-                       sap_pdcsap_match, odd_even_result, transit_shape, depth_stability,
+                       sap_pdcsap_match, odd_even_result, transit_shape,
+                       transit_shape_score, transit_shape_source, shape_status, shape_snr,
+                       measured_depth_ppt, secondary_depth_ppt, secondary_ratio_measured,
+                       baseline_left_right_delta_ppt, oot_scatter_ppt, folded_lc_quality,
+                       v_shape_score, shape_blocking_issues, shape_metrics_json,
+                       depth_stability,
                        data_gap_risk, sector_edge_risk, secondary_eclipse, period_alias_risk,
                        rotation_risk, status, status_color, extended_class, evidence_score,
                        score_interpretation, decision_reason, next_step, visible_transits,
@@ -1405,7 +1410,7 @@ def compute_final_decision(
 def classify_folded_lightcurve_status(transit_shape: str, depth_stability: str) -> str:
     shape = clean_text(transit_shape).upper()
     stability = clean_text(depth_stability).upper()
-    if shape in {"U_SHAPE", "U_SHAPED", "BOX", "BOX_SHAPED", "CLEAR"}:
+    if shape in {"SHAPE_CLEAR", "U_SHAPE", "U_SHAPED", "BOX", "BOX_SHAPED", "CLEAR"}:
         return "CLEAR"
     if shape in {"V_SHAPE", "V_SHAPED"}:
         return "V_SHAPED"
@@ -1449,11 +1454,16 @@ def evaluate_spc_art_stage2(
     duration_hours = safe_float(matrix.get("duration_hours")) or 0.0
     depth_stability = clean_text(matrix.get("depth_stability")).upper()
     transit_shape = clean_text(matrix.get("transit_shape")).upper()
+    transit_shape_score = safe_float(matrix.get("transit_shape_score"))
+    transit_shape_source = clean_text(matrix.get("transit_shape_source"))
+    shape_blockers_text = clean_text(matrix.get("shape_blocking_issues"))
+    shape_blockers = [item for item in re.split(r"[;|]", shape_blockers_text) if clean_text(item)]
+    folded_lc_quality = clean_text(matrix.get("folded_lc_quality")).upper()
     rotation_risk = clean_text(matrix.get("rotation_risk")).upper()
     sector_edge_risk = clean_text(matrix.get("sector_edge_risk")).upper()
     data_gap_risk = clean_text(matrix.get("data_gap_risk")).upper()
     expected_transits = max(observed_transits, visible_transits, safe_int(row.get("transit_count")))
-    shape_class = classify_folded_lightcurve_status(transit_shape, depth_stability)
+    shape_class = folded_lc_quality if folded_lc_quality in {"CLEAR", "V_SHAPED", "NOISY", "ARTIFACT_LIKE", "UNCLEAR"} else classify_folded_lightcurve_status(transit_shape, depth_stability)
     transit_shape_status = normalize_stage2_missing_status(
         transit_shape,
         has_lightcurve_product=has_lightcurve_product,
@@ -1519,6 +1529,7 @@ def evaluate_spc_art_stage2(
             blocking_issues.append("Transit shape not computed because fewer than two visible transits are available.")
         elif transit_shape_status == "NOT_COMPUTED":
             blocking_issues.append("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.")
+        blocking_issues.extend(shape_blockers)
         if plot_status == "PLOT_NOT_AVAILABLE":
             missing_checks.append("PLOT_NOT_AVAILABLE")
 
@@ -1561,6 +1572,16 @@ def evaluate_spc_art_stage2(
             "rawDepthStability": depth_stability or "UNKNOWN",
             "transitShape": transit_shape_status,
             "rawTransitShape": transit_shape or "UNKNOWN",
+            "transitShapeScore": transit_shape_score,
+            "transitShapeSource": transit_shape_source,
+            "shapeStatus": clean_text(matrix.get("shape_status")),
+            "shapeSnr": safe_float(matrix.get("shape_snr")),
+            "measuredDepthPpt": safe_float(matrix.get("measured_depth_ppt")),
+            "secondaryRatioMeasured": safe_float(matrix.get("secondary_ratio_measured")),
+            "baselineLeftRightDeltaPpt": safe_float(matrix.get("baseline_left_right_delta_ppt")),
+            "ootScatterPpt": safe_float(matrix.get("oot_scatter_ppt")),
+            "vShapeScore": safe_float(matrix.get("v_shape_score")),
+            "shapeBlockingIssues": shape_blockers,
             "foldedLightCurveStatus": shape_class,
             "transitShapeClass": shape_class,
             "activityStatus": activity_status,
@@ -1630,6 +1651,7 @@ def evaluate_spc_art_stage2(
         blocking_issues.append("Transit shape not computed because fewer than two visible transits are available.")
     elif transit_shape_status == "NOT_COMPUTED":
         blocking_issues.append("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.")
+    blocking_issues.extend(shape_blockers)
     if depth_stability_status == "MISSING_RAW_DATA":
         blocking_issues.append("Depth stability not computed because individual-transit depth measurements are missing from the data export.")
     elif depth_stability_status == "INSUFFICIENT_TRANSITS":
@@ -1688,6 +1710,16 @@ def evaluate_spc_art_stage2(
         "rawDepthStability": depth_stability or "UNKNOWN",
         "transitShape": transit_shape_status,
         "rawTransitShape": transit_shape or "UNKNOWN",
+        "transitShapeScore": transit_shape_score,
+        "transitShapeSource": transit_shape_source,
+        "shapeStatus": clean_text(matrix.get("shape_status")),
+        "shapeSnr": safe_float(matrix.get("shape_snr")),
+        "measuredDepthPpt": safe_float(matrix.get("measured_depth_ppt")),
+        "secondaryRatioMeasured": safe_float(matrix.get("secondary_ratio_measured")),
+        "baselineLeftRightDeltaPpt": safe_float(matrix.get("baseline_left_right_delta_ppt")),
+        "ootScatterPpt": safe_float(matrix.get("oot_scatter_ppt")),
+        "vShapeScore": safe_float(matrix.get("v_shape_score")),
+        "shapeBlockingIssues": shape_blockers,
         "foldedLightCurveStatus": shape_class,
         "transitShapeClass": shape_class,
         "activityStatus": activity_status,
@@ -1927,6 +1959,26 @@ def build_candidate(
     exported_transit_shape = spc_art_stage2_export.get("transitShape") or raw_transit_shape
     exported_depth_stability = spc_art_stage2_export.get("depthStability") or raw_depth_stability
     stage2_blocking_issues = spc_art_stage2_export.get("blockingIssues") or spc_art_stage2_export.get("missingChecks") or []
+    shape_blocking_issues = [
+        clean_text(item)
+        for item in re.split(r"[;|]", clean_text(matrix.get("shape_blocking_issues")))
+        if clean_text(item)
+    ]
+    folded_shape_metrics = {
+        "transitShape": raw_transit_shape,
+        "transitShapeScore": safe_float(matrix.get("transit_shape_score")),
+        "transitShapeSource": clean_text(matrix.get("transit_shape_source")),
+        "shapeStatus": clean_text(matrix.get("shape_status")),
+        "shapeSnr": safe_float(matrix.get("shape_snr")),
+        "measuredDepthPpt": safe_float(matrix.get("measured_depth_ppt")),
+        "secondaryDepthPpt": safe_float(matrix.get("secondary_depth_ppt")),
+        "secondaryRatioMeasured": safe_float(matrix.get("secondary_ratio_measured")),
+        "baselineLeftRightDeltaPpt": safe_float(matrix.get("baseline_left_right_delta_ppt")),
+        "ootScatterPpt": safe_float(matrix.get("oot_scatter_ppt")),
+        "foldedLcQuality": clean_text(matrix.get("folded_lc_quality")),
+        "vShapeScore": safe_float(matrix.get("v_shape_score")),
+        "shapeBlockingIssues": shape_blocking_issues,
+    }
     return {
         "tic": tic,
         "status": "WAIT_FOR_TESS" if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS" else clean_text(merged.get("status")),
@@ -1974,6 +2026,13 @@ def build_candidate(
         "sapPdcsapMatch": sap_pdcsap_match,
         "oddEvenResult": odd_even_result,
         "transitShape": exported_transit_shape,
+        "transitShapeScore": folded_shape_metrics["transitShapeScore"],
+        "transitShapeSource": folded_shape_metrics["transitShapeSource"],
+        "shapeStatus": folded_shape_metrics["shapeStatus"],
+        "shapeSnr": folded_shape_metrics["shapeSnr"],
+        "foldedLcQuality": folded_shape_metrics["foldedLcQuality"],
+        "foldedLightCurveShape": folded_shape_metrics,
+        "folded_light_curve_shape": folded_shape_metrics,
         "depthStability": exported_depth_stability,
         "rawTransitShape": raw_transit_shape,
         "rawDepthStability": raw_depth_stability,

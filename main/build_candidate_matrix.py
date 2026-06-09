@@ -56,6 +56,19 @@ FIELDS = [
     "sap_pdcsap_match",
     "odd_even_result",
     "transit_shape",
+    "transit_shape_score",
+    "transit_shape_source",
+    "shape_status",
+    "shape_snr",
+    "measured_depth_ppt",
+    "secondary_depth_ppt",
+    "secondary_ratio_measured",
+    "baseline_left_right_delta_ppt",
+    "oot_scatter_ppt",
+    "folded_lc_quality",
+    "v_shape_score",
+    "shape_blocking_issues",
+    "shape_metrics_json",
     "depth_stability",
     "data_gap_risk",
     "sector_edge_risk",
@@ -178,6 +191,211 @@ def robust_scatter(values: list[float]) -> float | None:
         mean = sum(clean) / len(clean)
         return math.sqrt(sum((value - mean) ** 2 for value in clean) / len(clean))
     return 0.0
+
+
+def centered_phase_days(time: float, period: float, t0: float) -> float:
+    return ((time - t0 + 0.5 * period) % period) - 0.5 * period
+
+
+def load_lightcurve_points(path_text: str) -> tuple[list[float], list[float]]:
+    path = Path(str(path_text or ""))
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    if path.is_dir():
+        matches = sorted(path.glob("*lightcurve*.csv"))
+        path = matches[0] if matches else path / f"{path.name}_lightcurve.csv"
+    if not path.exists():
+        return [], []
+    times: list[float] = []
+    fluxes: list[float] = []
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            time = safe_float(row.get("time"))
+            flux = safe_float(row.get("flux") or row.get("pdcsap_flux") or row.get("sap_flux"))
+            if finite(time) and finite(flux):
+                times.append(time)
+                fluxes.append(flux)
+    return times, fluxes
+
+
+def median(values: list[float]) -> float:
+    result = robust_median(values)
+    return result if result is not None else float("nan")
+
+
+def classify_transit_shape_status(metrics: dict[str, Any]) -> str:
+    status = str(metrics.get("shape_status") or "").upper()
+    if status == "OK":
+        return "SHAPE_CLEAR"
+    if status == "SECONDARY_LIKE":
+        return "V_SHAPED"
+    if status == "BASELINE_ASYMMETRY":
+        return "ARTIFACT_LIKE"
+    if status in {"WEAK_SHAPE", "INSUFFICIENT_POINTS"}:
+        return "SHAPE_UNCLEAR"
+    if status:
+        return "SHAPE_UNCLEAR"
+    return "NOT_COMPUTED"
+
+
+def shape_score_from_metrics(metrics: dict[str, Any]) -> float | None:
+    status = classify_transit_shape_status(metrics)
+    shape_snr = safe_float(metrics.get("shape_snr"))
+    secondary_ratio = safe_float(metrics.get("secondary_ratio_measured"))
+    baseline_delta = safe_float(metrics.get("baseline_left_right_delta_ppt"))
+    if status == "MISSING_FOLDED_LC_DATA":
+        return None
+    score = 0.5
+    if finite(shape_snr):
+        score = min(1.0, max(0.0, shape_snr / 12.0))
+    if status == "SHAPE_CLEAR":
+        score = max(score, 0.85)
+    elif status == "V_SHAPED":
+        score = min(score, 0.2)
+    elif status == "ARTIFACT_LIKE":
+        score = min(score, 0.3)
+    elif status == "SHAPE_UNCLEAR":
+        score = min(score, 0.55)
+    if finite(secondary_ratio) and secondary_ratio > 0.65:
+        score = min(score, 0.2)
+    if finite(baseline_delta) and baseline_delta > 3.0:
+        score = min(score, 0.45)
+    return round(score, 3)
+
+
+def folded_lc_quality_from_metrics(metrics: dict[str, Any]) -> str:
+    status = classify_transit_shape_status(metrics)
+    if status == "SHAPE_CLEAR":
+        return "CLEAR"
+    if status == "V_SHAPED":
+        return "V_SHAPED"
+    if status == "ARTIFACT_LIKE":
+        return "ARTIFACT_LIKE"
+    if status == "MISSING_FOLDED_LC_DATA":
+        return "MISSING_FOLDED_LC_DATA"
+    return "UNCLEAR"
+
+
+def v_shape_score_from_metrics(metrics: dict[str, Any], row: sqlite3.Row) -> float | None:
+    secondary_ratio = safe_float(metrics.get("secondary_ratio_measured"))
+    duration_fraction = safe_float(row["duration_fraction"])
+    score = 0.0
+    if finite(secondary_ratio):
+        score = max(score, min(1.0, secondary_ratio))
+    if finite(duration_fraction) and duration_fraction > 0.12:
+        score = max(score, 0.75)
+    if classify_transit_shape_status(metrics) == "V_SHAPED":
+        score = max(score, 0.85)
+    return round(score, 3)
+
+
+def shape_blocking_issues(metrics: dict[str, Any]) -> list[str]:
+    status = classify_transit_shape_status(metrics)
+    source = str(metrics.get("transit_shape_source") or "")
+    if status == "MISSING_FOLDED_LC_DATA":
+        return ["MISSING_FOLDED_LC_DATA"]
+    if status == "NOT_COMPUTED":
+        return ["NOT_COMPUTED"]
+    if status == "SHAPE_UNCLEAR":
+        return [str(metrics.get("shape_status") or "SHAPE_UNCLEAR")]
+    if not source:
+        return ["NOT_COMPUTED"]
+    return []
+
+
+def measure_folded_lc_shape(row: sqlite3.Row, level2: dict[str, str]) -> dict[str, Any]:
+    raw_status = str(level2.get("shape_status") or "").upper()
+    if raw_status:
+        metrics = {
+            "shape_status": raw_status,
+            "shape_snr": safe_float(level2.get("shape_snr")),
+            "measured_depth_ppt": safe_float(level2.get("measured_depth_ppt")),
+            "secondary_depth_ppt": safe_float(level2.get("secondary_depth_ppt")),
+            "secondary_ratio_measured": safe_float(level2.get("secondary_ratio_measured")),
+            "baseline_left_right_delta_ppt": safe_float(level2.get("baseline_left_right_delta_ppt")),
+            "oot_scatter_ppt": safe_float(level2.get("oot_scatter_ppt")),
+            "n_shape_in": safe_int(level2.get("n_shape_in")),
+            "n_shape_oot": safe_int(level2.get("n_shape_oot")),
+            "transit_shape_source": "LEVEL2_PLANET_CHECK",
+        }
+    else:
+        period = safe_float(row["best_period"])
+        t0 = safe_float(row["transit_time"])
+        duration = safe_float(row["duration"], 0.0)
+        times, fluxes = load_lightcurve_points(row["lightcurve_dir"])
+        if not times or not finite(period) or period <= 0 or not finite(t0) or not finite(duration) or duration <= 0:
+            metrics = {
+                "shape_status": "MISSING_FOLDED_LC_DATA",
+                "shape_snr": None,
+                "measured_depth_ppt": None,
+                "secondary_depth_ppt": None,
+                "secondary_ratio_measured": None,
+                "baseline_left_right_delta_ppt": None,
+                "oot_scatter_ppt": None,
+                "n_shape_in": 0,
+                "n_shape_oot": 0,
+                "transit_shape_source": "MISSING_FOLDED_LC_DATA",
+            }
+        else:
+            half_duration = duration / 2.0
+            phases = [centered_phase_days(time, period, t0) for time in times]
+            in_flux = [flux for phase, flux in zip(phases, fluxes) if abs(phase) <= half_duration]
+            oot_flux = [flux for phase, flux in zip(phases, fluxes) if abs(phase) >= 2.0 * duration]
+            near_left = [flux for phase, flux in zip(phases, fluxes) if -3.0 * duration <= phase <= -1.25 * duration]
+            near_right = [flux for phase, flux in zip(phases, fluxes) if 1.25 * duration <= phase <= 3.0 * duration]
+            if len(in_flux) < 3 or len(oot_flux) < 10:
+                metrics = {
+                    "shape_status": "INSUFFICIENT_POINTS",
+                    "shape_snr": None,
+                    "measured_depth_ppt": None,
+                    "secondary_depth_ppt": None,
+                    "secondary_ratio_measured": None,
+                    "baseline_left_right_delta_ppt": None,
+                    "oot_scatter_ppt": None,
+                    "n_shape_in": len(in_flux),
+                    "n_shape_oot": len(oot_flux),
+                    "transit_shape_source": "FOLDED_LC_LOCAL",
+                }
+            else:
+                base_med = median(oot_flux)
+                in_med = median(in_flux)
+                depth = max(0.0, base_med - in_med)
+                oot_residuals = [(flux - base_med) * 1000.0 for flux in oot_flux]
+                oot_scatter = robust_scatter(oot_residuals) or float("nan")
+                shape_snr = depth * 1000.0 / oot_scatter * math.sqrt(len(in_flux)) if finite(oot_scatter) and oot_scatter > 0 else float("nan")
+                sec_phases = [centered_phase_days(time, period, t0 + period / 2.0) for time in times]
+                sec_flux = [flux for phase, flux in zip(sec_phases, fluxes) if abs(phase) <= half_duration]
+                sec_depth = max(0.0, base_med - median(sec_flux)) if sec_flux else float("nan")
+                sec_ratio = sec_depth / depth if depth > 0 and finite(sec_depth) else float("nan")
+                left_med = median(near_left) if near_left else float("nan")
+                right_med = median(near_right) if near_right else float("nan")
+                baseline_delta = abs(left_med - right_med) * 1000.0 if finite(left_med) and finite(right_med) else float("nan")
+                status = "OK"
+                if not finite(shape_snr) or shape_snr < 4.0:
+                    status = "WEAK_SHAPE"
+                elif finite(sec_ratio) and sec_ratio > 0.65:
+                    status = "SECONDARY_LIKE"
+                elif finite(baseline_delta) and baseline_delta > max(1.5 * depth * 1000.0, 1.5):
+                    status = "BASELINE_ASYMMETRY"
+                metrics = {
+                    "shape_status": status,
+                    "shape_snr": round(shape_snr, 5) if finite(shape_snr) else None,
+                    "measured_depth_ppt": round(depth * 1000.0, 5),
+                    "secondary_depth_ppt": round(sec_depth * 1000.0, 5) if finite(sec_depth) else None,
+                    "secondary_ratio_measured": round(sec_ratio, 5) if finite(sec_ratio) else None,
+                    "baseline_left_right_delta_ppt": round(baseline_delta, 5) if finite(baseline_delta) else None,
+                    "oot_scatter_ppt": round(oot_scatter, 5) if finite(oot_scatter) else None,
+                    "n_shape_in": len(in_flux),
+                    "n_shape_oot": len(oot_flux),
+                    "transit_shape_source": "FOLDED_LC_LOCAL",
+                }
+    metrics["transit_shape"] = classify_transit_shape_status(metrics)
+    metrics["transit_shape_score"] = shape_score_from_metrics(metrics)
+    metrics["folded_lc_quality"] = folded_lc_quality_from_metrics(metrics)
+    metrics["v_shape_score"] = v_shape_score_from_metrics(metrics, row)
+    metrics["shape_blocking_issues"] = shape_blocking_issues(metrics)
+    return metrics
 
 
 def connect_db() -> sqlite3.Connection:
@@ -392,19 +610,7 @@ def secondary_eclipse(row: sqlite3.Row, level2: dict[str, str], level5: dict[str
 
 
 def transit_shape(level2: dict[str, str], row: sqlite3.Row) -> str:
-    shape = str(level2.get("shape_status") or "").upper()
-    duration_fraction = safe_float(row["duration_fraction"])
-    if shape == "OK":
-        return "U_SHAPE"
-    if shape == "BASELINE_ASYMMETRY":
-        return "ASYMMETRIC"
-    if shape == "SECONDARY_LIKE":
-        return "V_SHAPE"
-    if finite(duration_fraction) and duration_fraction > 0.12:
-        return "V_SHAPE"
-    if shape in {"WEAK_SHAPE", "INSUFFICIENT_POINTS"}:
-        return "UNKNOWN"
-    return "UNKNOWN"
+    return classify_transit_shape_status(measure_folded_lc_shape(row, level2))
 
 
 def depth_stability(row: sqlite3.Row, level5: dict[str, str]) -> str:
@@ -509,7 +715,17 @@ def score_components(metrics: dict[str, Any]) -> dict[str, int]:
     if visible >= 3 and clean >= 2:
         data_window = min(15, data_window + 3)
 
-    shape = {"U_SHAPE": 10, "UNKNOWN": 5, "ASYMMETRIC": 3, "V_SHAPE": 0}.get(metrics["transit_shape"], 5)
+    shape = {
+        "SHAPE_CLEAR": 10,
+        "U_SHAPE": 10,
+        "SHAPE_UNCLEAR": 5,
+        "UNKNOWN": 5,
+        "NOISY": 3,
+        "ASYMMETRIC": 3,
+        "ARTIFACT_LIKE": 2,
+        "V_SHAPED": 0,
+        "V_SHAPE": 0,
+    }.get(metrics["transit_shape"], 5)
     activity = {"UNKNOWN": 6, "LOW": 10, "POSSIBLE": 5, "HIGH": 0}.get(metrics["rotation_risk"], 6)
     followup = 10 if n_transits >= 5 and n_sectors >= 2 else 7 if n_transits >= 3 else 2
     if metrics["secondary_eclipse"] == "YES":
@@ -549,12 +765,12 @@ def decide(metrics: dict[str, Any], components: dict[str, int]) -> tuple[str, st
 
     odd_bad = metrics["odd_even_result"] == "BAD"
     secondary_bad = metrics["secondary_eclipse"] == "YES"
-    strong_v = metrics["transit_shape"] == "V_SHAPE"
+    strong_v = metrics["transit_shape"] in {"V_SHAPE", "V_SHAPED"}
     sap_mismatch = metrics["sap_pdcsap_match"] == "MISMATCH"
     depth_unstable = metrics["depth_stability"] == "UNSTABLE"
     gap_risk = metrics["data_gap_risk"] == "HIGH"
     edge_risk = metrics["sector_edge_risk"] == "HIGH"
-    u_shape_ok = metrics["transit_shape"] == "U_SHAPE"
+    u_shape_ok = metrics["transit_shape"] in {"U_SHAPE", "SHAPE_CLEAR"}
     odd_even_ok = metrics["odd_even_result"] == "OK"
     sap_ok = metrics["sap_pdcsap_match"] == "OK"
     depth_stable = metrics["depth_stability"] == "STABLE"
@@ -624,7 +840,7 @@ def extended_class(status: str, interpretation: str, metrics: dict[str, Any]) ->
     if status == "NEEDS_MORE_DATA":
         return "SPC_WEAK_DATA"
     if status == "FP":
-        if metrics["odd_even_result"] == "BAD" or metrics["secondary_eclipse"] == "YES" or metrics["transit_shape"] == "V_SHAPE":
+        if metrics["odd_even_result"] == "BAD" or metrics["secondary_eclipse"] == "YES" or metrics["transit_shape"] in {"V_SHAPE", "V_SHAPED"}:
             return "EB_RISK"
         return "REJECTED"
     return "IGNORE"
@@ -663,6 +879,7 @@ def build_row(
     level5_single = level5_single or missing_level5_single_transit_data()
     single_stats = dict(level5_single.get("statistics") or {})
     single_events = list(level5_single.get("events") or [])
+    shape_metrics = measure_folded_lc_shape(row, level2)
     if single_stats and not finite(safe_float(level5.get("min_depth_ratio"))):
         level5 = {**level5, "min_depth_ratio": single_stats.get("min_depth_ratio") or ""}
     if single_stats and not finite(safe_float(level5.get("depth_cv"))):
@@ -679,7 +896,20 @@ def build_row(
         "duration_hours": safe_float(row["duration"], 0.0) * 24.0,
         "sap_pdcsap_match": parse_sap_pdcsap(row["sector_quality_summary"]),
         "odd_even_result": odd_even_result(row, level5),
-        "transit_shape": transit_shape(level2, row),
+        "transit_shape": shape_metrics["transit_shape"],
+        "transit_shape_score": shape_metrics.get("transit_shape_score"),
+        "transit_shape_source": shape_metrics.get("transit_shape_source", ""),
+        "shape_status": shape_metrics.get("shape_status", ""),
+        "shape_snr": shape_metrics.get("shape_snr"),
+        "measured_depth_ppt": shape_metrics.get("measured_depth_ppt"),
+        "secondary_depth_ppt": shape_metrics.get("secondary_depth_ppt"),
+        "secondary_ratio_measured": shape_metrics.get("secondary_ratio_measured"),
+        "baseline_left_right_delta_ppt": shape_metrics.get("baseline_left_right_delta_ppt"),
+        "oot_scatter_ppt": shape_metrics.get("oot_scatter_ppt"),
+        "folded_lc_quality": shape_metrics.get("folded_lc_quality", ""),
+        "v_shape_score": shape_metrics.get("v_shape_score"),
+        "shape_blocking_issues": ";".join(shape_metrics.get("shape_blocking_issues") or []),
+        "shape_metrics_json": json.dumps(shape_metrics, ensure_ascii=False, separators=(",", ":")),
         "depth_stability": depth_stability(row, level5),
         "data_gap_risk": data_gap_risk(row),
         "sector_edge_risk": sector_edge_risk(row, level5),
@@ -741,6 +971,19 @@ def ensure_table(conn: sqlite3.Connection) -> None:
             sap_pdcsap_match TEXT,
             odd_even_result TEXT,
             transit_shape TEXT,
+            transit_shape_score REAL,
+            transit_shape_source TEXT,
+            shape_status TEXT,
+            shape_snr REAL,
+            measured_depth_ppt REAL,
+            secondary_depth_ppt REAL,
+            secondary_ratio_measured REAL,
+            baseline_left_right_delta_ppt REAL,
+            oot_scatter_ppt REAL,
+            folded_lc_quality TEXT,
+            v_shape_score REAL,
+            shape_blocking_issues TEXT,
+            shape_metrics_json TEXT,
             depth_stability TEXT,
             data_gap_risk TEXT,
             sector_edge_risk TEXT,
@@ -799,6 +1042,19 @@ def ensure_table(conn: sqlite3.Connection) -> None:
         "individual_transit_plot_path": "TEXT",
         "individual_transit_statistics_json": "TEXT",
         "individual_transit_events_json": "TEXT",
+        "transit_shape_score": "REAL",
+        "transit_shape_source": "TEXT",
+        "shape_status": "TEXT",
+        "shape_snr": "REAL",
+        "measured_depth_ppt": "REAL",
+        "secondary_depth_ppt": "REAL",
+        "secondary_ratio_measured": "REAL",
+        "baseline_left_right_delta_ppt": "REAL",
+        "oot_scatter_ppt": "REAL",
+        "folded_lc_quality": "TEXT",
+        "v_shape_score": "REAL",
+        "shape_blocking_issues": "TEXT",
+        "shape_metrics_json": "TEXT",
     }
     for column, column_type in column_types.items():
         if column not in existing:
