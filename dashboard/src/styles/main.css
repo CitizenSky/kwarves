@@ -6601,3 +6601,61 @@
           min-height: 34px !important;
         }
       }
+
+      @media (min-width: 769px) and (max-width: 1280px) {
+        .quad-grid {
+          display: grid !important;
+          grid-template-areas:
+            "candidates"
+            "details"
+            "lightcurve"
+            "starmap" !important;
+          grid-template-columns: minmax(0, 1fr) !important;
+          grid-template-rows: none !important;
+          gap: 16px !important;
+          height: auto !important;
+        }
+
+        .quad-grid > .quad-cell,
+        .quad-grid > .quad-cell:nth-child(1),
+        .quad-grid > .quad-cell:nth-child(2),
+        .quad-grid > .quad-cell:nth-child(3),
+        .quad-grid > .quad-cell:nth-child(4) {
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) {
+          grid-area: candidates !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) {
+          grid-area: details !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(3) {
+          grid-area: lightcurve !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(4) {
+          grid-area: starmap !important;
+        }
+
+        #tablePanel,
+        #tablePanel .table-wrap {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+
+        #tablePanel .table-wrap {
+          overflow-x: auto !important;
+        }
+      }
+
+      @media (min-width: 1281px) {
+        .quad-grid {
+          grid-template-columns: minmax(560px, 1.18fr) minmax(420px, .82fr);
+        }
+      }
