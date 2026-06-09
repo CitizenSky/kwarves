@@ -78,6 +78,30 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def load_existing_dashboard_data(path: Path = OUT_PATH) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:
+        return {}
+    match = re.search(r"window\.ASTRO_DASHBOARD_DATA\s*=\s*(\{.*\});?\s*$", text, re.S)
+    if not match:
+        return {}
+    try:
+        return json.loads(match.group(1))
+    except Exception:
+        return {}
+
+
+def existing_candidate_index(payload: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    return {
+        safe_int(candidate.get("tic")): candidate
+        for candidate in payload.get("candidates", [])
+        if safe_int(candidate.get("tic"))
+    }
+
+
 def clean_text(value: Any) -> str:
     if value is None:
         return ""
@@ -1567,8 +1591,98 @@ def build_tree(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def candidate_rank_key(candidate: dict[str, Any]) -> tuple[Any, ...]:
+    evidence = safe_float(candidate.get("evidenceScore")) or 0.0
+    snr = safe_float(candidate.get("snr")) or 0.0
+    distance = safe_float(candidate.get("distance")) or 999999.0
+    followup = clean_text(candidate.get("followupStrength")).upper()
+    final_class = clean_text(candidate.get("vettingStage2Class") or (candidate.get("finalDecision") or {}).get("vettingStage2Class")).upper()
+    matrix_class = " ".join(clean_text(value).upper() for value in (
+        candidate.get("matrixClass"),
+        candidate.get("matrixStatus"),
+        candidate.get("status"),
+        *(candidate.get("displayLabels") or []),
+    ))
+    is_readyish = final_class in {"GREEN_SPC", "YELLOW_RECHECK"} or "SPC_FOLLOWUP_READY" in matrix_class
+    is_fp = final_class == "RED_FP" or "FALSE_POSITIVE" in matrix_class or candidate.get("color") == "red"
+    # TODO(EXOFOP_READY): when the EXOFOP_READY workflow is implemented, add its readiness signal
+    # ahead of generic GREEN_SPC/YELLOW_RECHECK in this key instead of treating it as readyish.
+    return (
+        1 if is_fp else 0,
+        0 if followup == "STRONG" else (1 if followup == "MEDIUM" else 2),
+        0 if is_readyish else 1,
+        0 if candidate.get("isViolet") else 1,
+        0 if candidate.get("color") == "green" else (1 if candidate.get("color") == "yellow" else 2),
+        -evidence,
+        -snr,
+        distance,
+        safe_int(candidate.get("tic")),
+    )
+
+
+def apply_candidate_ranking(candidates: list[dict[str, Any]], previous_by_tic: dict[int, dict[str, Any]]) -> None:
+    generated_at = datetime.now().isoformat(timespec="seconds")
+    candidates.sort(key=candidate_rank_key)
+    for index, candidate in enumerate(candidates, start=1):
+        tic = safe_int(candidate.get("tic"))
+        previous = previous_by_tic.get(tic, {})
+        previous_rank = safe_int_or_none(previous.get("rank"))
+        previous_score = safe_float(previous.get("evidenceScore"))
+        new_score = safe_float(candidate.get("evidenceScore"))
+        previous_sectors = set(previous.get("observedSectors") or [])
+        current_sectors = set(candidate.get("observedSectors") or [])
+        added_sectors = sorted(current_sectors - previous_sectors)
+        if not added_sectors:
+            added_sectors = list(candidate.get("newSectors") or [])
+
+        candidate["rank"] = index
+        candidate["rankPrevious"] = previous_rank
+        candidate["rank_previous"] = previous_rank
+        candidate["scorePrevious"] = round(previous_score, 1) if previous_score is not None else None
+        candidate["score_previous"] = candidate["scorePrevious"]
+        candidate["lastSectorAdded"] = max(added_sectors) if added_sectors else previous.get("lastSectorAdded")
+        candidate["last_sector_added"] = candidate["lastSectorAdded"]
+
+        changed_fields: list[dict[str, Any]] = []
+        for field in ("status", "matrixStatus", "matrixClass", "color", "followupStrength"):
+            if previous and previous.get(field) != candidate.get(field):
+                changed_fields.append({"field": field, "before": previous.get(field), "after": candidate.get(field)})
+        if previous_rank is not None and previous_rank != index:
+            changed_fields.append({"field": "rank", "before": previous_rank, "after": index})
+        if previous_score is not None and new_score is not None and round(previous_score, 1) != round(new_score, 1):
+            changed_fields.append({"field": "evidenceScore", "before": round(previous_score, 1), "after": round(new_score, 1)})
+        if added_sectors:
+            changed_fields.append({"field": "observedSectors", "before": sorted(previous_sectors), "after": sorted(current_sectors)})
+
+        history = list(previous.get("updateHistory") or previous.get("update_history") or [])
+        if changed_fields:
+            history.append({
+                "checkedAt": generated_at,
+                "event": "AUTO_RERANK",
+                "rankPrevious": previous_rank,
+                "rank": index,
+                "scorePrevious": round(previous_score, 1) if previous_score is not None else None,
+                "score": round(new_score, 1) if new_score is not None else None,
+                "newSectors": added_sectors,
+                "changes": changed_fields,
+            })
+            history = history[-20:]
+
+        candidate["updateHistory"] = history
+        candidate["update_history"] = history
+        if changed_fields:
+            candidate["lastUpdated"] = generated_at
+        else:
+            candidate["lastUpdated"] = previous.get("lastUpdated") or previous.get("last_updated") or generated_at
+        candidate["last_updated"] = candidate["lastUpdated"]
+        candidate["updateStatus"] = "UPDATED" if changed_fields else previous.get("updateStatus", "")
+        candidate["update_status"] = candidate["updateStatus"]
+
+
 def main() -> int:
     args = parse_args()
+    previous_payload = load_existing_dashboard_data()
+    previous_by_tic = existing_candidate_index(previous_payload)
     auto_updated = run_auto_update(args)
     db_rows, matrix_rows, sector_rows, local_coord_rows = load_db_rows()
     with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
@@ -1611,8 +1725,6 @@ def main() -> int:
         )
         for row in manifest_rows
     ]
-    candidates.sort(key=lambda item: (item["distance"], -item["snr"], item["tic"]))
-
     # Override color based on final decision status
     for candidate in candidates:
         fd = candidate.get("finalDecision", {})
@@ -1635,6 +1747,8 @@ def main() -> int:
             # False Positive -> keep red if there are hard failures
             if not fd.get("failed_checks") and candidate.get("color") == "red":
                 candidate["color"] = "gray"
+
+    apply_candidate_ranking(candidates, previous_by_tic)
 
     lightcurve_candidates = [
         candidate for candidate in candidates

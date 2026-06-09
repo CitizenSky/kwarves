@@ -110,6 +110,7 @@ export function renderNotifications() {
   els.notificationList.innerHTML = items.length ? items.map((item) => {
     const changed = item.changes?.length || 0;
     const sectors = (item.newSectors || []).map((sector) => `S${sector}`).join(", ");
+    const types = (item.types || [item.type]).filter(Boolean).join(" · ");
     const recheckLine = t("notification_recheck_line", {
       status: item.recheckStatus || "-",
       current: item.currentSector ? `S${item.currentSector}` : "-",
@@ -119,6 +120,7 @@ export function renderNotifications() {
     return `
       <button class="notification-item" type="button" data-notification-tic="${item.tic}">
         <strong>TIC ${item.tic} <span class="pill ${notificationSeverityClass(item)}">${item.recheckStatus || item.type}</span></strong>
+        ${types ? `<p>${types}</p>` : ""}
         <p>${item.summary || recheckLine}</p>
         <p>${recheckLine}</p>
         <p>${changed ? t("notification_change_count", { count: changed }) : ""}${sectors ? ` \u00b7 ${t("notification_new_sectors", { sectors })}` : ""}</p>

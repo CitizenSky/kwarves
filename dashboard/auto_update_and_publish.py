@@ -19,6 +19,7 @@ TRACKED_OUTPUTS = [
     "dashboard/gaia_coordinates_cache.csv",
 ]
 WATCHED_FIELDS = [
+    "rank",
     "color",
     "baseColorLabel",
     "colorLabel",
@@ -32,7 +33,11 @@ WATCHED_FIELDS = [
     "nextPlannedSector",
     "estimatedDataAvailable",
     "observedSectorCount",
+    "observedSectors",
+    "newSectors",
     "followupStrength",
+    "lastUpdated",
+    "lastSectorAdded",
 ]
 
 
@@ -106,12 +111,38 @@ def field_changes(before: dict, after: dict) -> list[dict]:
 
 def notification_severity(item: dict) -> str:
     status = str(item.get("recheckStatus") or "")
+    types = set(item.get("types") or [item.get("type")])
     changes = {change["field"] for change in item.get("changes", [])}
-    if status == "LIVE_NOW" or "color" in changes or "matrixStatus" in changes or "matrixClass" in changes:
+    if status == "LIVE_NOW" or "UPGRADED" in types or "DOWNGRADED" in types or "color" in changes or "matrixStatus" in changes or "matrixClass" in changes:
         return "high"
-    if status in {"UPCOMING", "WAITING_DATA"} or "evidenceScore" in changes:
+    if status in {"UPCOMING", "WAITING_DATA"} or "NEW_DATA" in types or "RANK_CHANGED" in types or "evidenceScore" in changes:
         return "medium"
     return "low"
+
+
+def notification_types(previous: dict | None, candidate: dict, changes: list[dict]) -> list[str]:
+    types: list[str] = []
+    fields = {change["field"] for change in changes}
+    if previous is None:
+        types.append("NEW_CANDIDATE")
+    if changes:
+        types.append("UPDATED")
+    if candidate.get("newSectors") or "lastSectorAdded" in fields or "last_sector_added" in fields or "observedSectors" in fields:
+        types.append("NEW_DATA")
+    old_rank = previous.get("rank") if previous else candidate.get("rankPrevious")
+    new_rank = candidate.get("rank")
+    try:
+        old_rank_i = int(old_rank)
+        new_rank_i = int(new_rank)
+    except Exception:
+        old_rank_i = None
+        new_rank_i = None
+    if old_rank_i is not None and new_rank_i is not None and old_rank_i != new_rank_i:
+        types.append("RANK_CHANGED")
+        types.append("UPGRADED" if new_rank_i < old_rank_i else "DOWNGRADED")
+    elif "rank" in fields:
+        types.append("RANK_CHANGED")
+    return list(dict.fromkeys(types))
 
 
 def build_notifications(before: dict, after: dict) -> dict:
@@ -125,10 +156,12 @@ def build_notifications(before: dict, after: dict) -> dict:
         changes = field_changes(previous or {}, candidate)
         new_sectors = candidate.get("newSectors") or []
         recheck_status = candidate.get("recheckStatus") or "NO_PLANNED_RECHECK"
-        if not previous or changes or new_sectors:
+        types = notification_types(previous, candidate, changes)
+        if types or new_sectors:
             item = {
                 "tic": candidate.get("tic"),
-                "type": "NEW_CANDIDATE" if not previous else "REVALUATION",
+                "type": types[0] if types else ("NEW_CANDIDATE" if not previous else "REVALUATION"),
+                "types": types,
                 "status": candidate.get("status"),
                 "matrixStatus": candidate.get("matrixStatus"),
                 "matrixClass": candidate.get("matrixClass"),
@@ -137,15 +170,21 @@ def build_notifications(before: dict, after: dict) -> dict:
                 "isViolet": candidate.get("isViolet", False),
                 "hz": candidate.get("hz"),
                 "evidenceScore": candidate.get("evidenceScore"),
+                "scorePrevious": candidate.get("scorePrevious") or candidate.get("score_previous"),
+                "rank": candidate.get("rank"),
+                "rankPrevious": candidate.get("rankPrevious") or candidate.get("rank_previous"),
                 "recheckStatus": recheck_status,
                 "currentSector": candidate.get("currentSector"),
                 "nextPlannedSector": candidate.get("nextPlannedSector"),
                 "estimatedDataAvailable": candidate.get("estimatedDataAvailable"),
+                "lastUpdated": candidate.get("lastUpdated") or candidate.get("last_updated"),
+                "lastSectorAdded": candidate.get("lastSectorAdded") or candidate.get("last_sector_added"),
                 "newSectors": new_sectors,
                 "changes": changes,
                 "summary": (
                     f"TIC {candidate.get('tic')}: {recheck_status}; "
-                    f"Score {candidate.get('evidenceScore', '-')}; "
+                    f"Rank {candidate.get('rankPrevious') or '-'} → {candidate.get('rank') or '-'}; "
+                    f"Score {candidate.get('scorePrevious') or '-'} → {candidate.get('evidenceScore', '-')}; "
                     f"neue Sektoren {sector_text(new_sectors)}"
                 ),
             }
@@ -171,6 +210,11 @@ def build_notifications(before: dict, after: dict) -> dict:
             "upcoming": sum(1 for item in items if item.get("recheckStatus") == "UPCOMING"),
             "waitingData": sum(1 for item in items if item.get("recheckStatus") == "WAITING_DATA"),
             "newSectorHits": sum(1 for item in items if item.get("newSectors")),
+            "updated": sum(1 for item in items if "UPDATED" in (item.get("types") or [])),
+            "newData": sum(1 for item in items if "NEW_DATA" in (item.get("types") or [])),
+            "rankChanged": sum(1 for item in items if "RANK_CHANGED" in (item.get("types") or [])),
+            "upgraded": sum(1 for item in items if "UPGRADED" in (item.get("types") or [])),
+            "downgraded": sum(1 for item in items if "DOWNGRADED" in (item.get("types") or [])),
         },
     }
 
