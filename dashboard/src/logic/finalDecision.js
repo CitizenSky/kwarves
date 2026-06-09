@@ -150,6 +150,65 @@ function getStoredSpcArtStage2(candidate) {
   };
 }
 
+function stage2CheckStatus(stage2) {
+  if (stage2.recommendation === "FALSE_POSITIVE") return "failed";
+  if (stage2.recommendation === "PROMOTE_RECHECK") return "passed";
+  return "warning";
+}
+
+function depthStage2CheckStatus(stage2) {
+  const score = Number(stage2.depthStabilityScore ?? 0);
+  if (score >= 0.65) return "passed";
+  if (score < 0.4) return "failed";
+  return "warning";
+}
+
+function individualStage2CheckStatus(stage2) {
+  if (stage2.singleTransitStatus === "STABLE") return "passed";
+  if (stage2.singleTransitStatus === "NOT_REPRODUCIBLE") return "failed";
+  return "warning";
+}
+
+function withStoredSpcArtStage2Decision(decision, stage2) {
+  const existingTree = Array.isArray(decision.check_tree) ? decision.check_tree : [];
+  const keptTree = existingTree.filter((check) => ![
+    "Folded Light Curve",
+    "Individual Transits",
+    "Depth Stability",
+    "SPC_ART Stage 2"
+  ].includes(check.name));
+  const enrichedTree = [
+    ...keptTree,
+    {
+      name: "Folded Light Curve",
+      status: stage2CheckStatus(stage2),
+      reason: "Folded LC: " + (stage2.foldedLightCurveStatus || "-") + "; Shape: " + (stage2.transitShape || stage2.transitShapeClass || "-") + "; Depth: " + (stage2.depthStability || "-")
+    },
+    {
+      name: "Individual Transits",
+      status: individualStage2CheckStatus(stage2),
+      reason: (stage2.singleTransitStatus || "-") + "; " + (stage2.plotStatus || "-")
+    },
+    {
+      name: "Depth Stability",
+      status: depthStage2CheckStatus(stage2),
+      reason: "median=" + (stage2.medianDepthPpt ?? "-") + " ppt, scatter=" + (stage2.depthScatterPpt ?? "-") + ", score=" + (stage2.depthStabilityScore ?? "-")
+    },
+    {
+      name: "SPC_ART Stage 2",
+      status: stage2CheckStatus(stage2),
+      reason: "Source: " + (stage2.source || "DATA_BUILD") + "; fallback=" + (stage2.fallbackUsed ? "yes" : "no") + "; " + (stage2.computationStatus || "COMPUTED")
+    }
+  ];
+  return {
+    ...decision,
+    spcArtStage2: stage2,
+    warnings: stage2.missingChecks || decision.warnings || [],
+    blockers: stage2.blockingIssues || stage2.missingChecks || decision.blockers || [],
+    check_tree: enrichedTree
+  };
+}
+
 export function evaluateSpcArtStage2(candidate) {
   const visibleTransits = Number(candidate.matrixVisibleTransits ?? candidate.visibleTransits ?? candidate.matrixTransits ?? candidate.transits ?? 0) || 0;
   const expectedTransits = Number(candidate.matrixTransits ?? candidate.transits ?? visibleTransits) || visibleTransits;
@@ -342,7 +401,7 @@ export function computeFinalDecision(candidate) {
   const needsSpcArtStage2 = isSpcArtCandidate(candidate) && !storedSpcArtStage2;
   if (candidate.finalDecision && candidate.finalDecision.vettingStage2Class && !needsSpcArtStage2) {
     return storedSpcArtStage2
-      ? { ...candidate.finalDecision, spcArtStage2: storedSpcArtStage2 }
+      ? withStoredSpcArtStage2Decision(candidate.finalDecision, storedSpcArtStage2)
       : candidate.finalDecision;
   }
 

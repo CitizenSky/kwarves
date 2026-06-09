@@ -2,6 +2,7 @@ import { state } from '../state.js';
 import { t, formatMaybe, formatFloat } from '../i18n.js';
 import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList } from '../dataLoader.js';
 import { renderFinalDecisionPanel as renderNewFdPanel, initPanelListeners } from './finalDecisionPanel.js';
+import { computeFinalDecision } from '../logic/finalDecision.js';
 
 export function candidateChip(candidate) {
   return `<button class="chip" type="button" data-stat-tic="${candidate.tic}">TIC ${candidate.tic} · ${formatMaybe(candidate.evidenceScore, 0)}</button>`;
@@ -13,7 +14,7 @@ export function candidateGroupLabel(candidate) {
 }
 
 export function renderFinalDecisionPanel(candidate) {
-  var fd = candidate.finalDecision;
+  var fd = computeFinalDecision(candidate);
   if (!fd) return "";
 
   var statusClass = (fd.status || "").toLowerCase().replace(/_/g, "-");
@@ -128,7 +129,7 @@ export function renderFinalDecisionPanel(candidate) {
 
 function renderExecutiveSummary(candidate) {
   const items = [];
-  const fd = candidate.finalDecision;
+  const fd = computeFinalDecision(candidate);
 
   if (candidate.hz) items.push({ type: "good", text: `HZ Kandidat (${candidate.hz})` });
   if (candidate.distance) items.push({ type: "good", text: `${candidate.distance} Lichtjahre` });
@@ -163,7 +164,7 @@ function renderExecutiveSummary(candidate) {
 }
 
 function renderActionCard(candidate) {
-  const fd = candidate.finalDecision;
+  const fd = computeFinalDecision(candidate);
   const evidence = candidate.evidenceScore || 0;
 
   let priorityLevel = "low";

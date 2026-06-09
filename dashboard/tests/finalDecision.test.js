@@ -223,6 +223,69 @@ describe('SPC_ART Stage 2', () => {
     expect(result.signalStatus).toBe("NOT_REPRODUCIBLE");
     expect(result.failed_test).toBe("Individual Transits");
   });
+
+  it('prefers persisted DATA_BUILD spcArtStage2 over raw matrix UNKNOWN values', () => {
+    var persistedStage2 = {
+      applies: true,
+      source: "DATA_BUILD",
+      fallbackUsed: false,
+      stage2Completed: true,
+      computationStatus: "COMPUTED_WITH_LIMITED_EXPORT_DATA",
+      singleTransitStatus: "NEEDS_REVIEW",
+      individualTransitStatus: "NEEDS_REVIEW",
+      transits: [{ index: 1, status: "NEEDS_REVIEW", flags: [] }],
+      individualTransitCount: 85,
+      visibleTransits: 41,
+      totalTransits: 85,
+      medianDepthPpt: 1.59768,
+      depthScatterPpt: 0.71895,
+      depthStabilityScore: 0.55,
+      depthStability: "NOT_COMPUTED",
+      rawDepthStability: "UNKNOWN",
+      transitShape: "NOT_COMPUTED",
+      rawTransitShape: "UNKNOWN",
+      foldedLightCurveStatus: "UNCLEAR",
+      transitShapeClass: "UNCLEAR",
+      activityStatus: "UNCLEAR",
+      activityRotationStatus: "UNCLEAR",
+      activityFlag: false,
+      missingChecks: ["Depth stability measurement"],
+      blockingIssues: ["Depth stability metric exists neither in candidate_matrix nor in Stage 2 raw measurements."],
+      recommendation: "KEEP_SPC_ART",
+      nextAction: "Review individual transits, folded light curve, depth stability, and activity/rotation.",
+      plotStatus: "INDIVIDUAL_TRANSIT_PLOTS_NOT_AVAILABLE_IN_DASHBOARD_DATA"
+    };
+    var result = computeFinalDecision(makeCandidate({
+      matrixStatus: "SPC_ART",
+      evidenceScore: 66,
+      observedSectorCount: 10,
+      matrixVisibleTransits: 41,
+      matrixTransits: 85,
+      transitShape: "UNKNOWN",
+      depthStability: "UNKNOWN",
+      spcArtStage2: persistedStage2,
+      finalDecision: {
+        status: "PURPLE_SPC_ART",
+        vettingStage2Class: "PURPLE_SPC_ART",
+        reason: "Persisted decision",
+        check_tree: [{
+          name: "Folded Light Curve",
+          status: "warning",
+          reason: "Transit shape: UNKNOWN, Depth stability: UNKNOWN"
+        }]
+      }
+    }));
+
+    expect(result.spcArtStage2.source).toBe("DATA_BUILD");
+    expect(result.spcArtStage2.fallbackUsed).toBe(false);
+    expect(result.spcArtStage2.transitShape).toBe("NOT_COMPUTED");
+    expect(result.spcArtStage2.depthStability).toBe("NOT_COMPUTED");
+    expect(result.spcArtStage2.depthStabilityScore).toBe(0.55);
+    expect(result.spcArtStage2.blockingIssues).toContain("Depth stability metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
+    expect(result.check_tree.find((check) => check.name === "Folded Light Curve").reason).toContain("Shape: NOT_COMPUTED");
+    expect(result.check_tree.find((check) => check.name === "Depth Stability").reason).toContain("score=0.55");
+    expect(result.check_tree.some((check) => check.reason === "Transit shape: UNKNOWN, Depth stability: UNKNOWN")).toBe(false);
+  });
 });
 
 describe('computeSignalQuality', () => {
