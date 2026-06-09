@@ -5895,6 +5895,29 @@
         background: transparent !important;
       }
 
+      .fd-kv {
+        display: grid;
+        grid-template-columns: minmax(110px, 0.42fr) minmax(0, 1fr);
+        gap: 8px;
+        padding: 5px 0;
+        border-top: 1px solid rgba(217, 225, 222, 0.65);
+        font-size: 12px;
+      }
+
+      .fd-kv:first-of-type {
+        border-top: 0;
+      }
+
+      .fd-kv span {
+        color: var(--muted);
+        font-weight: 760;
+      }
+
+      .fd-kv strong {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
       @media (max-width: 768px) {
         html,
         body {

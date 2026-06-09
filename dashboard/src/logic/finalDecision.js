@@ -8,8 +8,11 @@ export const HIGH_TRANSITS = 3;
 export const SIGNAL_MIN_SCORE = 20;
 
 export function checkTessData(candidate) {
-  const sectors = candidate.observedSectorCount || 0;
-  if (sectors <= 0) {
+  const sectors = candidate.observedSectorCount || candidate.astroMonitor?.sectors?.length || 0;
+  const productsAvailable = candidate.astroMonitor
+    ? candidate.astroMonitor.productsAvailable !== false
+    : true;
+  if (sectors <= 0 || !productsAvailable) {
     return { status: "failed", reason: "No TESS sectors available" };
   }
   return { status: "passed", reason: `${sectors} TESS sector(s) available` };
@@ -145,6 +148,9 @@ export function categorizeChecks(checks) {
 }
 
 export function determineMatrixCell(signalQuality, dataQuality, status) {
+  if (status === "WAIT_FOR_TESS") {
+    return "no_tess_data";
+  }
   if (status === "NO_PLANET") {
     return "no_planet";
   }
@@ -176,6 +182,39 @@ export function computeFinalDecision(candidate) {
       not_run_checks: ["TESS Data", "Signal Detection", "Folded Light Curve", "Sector Coverage", "Transit Count", "Odd/Even", "Secondary Eclipse", "SAP/PDCSAP", "Activity/Rotation"],
       blockers: [],
       check_tree: []
+    };
+  }
+
+  if (candidate.finalDecision && candidate.finalDecision.vettingStage2Class) {
+    return candidate.finalDecision;
+  }
+
+  const tessCheck = checkTessData(candidate);
+  if (tessCheck.status === "failed") {
+    return {
+      ticId: candidate.tic,
+      status: "WAIT_FOR_TESS",
+      vettingStage2Class: "WAIT_FOR_TESS",
+      reason: "No TESS observations available.",
+      decisionReason: "No TESS observations available",
+      failed_test: "TESS Data",
+      next_action: "wait_for_tess",
+      suggestedAction: "Wait for TESS observations",
+      signal_quality: "unknown",
+      signalStatus: "NO_DATA",
+      data_quality: "low",
+      dataStatus: "NO_TESS_DATA",
+      monitorStatus: "NO_TESS_DATA",
+      matrix_cell: "no_tess_data",
+      scoreDelta: 0,
+      badges: ["WAIT_FOR_TESS", "NO_TESS_DATA"],
+      warnings: ["No TESS data available"],
+      passed_checks: [],
+      warning_checks: [],
+      failed_checks: ["TESS Data"],
+      not_run_checks: ["Signal Detection", "Folded Light Curve", "Sector Coverage", "Transit Count", "Vetting Checks"],
+      blockers: ["No TESS data available"],
+      check_tree: [{ name: "TESS Data", status: "failed", reason: "No TESS sectors available" }]
     };
   }
 
@@ -211,13 +250,19 @@ export function computeFinalDecision(candidate) {
 
   if (checks["Signal Detection"].status === "failed") {
     return {
-      status: "NO_PLANET",
+      status: "LOW_CONFIDENCE",
+      vettingStage2Class: "LOW_CONFIDENCE",
       reason: "No BLS/TLS signal detected.",
       failed_test: "Signal Detection",
-      next_action: "exclude",
+      next_action: "manual_review_required",
+      suggestedAction: "Signal detection failed.",
+      decisionReason: "No BLS/TLS signal detected.",
+      signalStatus: "NO_SIGNAL",
+      dataStatus: "TESS_DATA_AVAILABLE",
+      monitorStatus: "TESS_DATA_AVAILABLE",
       signal_quality: signalQuality,
       data_quality: dataQuality,
-      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "NO_PLANET"),
+      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "LOW_CONFIDENCE"),
       passed_checks: cats.passed,
       warning_checks: cats.warning,
       failed_checks: cats.failed,
@@ -229,13 +274,19 @@ export function computeFinalDecision(candidate) {
 
   if (checks["Folded Light Curve"].status === "failed") {
     return {
-      status: "NO_PLANET",
+      status: "RED_FP",
+      vettingStage2Class: "RED_FP",
       reason: "Folded light curve indicates EB or artifact.",
+      decisionReason: "Folded light curve indicates EB or artifact.",
       failed_test: "Folded Light Curve",
       next_action: "exclude",
+      suggestedAction: "Candidate excluded from follow-up.",
+      signalStatus: "VISIBLE_SIGNAL",
+      dataStatus: "TESS_DATA_AVAILABLE",
+      monitorStatus: "TESS_DATA_AVAILABLE",
       signal_quality: signalQuality,
       data_quality: dataQuality,
-      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "NO_PLANET"),
+      matrix_cell: "false_positive",
       passed_checks: cats.passed,
       warning_checks: cats.warning,
       failed_checks: cats.failed,
@@ -288,13 +339,19 @@ export function computeFinalDecision(candidate) {
   const hardVettingFails = hardVettingChecks.filter(function(name) { return checks[name].status === "failed"; });
   if (hardVettingFails.length > 0) {
     return {
-      status: "NO_PLANET",
+      status: "RED_FP",
+      vettingStage2Class: "RED_FP",
       reason: "False positive indicator: " + hardVettingFails.join(", ") + ".",
+      decisionReason: "False positive indicator: " + hardVettingFails.join(", ") + ".",
       failed_test: hardVettingFails[0],
       next_action: "exclude",
+      suggestedAction: "Candidate excluded from follow-up.",
+      signalStatus: "VISIBLE_SIGNAL",
+      dataStatus: "TESS_DATA_AVAILABLE",
+      monitorStatus: "TESS_DATA_AVAILABLE",
       signal_quality: signalQuality,
       data_quality: dataQuality,
-      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "NO_PLANET"),
+      matrix_cell: "false_positive",
       passed_checks: cats.passed,
       warning_checks: cats.warning,
       failed_checks: cats.failed,
@@ -324,13 +381,19 @@ export function computeFinalDecision(candidate) {
       };
     }
     return {
-      status: "NO_PLANET",
+      status: "LOW_CONFIDENCE",
+      vettingStage2Class: "LOW_CONFIDENCE",
       reason: "Weak signal with rotation/activity risk; likely false positive.",
+      decisionReason: "Weak signal with rotation/activity risk; manual review required.",
       failed_test: "Activity/Rotation",
-      next_action: "exclude",
+      next_action: "manual_review_required",
+      suggestedAction: "Manual review required.",
+      signalStatus: "VISIBLE_SIGNAL",
+      dataStatus: "TESS_DATA_AVAILABLE",
+      monitorStatus: "TESS_DATA_AVAILABLE",
       signal_quality: signalQuality,
       data_quality: dataQuality,
-      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "NO_PLANET"),
+      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "LOW_CONFIDENCE"),
       passed_checks: cats.passed,
       warning_checks: cats.warning,
       failed_checks: cats.failed,
@@ -348,13 +411,19 @@ export function computeFinalDecision(candidate) {
   if (blockingWarnings.length > 0) {
     const failedTest = blockingWarnings[0];
     return {
-      status: "NO_PLANET",
+      status: "YELLOW_RECHECK",
+      vettingStage2Class: "YELLOW_RECHECK",
       reason: "Follow-up checks incomplete: " + blockingWarnings.join(", ") + ".",
+      decisionReason: "Follow-up checks incomplete: " + blockingWarnings.join(", ") + ".",
       failed_test: failedTest,
       next_action: "manual_review_required",
+      suggestedAction: "Complete missing vetting checks before ExoFOP submission.",
+      signalStatus: "VISIBLE_SIGNAL",
+      dataStatus: "TESS_DATA_AVAILABLE",
+      monitorStatus: "TESS_DATA_AVAILABLE",
       signal_quality: signalQuality,
       data_quality: dataQuality,
-      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "NO_PLANET"),
+      matrix_cell: determineMatrixCell(signalQuality, dataQuality, "YELLOW_RECHECK"),
       passed_checks: cats.passed,
       warning_checks: cats.warning,
       failed_checks: cats.failed,
@@ -366,10 +435,16 @@ export function computeFinalDecision(candidate) {
 
   // Step 9: All checks passed
   return {
-    status: "EXOFOP_CANDIDATE",
+    status: "GREEN_SPC",
+    vettingStage2Class: "GREEN_SPC",
     reason: "All ExoFOP checks passed.",
+    decisionReason: "All ExoFOP checks passed.",
     failed_test: null,
     next_action: "prepare_exofop_upload",
+    suggestedAction: "Ready for ExoFOP upload and follow-up prioritization.",
+    signalStatus: "VISIBLE_SIGNAL",
+    dataStatus: "TESS_DATA_AVAILABLE",
+    monitorStatus: "TESS_DATA_AVAILABLE",
     signal_quality: signalQuality,
     data_quality: dataQuality,
     matrix_cell: determineMatrixCell(signalQuality, dataQuality, "EXOFOP_CANDIDATE"),

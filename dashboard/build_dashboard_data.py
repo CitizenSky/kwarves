@@ -717,6 +717,7 @@ def compute_final_decision(
     full_vetting: dict[str, Any] | None,
     observed_sectors: list[int],
     period: float,
+    monitor_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     _cfg = _load_pipeline_config()
     """
@@ -736,16 +737,33 @@ def compute_final_decision(
     not_run_checks: list[str] = []
     blockers: list[str] = []
     
-    # === Step 1: TESS Data ===
-    has_tess_data = bool(observed_sectors)
+    monitor_result = monitor_result or {}
+    tic_id = safe_int(row.get("TIC"))
+    products_available = bool(monitor_result.get("productsAvailable"))
+    # === Step 1: Astro Monitor / TESS Data Gate ===
+    has_tess_data = bool(observed_sectors) and products_available
     if not has_tess_data:
         check_tree.append({"name": "TESS Data", "status": "failed", "reason": "No TESS sectors available"})
         failed_checks.append("TESS Data")
         blockers.append("No TESS data available")
         return {
-            "status": "NO_PLANET", "reason": "No TESS observations available.",
-            "failed_test": "TESS Data", "next_action": "Wait for TESS observations.",
-            "signal_quality": "unknown", "data_quality": "low", "matrix_cell": "no_tess_data",
+            "ticId": tic_id,
+            "status": "WAIT_FOR_TESS",
+            "vettingStage2Class": "WAIT_FOR_TESS",
+            "reason": "No TESS observations available.",
+            "decisionReason": "No TESS observations available",
+            "failed_test": "TESS Data",
+            "next_action": "wait_for_tess",
+            "suggestedAction": "Wait for TESS observations",
+            "signal_quality": "unknown",
+            "signalStatus": "NO_DATA",
+            "data_quality": "low",
+            "dataStatus": "NO_TESS_DATA",
+            "monitorStatus": "NO_TESS_DATA",
+            "matrix_cell": "no_tess_data",
+            "scoreDelta": 0,
+            "badges": ["WAIT_FOR_TESS", "NO_TESS_DATA"],
+            "warnings": ["No TESS data available"],
             "passed_checks": [], "warning_checks": [], "failed_checks": failed_checks,
             "not_run_checks": ["Signal Detection", "Folded Light Curve", "Sector Coverage", "Transit Count", "Vetting Checks"],
             "blockers": blockers, "check_tree": check_tree
@@ -762,9 +780,17 @@ def compute_final_decision(
         failed_checks.append("Signal Detection")
         blockers.append("No transit signal detected")
         return {
-            "status": "NO_PLANET", "reason": "No statistically significant transit signal detected.",
-            "failed_test": "Signal Detection", "next_action": "Signal detection failed.",
-            "signal_quality": "weak", "data_quality": "sufficient", "matrix_cell": "no_signal",
+            "ticId": tic_id,
+            "status": "LOW_CONFIDENCE", "vettingStage2Class": "LOW_CONFIDENCE",
+            "reason": "No statistically significant transit signal detected.",
+            "decisionReason": "No statistically significant transit signal detected.",
+            "failed_test": "Signal Detection", "next_action": "manual_review_required",
+            "suggestedAction": "Signal detection failed.",
+            "signal_quality": "weak", "signalStatus": "NO_SIGNAL",
+            "data_quality": "sufficient", "dataStatus": "TESS_DATA_AVAILABLE",
+            "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+            "matrix_cell": "no_signal", "scoreDelta": 0,
+            "badges": ["LOW_CONFIDENCE"], "warnings": ["No transit signal detected"],
             "passed_checks": passed_checks, "warning_checks": [], "failed_checks": failed_checks,
             "not_run_checks": ["Folded Light Curve", "Sector Coverage", "Transit Count", "Vetting Checks"],
             "blockers": blockers, "check_tree": check_tree
@@ -864,9 +890,17 @@ def compute_final_decision(
     if is_fp:
         check_tree.append({"name": "Decision", "status": "failed", "reason": fp_reason})
         return {
-            "status": "NO_PLANET", "reason": f"False Positive: {fp_reason}. Candidate is likely not a planet.",
-            "failed_test": "False Positive", "next_action": "Candidate excluded from follow-up.",
-            "signal_quality": "weak", "data_quality": "sufficient", "matrix_cell": "false_positive",
+            "ticId": tic_id,
+            "status": "RED_FP", "vettingStage2Class": "RED_FP",
+            "reason": f"False Positive: {fp_reason}. Candidate is likely not a planet.",
+            "decisionReason": f"False Positive: {fp_reason}. Candidate is likely not a planet.",
+            "failed_test": "False Positive", "next_action": "exclude",
+            "suggestedAction": "Candidate excluded from follow-up.",
+            "signal_quality": "weak", "signalStatus": "VISIBLE_SIGNAL",
+            "data_quality": "sufficient", "dataStatus": "TESS_DATA_AVAILABLE",
+            "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+            "matrix_cell": "false_positive", "scoreDelta": 0,
+            "badges": ["RED_FP"], "warnings": [fp_reason],
             "passed_checks": passed_checks, "warning_checks": [], "failed_checks": ["Vetting Checks"],
             "not_run_checks": [], "blockers": [fp_reason], "check_tree": check_tree
         }
@@ -875,9 +909,17 @@ def compute_final_decision(
     if not has_sufficient_sectors or not has_sufficient_transits:
         check_tree.append({"name": "Decision", "status": "warning", "reason": "Insufficient data for reliable assessment"})
         return {
-            "status": "ZU_WENIG_DATEN", "reason": f"Not enough data: only {observed_transits} visible transits, {sector_count} sectors. Cannot reliably assess signal.",
-            "failed_test": "Data Limit", "next_action": "Wait for additional TESS sectors or data.",
-            "signal_quality": "strong", "data_quality": "low", "matrix_cell": "data_limited",
+            "ticId": tic_id,
+            "status": "YELLOW_RECHECK", "vettingStage2Class": "YELLOW_RECHECK",
+            "reason": f"Not enough data: only {observed_transits} visible transits, {sector_count} sectors. Cannot reliably assess signal.",
+            "decisionReason": f"Not enough data: only {observed_transits} visible transits, {sector_count} sectors. Cannot reliably assess signal.",
+            "failed_test": "Data Limit", "next_action": "wait_for_more_sectors",
+            "suggestedAction": "Wait for additional TESS sectors or data.",
+            "signal_quality": "strong", "signalStatus": "VISIBLE_SIGNAL",
+            "data_quality": "low", "dataStatus": "TESS_DATA_LIMITED",
+            "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+            "matrix_cell": "data_limited", "scoreDelta": 0,
+            "badges": ["YELLOW_RECHECK"], "warnings": ["Data limited"],
             "passed_checks": passed_checks, "warning_checks": ["Transit Count", "Sector Coverage"],
             "failed_checks": [], "not_run_checks": [], "blockers": [f"Only {observed_transits} transits, {sector_count} sectors"], 
             "check_tree": check_tree
@@ -896,10 +938,18 @@ def compute_final_decision(
         if not rotation_ok: artifact_reasons.append("Activity/Rotation unclear")
         
         return {
-            "status": "SPC_ART_RECHECK", 
+            "ticId": tic_id,
+            "status": "PURPLE_SPC_ART",
+            "vettingStage2Class": "PURPLE_SPC_ART",
             "reason": f"Strong candidate, but artifact/systematics concerns remain: {', '.join(artifact_reasons)}. Manual vetting required.",
-            "failed_test": "Artifact Check", "next_action": "Clean lightcurve, verify SAP/PDCSAP, check activity/rotation, analyze outliers.",
-            "signal_quality": "medium", "data_quality": "medium", "matrix_cell": "artifact_recheck",
+            "decisionReason": f"Strong candidate, but artifact/systematics concerns remain: {', '.join(artifact_reasons)}. Manual vetting required.",
+            "failed_test": "Artifact Check", "next_action": "manual_review_required",
+            "suggestedAction": "Clean lightcurve, verify SAP/PDCSAP, check activity/rotation, analyze outliers.",
+            "signal_quality": "medium", "signalStatus": "VISIBLE_SIGNAL",
+            "data_quality": "medium", "dataStatus": "TESS_DATA_AVAILABLE",
+            "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+            "matrix_cell": "artifact_recheck", "scoreDelta": 0,
+            "badges": ["PURPLE_SPC_ART"], "warnings": artifact_reasons,
             "passed_checks": passed_checks, "warning_checks": warning_checks, "failed_checks": [],
             "not_run_checks": not_run_checks, "blockers": artifact_reasons, "check_tree": check_tree
         }
@@ -923,10 +973,18 @@ def compute_final_decision(
         check_tree.append({"name": "Decision", "status": "warning", "reason": "Some vetting checks not complete"})
         
         return {
-            "status": "SPC_PREP", 
+            "ticId": tic_id,
+            "status": "YELLOW_RECHECK",
+            "vettingStage2Class": "YELLOW_RECHECK",
             "reason": f"Strong signal and good data, but unresolved vetting checks: {', '.join(prep_reasons)}.",
-            "failed_test": "Vetting Incomplete", "next_action": "Complete missing vetting checks before ExoFOP submission.",
-            "signal_quality": "strong", "data_quality": "good", "matrix_cell": "spc_prep",
+            "decisionReason": f"Strong signal and good data, but unresolved vetting checks: {', '.join(prep_reasons)}.",
+            "failed_test": "Vetting Incomplete", "next_action": "manual_review_required",
+            "suggestedAction": "Complete missing vetting checks before ExoFOP submission.",
+            "signal_quality": "strong", "signalStatus": "VISIBLE_SIGNAL",
+            "data_quality": "good", "dataStatus": "TESS_DATA_AVAILABLE",
+            "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+            "matrix_cell": "spc_prep", "scoreDelta": 0,
+            "badges": ["YELLOW_RECHECK"], "warnings": prep_reasons,
             "passed_checks": passed_checks, "warning_checks": warning_checks, "failed_checks": [],
             "not_run_checks": not_run_checks, "blockers": prep_reasons, "check_tree": check_tree
         }
@@ -935,12 +993,66 @@ def compute_final_decision(
     check_tree.append({"name": "Decision", "status": "passed", "reason": "All scientific requirements met"})
     
     return {
-        "status": "EXOFOP_BEREIT", 
+        "ticId": tic_id,
+        "status": "GREEN_SPC",
+        "vettingStage2Class": "GREEN_SPC",
         "reason": "Candidate meets all scientific requirements for ExoFOP submission.",
-        "failed_test": None, "next_action": "Ready for ExoFOP upload and follow-up prioritization.",
-        "signal_quality": "strong", "data_quality": "high", "matrix_cell": "exofop_ready",
+        "decisionReason": "Candidate meets all scientific requirements for ExoFOP submission.",
+        "failed_test": None, "next_action": "prepare_exofop_upload",
+        "suggestedAction": "Ready for ExoFOP upload and follow-up prioritization.",
+        "signal_quality": "strong", "signalStatus": "VISIBLE_SIGNAL",
+        "data_quality": "high", "dataStatus": "TESS_DATA_AVAILABLE",
+        "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+        "matrix_cell": "exofop_ready", "scoreDelta": 0,
+        "badges": ["GREEN_SPC"], "warnings": [],
         "passed_checks": passed_checks, "warning_checks": [], "failed_checks": [],
         "not_run_checks": not_run_checks, "blockers": [], "check_tree": check_tree
+    }
+
+
+def build_astro_monitor_result(
+    tic: int,
+    observed_sectors: list[int],
+    lightcurve_img: str,
+    row: dict[str, Any],
+    matrix: dict[str, Any] | None,
+    gaia_coord: dict[str, Any] | None,
+) -> dict[str, Any]:
+    products_available = bool(lightcurve_img)
+    has_tess_sectors = bool(observed_sectors)
+    data_status = "TESS_DATA_AVAILABLE" if has_tess_sectors and products_available else "NO_TESS_DATA"
+    monitor_status = data_status
+    warnings: list[str] = []
+    if not has_tess_sectors:
+        warnings.append("No TESS sectors available")
+    if not products_available:
+        warnings.append("No lightcurve products available")
+    ruwe = safe_float((gaia_coord or {}).get("ruwe"))
+    duplicated_source = bool((gaia_coord or {}).get("duplicated_source"))
+    if ruwe is not None and ruwe > 1.4:
+        warnings.append("Gaia RUWE elevated")
+    if duplicated_source:
+        warnings.append("Gaia duplicated_source")
+    text = " ".join(clean_text(value).upper() for value in (
+        row.get("notes"),
+        row.get("status"),
+        row.get("markierung"),
+        row.get("markierungs_klasse"),
+        (matrix or {}).get("decision_reason"),
+        (matrix or {}).get("extended_class"),
+    ))
+    return {
+        "ticId": tic,
+        "hasTessSectors": has_tess_sectors,
+        "sectors": observed_sectors,
+        "productsAvailable": products_available,
+        "exoFopMatch": "EXOFOP" in text or "TOI" in text,
+        "simbadVariableOrBinary": "VARIABLE" in text or "BINARY" in text or "EB" in text,
+        "gaiaRuwe": ruwe,
+        "gaiaDuplicatedSource": duplicated_source,
+        "dataStatus": data_status,
+        "monitorStatus": monitor_status,
+        "warnings": warnings,
     }
 
 
@@ -1060,16 +1172,63 @@ def build_candidate(
             if deploy_path and deploy_path.exists():
                 lightcurve_img_deploy = rel_from_dashboard(deploy_path)
             lightcurve_img = lightcurve_img_deploy or lightcurve_img_local
+    monitor_result = build_astro_monitor_result(
+        tic=tic,
+        observed_sectors=observed_sectors,
+        lightcurve_img=lightcurve_img,
+        row=merged,
+        matrix=matrix,
+        gaia_coord=gaia_coord,
+    )
+    final_decision = compute_final_decision(
+        row=merged,
+        matrix=matrix,
+        sector=sector,
+        full_vetting=full_vetting,
+        observed_sectors=observed_sectors,
+        period=period,
+        monitor_result=monitor_result,
+    )
+    if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS":
+        color = "gray"
+        matrix_status = "WAIT_FOR_TESS"
+        matrix_status_color = "GRAY"
+        matrix_class = "WAIT_FOR_TESS"
+        matrix_score_band = "NO_TESS_DATA"
+        display_labels = ["WAIT_FOR_TESS", "NO_TESS_DATA"]
+        reason_tags = []
+        next_checks = ["Wait for TESS observations"]
+        followup_strength = "LOW"
+        yellow_summary = ""
+        decision_reason = final_decision["decisionReason"]
+        next_step = final_decision["suggestedAction"]
+        sap_pdcsap_match = "NOT_RUN"
+        odd_even_result = "NOT_RUN"
+        rotation_risk = "NOT_RUN"
+        display_reason = "WAIT_FOR_TESS"
+        display_markierung = ""
+        display_markierungs_klasse = "WAIT_FOR_TESS"
+        display_notes = ""
+        display_folder = ""
+        lightcurve_img = ""
+        lightcurve_img_local = ""
+        lightcurve_img_deploy = ""
+    else:
+        display_reason = reason_for(merged, color, is_violet)
+        display_markierung = clean_text(merged.get("markierung"))
+        display_markierungs_klasse = clean_text(merged.get("markierungs_klasse"))
+        display_notes = clean_text(merged.get("notes"))
+        display_folder = candidate_folder
     return {
         "tic": tic,
-        "status": clean_text(merged.get("status")),
+        "status": "WAIT_FOR_TESS" if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS" else clean_text(merged.get("status")),
         "color": color,
         "colorLabel": color_label("violet" if is_violet else color),
         "baseColorLabel": color_label(color),
         "isViolet": is_violet,
-        "reason": reason_for(merged, color, is_violet),
-        "markierung": clean_text(merged.get("markierung")),
-        "markierungsKlasse": clean_text(merged.get("markierungs_klasse")),
+        "reason": display_reason,
+        "markierung": display_markierung,
+        "markierungsKlasse": display_markierungs_klasse,
         "hzMarkierung": clean_text(merged.get("hz_markierung")),
         "hz": clean_text(merged.get("hz_status") or merged.get("hz_class")),
         "distance": round(distance, 2),
@@ -1115,7 +1274,7 @@ def build_candidate(
         "rotationRisk": rotation_risk,
         "nextRecheck": clean_text(merged.get("next_recheck")),
         "revisitPriority": clean_text(merged.get("revisit_priority")),
-        "notes": clean_text(merged.get("notes")),
+        "notes": display_notes,
         "observedSectors": observed_sectors,
         "plannedSectors": recheck["plannedSectors"],
         "planned_sectors": recheck["plannedSectors"],
@@ -1136,6 +1295,12 @@ def build_candidate(
         "sectorInventoryStatus": clean_text(sector.get("source_status")),
         "sectorLastCheckedAt": clean_text(sector.get("last_checked_at")),
         "sectorLastNewAt": clean_text(sector.get("last_new_sector_at")),
+        "astroMonitor": monitor_result,
+        "monitorStatus": final_decision.get("monitorStatus", monitor_result["monitorStatus"]),
+        "dataStatus": final_decision.get("dataStatus", monitor_result["dataStatus"]),
+        "signalStatus": final_decision.get("signalStatus", ""),
+        "vettingStage2Class": final_decision.get("vettingStage2Class", ""),
+        "suggestedAction": final_decision.get("suggestedAction", ""),
         "fullVetting": {
             "classification": clean_text(full_vetting.get("classification")),
             "evidence_score": safe_float(full_vetting.get("evidence_score")),
@@ -1148,15 +1313,8 @@ def build_candidate(
             "report_dir": clean_text(full_vetting.get("report_dir")),
             "status": dashboard_full_vetting_status,
         } if full_vetting else None,
-        "finalDecision": compute_final_decision(
-            row=merged,
-            matrix=matrix,
-            sector=sector,
-            full_vetting=full_vetting,
-            observed_sectors=observed_sectors,
-            period=period,
-        ),
-        "folder": candidate_folder,
+        "finalDecision": final_decision,
+        "folder": display_folder,
         "lightcurveImg": lightcurve_img,
         "lightcurveImgLocal": lightcurve_img_local,
         "lightcurveImgDeploy": lightcurve_img_deploy,

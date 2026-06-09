@@ -186,21 +186,35 @@ describe('computeDataQuality', () => {
 });
 
 describe('computeFinalDecision', () => {
-  it('returns NO_PLANET for no TESS data', () => {
-    var result = computeFinalDecision(makeCandidate({ observedSectorCount: 0 }));
-    expect(result.status).toBe("NO_PLANET");
+  it('returns WAIT_FOR_TESS for no TESS data', () => {
+    var result = computeFinalDecision(makeCandidate({
+      observedSectorCount: 0,
+      evidenceScore: null,
+      astroMonitor: { sectors: [], productsAvailable: false }
+    }));
+    expect(result.status).toBe("WAIT_FOR_TESS");
+    expect(result.vettingStage2Class).toBe("WAIT_FOR_TESS");
+    expect(result.signalStatus).toBe("NO_DATA");
+    expect(result.dataStatus).toBe("NO_TESS_DATA");
+    expect(result.suggestedAction).toBe("Wait for TESS observations");
+    expect(result.decisionReason).toBe("No TESS observations available");
     expect(result.failed_test).toBe("TESS Data");
+    expect(result.status).not.toBe("NO_PLANET");
+    expect(result.status).not.toBe("RED_FP");
+    expect(result.not_run_checks).toContain("Vetting Checks");
+    expect(result.check_tree.map((item) => item.name)).not.toContain("SAP/PDCSAP");
+    expect(result.check_tree.map((item) => item.name)).not.toContain("Odd/Even");
   });
 
-  it('returns NO_PLANET for no signal', () => {
+  it('returns LOW_CONFIDENCE for no signal', () => {
     var result = computeFinalDecision(makeCandidate({ evidenceScore: 10 }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("LOW_CONFIDENCE");
     expect(result.failed_test).toBe("Signal Detection");
   });
 
-  it('returns NO_PLANET for V_SHAPE folded light curve', () => {
+  it('returns RED_FP for V_SHAPE folded light curve', () => {
     var result = computeFinalDecision(makeCandidate({ transitShape: "V_SHAPE" }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("RED_FP");
     expect(result.failed_test).toBe("Folded Light Curve");
   });
 
@@ -225,7 +239,7 @@ describe('computeFinalDecision', () => {
     expect(result.failed_test).toBe("Transit Count");
   });
 
-  it('returns NO_PLANET when SAP/PDCSAP mismatch blocks EXOFOP', () => {
+  it('returns RED_FP when SAP/PDCSAP mismatch blocks EXOFOP', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -233,7 +247,7 @@ describe('computeFinalDecision', () => {
       evidenceScore: 55,
       sapPdcsapMatch: "MISMATCH"
     }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("RED_FP");
   });
 
   it('returns RECHECK_ACTIVITY when Activity/Rotation HIGH fails but signal+data are strong', () => {
@@ -263,7 +277,7 @@ describe('computeFinalDecision', () => {
     expect(result.reason).toContain("Starker Transit-Kandidat");
   });
 
-  it('returns NO_PLANET when Secondary Eclipse is detected (hard FP)', () => {
+  it('returns RED_FP when Secondary Eclipse is detected (hard FP)', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -273,11 +287,11 @@ describe('computeFinalDecision', () => {
       oddEvenResult: "OK",
       secondaryEclipse: "YES"
     }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("RED_FP");
     expect(result.reason).toContain("False positive indicator");
   });
 
-  it('returns NO_PLANET when Odd/Even BAD + SAP/PDCSAP MISMATCH (hard FPs)', () => {
+  it('returns RED_FP when Odd/Even BAD + SAP/PDCSAP MISMATCH (hard FPs)', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -288,11 +302,11 @@ describe('computeFinalDecision', () => {
       secondaryEclipse: "NO",
       rotationRisk: "LOW"
     }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("RED_FP");
     expect(result.reason).toContain("False positive indicator");
   });
 
-  it('returns NO_PLANET for weak signal + Activity fail (soft FP)', () => {
+  it('returns LOW_CONFIDENCE for weak signal + Activity fail', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -303,11 +317,11 @@ describe('computeFinalDecision', () => {
       secondaryEclipse: "NO",
       rotationRisk: "HIGH"
     }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("LOW_CONFIDENCE");
     expect(result.reason).toContain("Weak signal");
   });
 
-  it('returns EXOFOP_CANDIDATE when all checks pass', () => {
+  it('returns GREEN_SPC when all checks pass', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -318,7 +332,7 @@ describe('computeFinalDecision', () => {
       secondaryEclipse: "NO",
       rotationRisk: "LOW"
     }));
-    expect(result.status).toBe("EXOFOP_CANDIDATE");
+    expect(result.status).toBe("GREEN_SPC");
     expect(result.next_action).toBe("prepare_exofop_upload");
   });
 
@@ -327,7 +341,7 @@ describe('computeFinalDecision', () => {
     expect(result.status).toBe("NO_PLANET");
   });
 
-  it('returns NO_PLANET with warning blockers when folded light curve is UNKNOWN', () => {
+  it('returns YELLOW_RECHECK with warning blockers when folded light curve is UNKNOWN', () => {
     var result = computeFinalDecision(makeCandidate({
       observedSectorCount: MIN_SECTORS_FOR_DATA,
       matrixVisibleTransits: MIN_TRANSITS_FOR_DATA,
@@ -338,7 +352,7 @@ describe('computeFinalDecision', () => {
       secondaryEclipse: "NO",
       rotationRisk: "LOW"
     }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("YELLOW_RECHECK");
     expect(result.reason).toContain("Folded Light Curve");
   });
 
@@ -351,7 +365,8 @@ describe('computeFinalDecision', () => {
       matrixStatus: "SPC_ART",
       displayLabels: ["SPC", "SPC_STRONG"]
     }));
-    expect(result.status).toBe("NO_PLANET");
+    expect(result.status).toBe("WAIT_FOR_TESS");
+    expect(result.vettingStage2Class).toBe("WAIT_FOR_TESS");
     expect(result.failed_test).toBe("TESS Data");
   });
 

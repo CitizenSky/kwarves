@@ -2,6 +2,12 @@ import { computeFinalDecision } from '../logic/finalDecision.js';
 
 const STATUS_LABELS = {
   "EXOFOP_CANDIDATE": "ExoFOP bereit",
+  "GREEN_SPC": "Grün SPC",
+  "YELLOW_RECHECK": "Recheck",
+  "PURPLE_SPC_ART": "SPC Art",
+  "RED_FP": "False Positive",
+  "WAIT_FOR_TESS": "Warten auf TESS",
+  "LOW_CONFIDENCE": "Niedrige Sicherheit",
   "DATA_LIMITED_SECTORS": "Wenige Daten (Sektoren)",
   "DATA_LIMITED_TRANSITS": "Wenige Daten (Transits)",
   "NO_PLANET": "Kein Planet",
@@ -115,7 +121,17 @@ export function renderFinalDecisionPanel(candidate) {
   var nextHtml = "";
   if (fd.next_action && NEXT_LABELS[fd.next_action]) {
     nextHtml = '<div class="fd-next"><strong>Nächste Aktion:</strong> ' + NEXT_LABELS[fd.next_action] + '</div>';
+  } else if (fd.suggestedAction) {
+    nextHtml = '<div class="fd-next"><strong>Nächste Aktion:</strong> ' + fd.suggestedAction + '</div>';
   }
+
+  var stageHtml = '<div class="fd-section"><div class="fd-section-title">Monitor / Vetting Stage 2</div>' +
+    '<div class="fd-kv"><span>Monitor Status</span><strong>' + (fd.monitorStatus || "-") + '</strong></div>' +
+    '<div class="fd-kv"><span>TESS Data Status</span><strong>' + (fd.dataStatus || "-") + '</strong></div>' +
+    '<div class="fd-kv"><span>Vetting Stage 2</span><strong>' + (fd.vettingStage2Class || fd.status || "-") + '</strong></div>' +
+    '<div class="fd-kv"><span>Suggested Action</span><strong>' + (fd.suggestedAction || NEXT_LABELS[fd.next_action] || "-") + '</strong></div>' +
+    '<div class="fd-kv"><span>Decision Reason</span><strong>' + (fd.decisionReason || fd.reason || "-") + '</strong></div>' +
+  '</div>';
 
   return '<div class="fd-panel">' +
     '<button class="fd-toggle" type="button" aria-expanded="' + String(!collapsed) + '" data-fd-target="' + panelContentId + '">' +
@@ -123,9 +139,10 @@ export function renderFinalDecisionPanel(candidate) {
       '<span class="fd-toggle-label">FINAL DECISION</span>' +
       '<span class="fd-badge ' + statusClass + '">' + statusLabel + '</span>' +
     '</button>' +
-    '<div id="' + panelContentId + '" class="fd-content"' + (collapsed ? ' style="display:none"' : "") + '>' +
+      '<div id="' + panelContentId + '" class="fd-content"' + (collapsed ? ' style="display:none"' : "") + '>' +
       '<div class="fd-reason">' + (fd.reason || "") + '</div>' +
       nextHtml +
+      stageHtml +
       '<div class="fd-matrix">' +
         '<div class="fd-matrix-row"><div class="fd-axis">Signalqualität</div><div class="fd-quadrant" style="border-color:' + signalColor + '"><div class="fd-quadrant-label">' + String(fd.signal_quality).toUpperCase() + '</div><div class="fd-quadrant-desc">Transit-Signal</div></div></div>' +
         '<div class="fd-matrix-row"><div class="fd-axis">Datenqualität</div><div class="fd-quadrant" style="border-color:' + dataColor + '"><div class="fd-quadrant-label">' + String(fd.data_quality).toUpperCase() + '</div><div class="fd-quadrant-desc">TESS-Abdeckung</div></div></div>' +
