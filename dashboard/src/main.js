@@ -1443,6 +1443,7 @@ window.addEventListener("popstate", () => {
 window.addEventListener("resize", () => {
   window.requestAnimationFrame(() => {
     syncMobileOverviewPlacement();
+    renderTable();
     draw2dMap();
     resize3d();
     const tessState = buildTessScheduleState();

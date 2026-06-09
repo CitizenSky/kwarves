@@ -170,7 +170,36 @@ export function renderFollowupCandidates() {
   `).join("") : `<span class="muted">${t("followup_candidates_empty")}</span>`;
 }
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
+const MIN_DYNAMIC_PAGE_SIZE = 1;
+const MAX_DYNAMIC_PAGE_SIZE = 60;
+const DESKTOP_TABLE_QUERY = "(min-width: 769px)";
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function candidateTablePageSize(total) {
+  if (!total) return DEFAULT_PAGE_SIZE;
+  if (!window.matchMedia(DESKTOP_TABLE_QUERY).matches) return DEFAULT_PAGE_SIZE;
+
+  const wrap = document.querySelector("#tablePanel .table-wrap");
+  if (!wrap) return DEFAULT_PAGE_SIZE;
+
+  const search = wrap.querySelector(".search");
+  const header = wrap.querySelector("thead");
+  const rowHeight = 37;
+  const searchStyle = search ? window.getComputedStyle(search) : null;
+  const searchMargin = searchStyle ? parseFloat(searchStyle.marginBottom) || 0 : 0;
+  const tableChrome =
+    (search ? search.getBoundingClientRect().height + searchMargin : 0) +
+    (header ? header.getBoundingClientRect().height : 0);
+
+  const navReserve = total > MIN_DYNAMIC_PAGE_SIZE ? 48 : 0;
+  const available = wrap.clientHeight - tableChrome - navReserve - 8;
+  const dynamicSize = Math.floor(available / rowHeight);
+  return clamp(dynamicSize || MIN_DYNAMIC_PAGE_SIZE, MIN_DYNAMIC_PAGE_SIZE, Math.min(MAX_DYNAMIC_PAGE_SIZE, total));
+}
 
 export function renderTable() {
   let rows = publicMatrixCandidates();
@@ -196,18 +225,24 @@ export function renderTable() {
   const term = els.globalSearch.value.trim().toLowerCase();
   const tableCount = document.getElementById("tableCount");
   if (tableCount) tableCount.textContent = `${formatNumber(total)} ${t("table_count_label")}`;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const previousPageSize = state.tablePageSize || DEFAULT_PAGE_SIZE;
+  const pageSize = candidateTablePageSize(total);
+  state.tablePageSize = pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (state.restoreSelectedTablePage && state.activeCandidateId) {
     const selectedIndex = rows.findIndex((candidate) => candidate.tic === state.activeCandidateId);
     if (selectedIndex >= 0) {
-      state.tablePage = Math.floor(selectedIndex / PAGE_SIZE);
+      state.tablePage = Math.floor(selectedIndex / pageSize);
     }
     state.restoreSelectedTablePage = false;
+  } else if (previousPageSize !== pageSize) {
+    const firstVisibleIndex = state.tablePage * previousPageSize;
+    state.tablePage = Math.floor(firstVisibleIndex / pageSize);
   }
   if (state.tablePage >= totalPages) state.tablePage = totalPages - 1;
   if (state.tablePage < 0) state.tablePage = 0;
-  const start = state.tablePage * PAGE_SIZE;
-  const pageRows = rows.slice(start, start + PAGE_SIZE);
+  const start = state.tablePage * pageSize;
+  const pageRows = rows.slice(start, start + pageSize);
   if (!total) {
     els.rows.innerHTML = `<tr><td colspan="5">${term ? t("table_empty_search") : t("table_empty_filter")}</td></tr>`;
     const nav = document.getElementById("tablePageNav");

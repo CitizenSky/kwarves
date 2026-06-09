@@ -5,6 +5,7 @@ export const state = {
   curveFilter: "all",
   tableLimit: "all",
   tablePage: 0,
+  tablePageSize: 20,
   selected: null,
   selectedCandidate: null,
   activeCandidateId: null,

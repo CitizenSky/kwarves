@@ -6659,3 +6659,81 @@
           grid-template-columns: minmax(560px, 1.18fr) minmax(420px, .82fr);
         }
       }
+
+      @media (min-width: 1281px) {
+        .quad-grid {
+          --workbench-height: calc(100vh - 154px);
+          grid-template-areas:
+            "candidates details"
+            "lightcurve starmap";
+          grid-template-columns: repeat(2, minmax(700px, 1fr));
+          grid-template-rows: minmax(430px, 1fr) minmax(430px, 1fr);
+          min-height: 880px;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) {
+          position: static;
+          height: 100%;
+          max-height: none;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) {
+          grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .kpis {
+          grid-template-columns: repeat(6, minmax(118px, 1fr));
+        }
+
+        #tablePanel table {
+          table-layout: fixed;
+        }
+
+        #tablePanel .table-wrap {
+          overflow: hidden;
+        }
+
+        #tablePanel th:nth-child(1),
+        #tablePanel td:nth-child(1) {
+          width: 22%;
+        }
+
+        #tablePanel th:nth-child(2),
+        #tablePanel td:nth-child(2) {
+          width: 40%;
+        }
+
+        #tablePanel th:nth-child(3),
+        #tablePanel td:nth-child(3) {
+          width: 8%;
+        }
+
+        #tablePanel th:nth-child(4),
+        #tablePanel td:nth-child(4) {
+          width: 15%;
+        }
+
+        #tablePanel th:nth-child(5),
+        #tablePanel td:nth-child(5) {
+          width: 15%;
+        }
+
+        #tablePanel .pill {
+          justify-content: flex-start;
+          width: fit-content;
+          max-width: 100%;
+          height: auto;
+          min-height: 22px;
+          padding: 3px 7px;
+          line-height: 1.18;
+          text-align: left;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          text-overflow: clip;
+        }
+
+        #tablePanel td {
+          padding-top: 5px;
+          padding-bottom: 5px;
+        }
+      }
