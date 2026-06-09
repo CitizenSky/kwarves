@@ -1093,19 +1093,28 @@ document.querySelectorAll("[data-map-mode]").forEach((button) => {
   });
 });
 
+function zoomMap(value) {
+  applyMapZoom(value);
+  if (state.mapMode === "3d") {
+    resize3d();
+  } else {
+    draw2dMap();
+  }
+}
+
 document.querySelectorAll("[data-map-zoom]").forEach((button) => {
   button.addEventListener("click", () => {
     const action = button.dataset.mapZoom;
-    if (action === "in") applyMapZoom(mapZoom * 1.25);
-    if (action === "out") applyMapZoom(mapZoom / 1.25);
-    if (action === "reset") applyMapZoom(1);
+    if (action === "in") zoomMap(mapZoom * 1.25);
+    if (action === "out") zoomMap(mapZoom / 1.25);
+    if (action === "reset") zoomMap(1);
   });
 });
 
 els.mapFrame.addEventListener("wheel", (event) => {
   event.preventDefault();
   const direction = event.deltaY < 0 ? 1.12 : 1 / 1.12;
-  applyMapZoom(mapZoom * direction);
+  zoomMap(mapZoom * direction);
 }, { passive: false });
 
 document.querySelectorAll("[data-tess-map-mode]").forEach((button) => {
