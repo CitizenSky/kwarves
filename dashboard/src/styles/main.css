@@ -2291,6 +2291,22 @@
         overflow-x: auto;
       }
 
+      #tablePanel .table-wrap {
+        overflow-x: visible;
+      }
+
+      #tablePanel table {
+        min-width: 0;
+        max-width: 100%;
+        table-layout: fixed;
+      }
+
+      #tablePanel th,
+      #tablePanel td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
       table {
         width: 100%;
         min-width: 350px;
@@ -5719,12 +5735,12 @@
         #tablePanel .table-wrap {
           width: 100% !important;
           max-width: 100% !important;
-          max-height: min(620px, calc(100dvh - 260px)) !important;
-          min-height: 360px !important;
+          max-height: none !important;
+          min-height: 0 !important;
           margin: 0 !important;
           padding: 10px !important;
-          overflow: auto !important;
-          -webkit-overflow-scrolling: touch !important;
+          overflow: visible !important;
+          -webkit-overflow-scrolling: auto !important;
         }
 
         #tablePanel .search {
@@ -6136,10 +6152,12 @@
         #tablePanel .table-wrap {
           width: 100%;
           max-width: 100%;
-          max-height: none;
+          min-height: 0 !important;
+          max-height: none !important;
           margin: 0;
           padding: 10px;
-          overflow: visible;
+          overflow: visible !important;
+          -webkit-overflow-scrolling: auto;
         }
 
         #tablePanel .search {
@@ -6166,6 +6184,8 @@
 
         #tablePanel table {
           min-width: 0;
+          max-width: 100%;
+          table-layout: fixed;
           border-collapse: separate;
           border-spacing: 0;
         }
@@ -6198,9 +6218,11 @@
 
         #tablePanel td {
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-columns: minmax(42px, auto) minmax(0, 1fr);
           gap: 6px;
           align-items: center;
+          min-width: 0;
+          max-width: 100%;
           padding: 0;
           border: 0;
           color: var(--ink);
@@ -6226,9 +6248,11 @@
         #tablePanel td:nth-child(1) {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
           gap: 8px;
+          min-width: 0;
           font-size: 15px;
+          flex-wrap: wrap;
         }
 
         #tablePanel td:nth-child(1)::before,
