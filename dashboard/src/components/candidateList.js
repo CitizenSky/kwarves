@@ -222,7 +222,10 @@ export function renderTable() {
       <td data-label="Status"><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
       <td data-label="Evidence">${formatFloat(candidate.evidenceScore, 0)}</td>
       <td data-label="Distanz">${candidate.distance ? candidate.distance + " ly" : "-"}</td>
-      <td data-label="Prioritaet"><span class="prio-pill ${prioClass}">${prio}</span></td>
+      <td data-label="Prioritaet">
+        <span class="prio-pill ${prioClass}">${prio}</span>
+        <button class="candidate-select-button" type="button" data-select-tic="${candidate.tic}">Details</button>
+      </td>
     </tr>
   `;
   }).join("");
@@ -235,9 +238,9 @@ function renderPageNav(totalPages) {
   if (totalPages <= 1) { nav.innerHTML = ""; return; }
   const cur = state.tablePage;
   nav.innerHTML = `
-    <button class="small-button page-btn" type="button" data-page="prev" ${cur === 0 ? "disabled" : ""}>‹</button>
-    <span class="page-info">${cur + 1} / ${totalPages}</span>
-    <button class="small-button page-btn" type="button" data-page="next" ${cur >= totalPages - 1 ? "disabled" : ""}>›</button>
+    <button class="small-button page-btn" type="button" data-page="prev" ${cur === 0 ? "disabled" : ""}>Zurueck</button>
+    <span class="page-info">Seite ${cur + 1} von ${totalPages}</span>
+    <button class="small-button page-btn" type="button" data-page="next" ${cur >= totalPages - 1 ? "disabled" : ""}>Weiter</button>
   `;
 }
 

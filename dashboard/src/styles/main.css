@@ -3711,6 +3711,19 @@
       .prio-high { background: #bf3e36; color: #fff; }
       .prio-mid { background: #b88220; color: #fff; }
       .prio-low { background: #e2e3e5; color: #66736f; }
+      .candidate-select-button {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--heading);
+        font-size: 12px;
+        font-weight: 820;
+      }
       .page-nav {
         display: flex;
         align-items: center;
@@ -5278,7 +5291,9 @@
           grid-row: 3 / 5;
           align-self: end;
           justify-self: end;
-          display: block;
+          display: grid;
+          gap: 8px;
+          justify-items: end;
         }
 
         #tablePanel td::before {
@@ -5756,7 +5771,54 @@
           grid-row: 3 / 5 !important;
           align-self: end !important;
           justify-self: end !important;
-          display: block !important;
+          display: grid !important;
+          gap: 8px !important;
+          justify-items: end !important;
+        }
+
+        #tablePanel .candidate-select-button {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: auto !important;
+          min-width: 76px !important;
+          min-height: 32px !important;
+          padding: 0 10px !important;
+          border: 1px solid var(--line) !important;
+          border-radius: 8px !important;
+          background: #ffffff !important;
+          color: var(--heading) !important;
+          font-size: 12px !important;
+          font-weight: 820 !important;
+          white-space: nowrap !important;
+        }
+
+        .page-nav {
+          position: static !important;
+          z-index: 1 !important;
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+          align-items: center !important;
+          gap: 8px !important;
+          margin-top: 10px !important;
+          padding: 10px !important;
+          border: 1px solid var(--line) !important;
+          border-radius: 8px !important;
+          background: #ffffff !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+        }
+
+        .page-nav .page-btn {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .page-info {
+          padding: 0 8px !important;
+          align-self: center !important;
+          font-size: 12px !important;
+          text-align: center !important;
         }
 
         .kpis,
@@ -6140,16 +6202,35 @@
           text-overflow: clip;
         }
 
+        #tablePanel .candidate-select-button {
+          display: inline-flex;
+          width: auto;
+          min-width: 76px;
+        }
+
         .page-nav {
-          position: sticky;
-          bottom: calc(12px + env(safe-area-inset-bottom));
-          z-index: 7;
+          position: static;
+          z-index: 1;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
           margin-top: 10px;
-          padding: 8px;
+          padding: 10px;
           border: 1px solid var(--line);
           border-radius: 8px;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
+          background: #ffffff;
+          box-shadow: none;
+          backdrop-filter: none;
+        }
+
+        .page-nav .page-btn {
+          width: 100%;
+          min-width: 0 !important;
+        }
+
+        .page-info {
+          padding: 0 10px;
+          align-self: center;
+          font-size: 12px;
         }
 
         .kpis {

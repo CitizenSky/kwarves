@@ -1118,8 +1118,18 @@ document.addEventListener("click", (e) => {
   const btn = e.target.closest(".page-btn");
   if (!btn) return;
   const dir = btn.dataset.page;
-  if (dir === "prev" && state.tablePage > 0) { state.tablePage--; renderTable(); }
-  if (dir === "next") { state.tablePage++; renderTable(); }
+  let changed = false;
+  if (dir === "prev" && state.tablePage > 0) {
+    state.tablePage--;
+    changed = true;
+  }
+  if (dir === "next") {
+    state.tablePage++;
+    changed = true;
+  }
+  if (!changed) return;
+  renderTable();
+  document.querySelector("#tablePanel .table-wrap")?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
 });
 
 document.querySelectorAll("[data-sort]").forEach((button) => {
