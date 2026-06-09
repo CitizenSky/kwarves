@@ -105,6 +105,22 @@ function renderBlockers(blockers) {
   return html + '</div>';
 }
 
+function renderSpcArtStage2(stage2) {
+  if (!stage2 || !stage2.applies) return "";
+  var missing = stage2.missingChecks && stage2.missingChecks.length ? stage2.missingChecks.join(", ") : "-";
+  var transitCount = stage2.transits && stage2.transits.length ? String(stage2.transits.length) : "-";
+  return '' +
+    '<div class="fd-section"><div class="fd-section-title">SPC_ART Stage 2</div>' +
+      '<div class="fd-kv"><span>Warum SPC_ART</span><strong>Artifact/systematics concerns</strong></div>' +
+      '<div class="fd-kv"><span>Fehlende Prüfung</span><strong>' + missing + '</strong></div>' +
+      '<div class="fd-kv"><span>Nächste Aktion</span><strong>' + (stage2.nextAction || "-") + '</strong></div>' +
+      '<div class="fd-kv"><span>Einzeltransite</span><strong>' + (stage2.singleTransitStatus || "-") + ' (' + transitCount + ' Events)</strong></div>' +
+      '<div class="fd-kv"><span>Depth Stability</span><strong>' + (stage2.depthStability || "-") + ' · Score ' + (stage2.depthStabilityScore ?? "-") + '</strong></div>' +
+      '<div class="fd-kv"><span>Folded LC</span><strong>' + (stage2.foldedLightCurveStatus || "-") + '</strong></div>' +
+      '<div class="fd-kv"><span>Activity</span><strong>' + (stage2.activityStatus || "-") + '</strong></div>' +
+    '</div>';
+}
+
 export function renderFinalDecisionPanel(candidate) {
   if (!candidate) return "";
   var fd = computeFinalDecision(candidate);
@@ -143,6 +159,7 @@ export function renderFinalDecisionPanel(candidate) {
       '<div class="fd-reason">' + (fd.reason || "") + '</div>' +
       nextHtml +
       stageHtml +
+      renderSpcArtStage2(fd.spcArtStage2 || candidate.spcArtStage2) +
       '<div class="fd-matrix">' +
         '<div class="fd-matrix-row"><div class="fd-axis">Signalqualität</div><div class="fd-quadrant" style="border-color:' + signalColor + '"><div class="fd-quadrant-label">' + String(fd.signal_quality).toUpperCase() + '</div><div class="fd-quadrant-desc">Transit-Signal</div></div></div>' +
         '<div class="fd-matrix-row"><div class="fd-axis">Datenqualität</div><div class="fd-quadrant" style="border-color:' + dataColor + '"><div class="fd-quadrant-label">' + String(fd.data_quality).toUpperCase() + '</div><div class="fd-quadrant-desc">TESS-Abdeckung</div></div></div>' +

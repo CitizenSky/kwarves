@@ -33,6 +33,10 @@ GAIA_FETCH_ENABLED = os.environ.get("GAIA_FETCH_ENABLED", "1").strip() not in {"
 AUTO_TESS_UPDATE_ENABLED = os.environ.get("KWARVES_AUTO_TESS_UPDATE", "1").strip() not in {"0", "false", "False"}
 AUTO_TESS_MAX_AGE_HOURS = float(os.environ.get("KWARVES_AUTO_TESS_MAX_AGE_HOURS", "18"))
 AUTO_TESS_SLEEP = float(os.environ.get("KWARVES_AUTO_TESS_SLEEP", "0.2"))
+AUTO_TESS_BATCH_SIZE = int(os.environ.get("KWARVES_MAST_BATCH_SIZE", "20"))
+AUTO_TESS_BATCH_SLEEP = float(os.environ.get("KWARVES_MAST_BATCH_SLEEP", "15"))
+AUTO_TESS_RETRIES = int(os.environ.get("KWARVES_MAST_RETRIES", "2"))
+AUTO_TESS_RETRY_SLEEP = float(os.environ.get("KWARVES_MAST_RETRY_SLEEP", "5"))
 
 # Pipeline thresholds (loaded from shared config file)
 _PIPELINE_CFG: dict[str, Any] | None = None
@@ -66,6 +70,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--force-auto-update", action="store_true", help="Run TESS refresh even when inventory is still fresh.")
     parser.add_argument("--auto-update-limit", type=int, default=None, help="Limit candidates checked against MAST during automatic refresh.")
     parser.add_argument("--auto-update-sleep", type=float, default=AUTO_TESS_SLEEP, help="Delay between MAST queries during automatic refresh.")
+    parser.add_argument("--auto-update-batch-size", type=int, default=AUTO_TESS_BATCH_SIZE, help="Number of MAST TIC queries per automatic refresh block.")
+    parser.add_argument("--auto-update-batch-sleep", type=float, default=AUTO_TESS_BATCH_SLEEP, help="Delay between automatic MAST refresh blocks.")
+    parser.add_argument("--auto-update-retries", type=int, default=AUTO_TESS_RETRIES, help="Retries per TIC during automatic MAST refresh.")
+    parser.add_argument("--auto-update-retry-sleep", type=float, default=AUTO_TESS_RETRY_SLEEP, help="Base retry delay for automatic MAST refresh.")
     parser.add_argument("--no-sector-mark", action="store_true", help="Record new sectors but do not mark candidates RECHECK_NEW_SECTOR.")
     return parser.parse_args()
 
@@ -314,6 +322,14 @@ def run_auto_update(args: argparse.Namespace) -> bool:
         str(SCRIPT_ROOT / "main" / "check_new_tess_sectors.py"),
         "--sleep",
         str(args.auto_update_sleep),
+        "--batch-size",
+        str(args.auto_update_batch_size),
+        "--batch-sleep",
+        str(args.auto_update_batch_sleep),
+        "--retries",
+        str(args.auto_update_retries),
+        "--retry-sleep",
+        str(args.auto_update_retry_sleep),
     ]
     if args.auto_update_limit:
         sector_cmd.extend(["--limit", str(args.auto_update_limit)])
@@ -864,6 +880,7 @@ def compute_final_decision(
     # Matrix color
     matrix_color = clean_text((matrix or {}).get("status_color")).upper()
     is_orange = matrix_color == "ORANGE"
+    spc_art_stage2 = evaluate_spc_art_stage2(matrix, row, visible_transits or 0, observed_transits) if (has_spcar_art or is_orange) else None
     
     # === DECISION LOGIC ===
     
@@ -904,6 +921,64 @@ def compute_final_decision(
             "passed_checks": passed_checks, "warning_checks": [], "failed_checks": ["Vetting Checks"],
             "not_run_checks": [], "blockers": [fp_reason], "check_tree": check_tree
         }
+
+    if spc_art_stage2:
+        check_tree.append({
+            "name": "Individual Transits",
+            "status": "passed" if spc_art_stage2["singleTransitStatus"] == "STABLE" else ("failed" if spc_art_stage2["singleTransitStatus"] == "NOT_REPRODUCIBLE" else "warning"),
+            "reason": f"{spc_art_stage2['singleTransitStatus']}; {spc_art_stage2['plotStatus']}",
+        })
+        check_tree.append({
+            "name": "Depth Stability",
+            "status": "passed" if spc_art_stage2["depthStabilityScore"] >= 0.65 else ("failed" if spc_art_stage2["depthStabilityScore"] < 0.4 else "warning"),
+            "reason": f"median={spc_art_stage2['medianDepthPpt'] or '-'} ppt, scatter={spc_art_stage2['depthScatterPpt'] or '-'}, score={spc_art_stage2['depthStabilityScore']}",
+        })
+        check_tree.append({
+            "name": "SPC_ART Stage 2",
+            "status": "passed" if spc_art_stage2["recommendation"] == "PROMOTE_RECHECK" else ("failed" if spc_art_stage2["recommendation"] == "FALSE_POSITIVE" else "warning"),
+            "reason": f"Folded LC: {spc_art_stage2['foldedLightCurveStatus']}; Activity: {spc_art_stage2['activityStatus']}",
+        })
+
+        if spc_art_stage2["recommendation"] == "FALSE_POSITIVE":
+            return {
+                "ticId": tic_id,
+                "status": "RED_FP", "vettingStage2Class": "RED_FP",
+                "reason": "SPC_ART Stage 2: signal is not reproducible in individual transits.",
+                "decisionReason": "SPC_ART Stage 2: signal is not reproducible in individual transits.",
+                "failed_test": "Individual Transits", "next_action": "exclude",
+                "suggestedAction": spc_art_stage2["nextAction"],
+                "signal_quality": "medium", "signalStatus": "NOT_REPRODUCIBLE",
+                "data_quality": "medium", "dataStatus": "TESS_DATA_AVAILABLE",
+                "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+                "matrix_cell": "false_positive", "scoreDelta": 0,
+                "badges": ["RED_FP", "SPC_ART_STAGE2"], "warnings": spc_art_stage2["missingChecks"],
+                "spcArtStage2": spc_art_stage2,
+                "passed_checks": passed_checks, "warning_checks": warning_checks,
+                "failed_checks": ["Individual Transits"], "not_run_checks": not_run_checks,
+                "blockers": ["Signal not reproducible", *spc_art_stage2["missingChecks"]],
+                "check_tree": check_tree,
+            }
+
+        if spc_art_stage2["recommendation"] != "PROMOTE_RECHECK":
+            return {
+                "ticId": tic_id,
+                "status": "PURPLE_SPC_ART",
+                "vettingStage2Class": "PURPLE_SPC_ART",
+                "reason": "SPC_ART Stage 2 required: artifact/systematics concerns remain.",
+                "decisionReason": "SPC_ART Stage 2 required: " + (", ".join(spc_art_stage2["missingChecks"]) if spc_art_stage2["missingChecks"] else "artifact/systematics concerns remain") + ".",
+                "failed_test": "SPC_ART Stage 2", "next_action": "manual_review_required",
+                "suggestedAction": spc_art_stage2["nextAction"],
+                "signal_quality": "medium", "signalStatus": "VISIBLE_SIGNAL",
+                "data_quality": "medium", "dataStatus": "TESS_DATA_AVAILABLE",
+                "monitorStatus": monitor_result.get("monitorStatus", "TESS_DATA_AVAILABLE"),
+                "matrix_cell": "artifact_recheck", "scoreDelta": 0,
+                "badges": ["PURPLE_SPC_ART", "SPC_ART_STAGE2"], "warnings": spc_art_stage2["missingChecks"],
+                "spcArtStage2": spc_art_stage2,
+                "passed_checks": passed_checks, "warning_checks": list(dict.fromkeys([*warning_checks, "SPC_ART Stage 2"])),
+                "failed_checks": [], "not_run_checks": not_run_checks,
+                "blockers": spc_art_stage2["missingChecks"],
+                "check_tree": check_tree,
+            }
     
     # 2. Check for ZU WENIG DATEN (not enough data to assess)
     if not has_sufficient_sectors or not has_sufficient_transits:
@@ -1007,6 +1082,126 @@ def compute_final_decision(
         "badges": ["GREEN_SPC"], "warnings": [],
         "passed_checks": passed_checks, "warning_checks": [], "failed_checks": [],
         "not_run_checks": not_run_checks, "blockers": [], "check_tree": check_tree
+    }
+
+
+def classify_folded_lightcurve_status(transit_shape: str, depth_stability: str) -> str:
+    shape = clean_text(transit_shape).upper()
+    stability = clean_text(depth_stability).upper()
+    if shape in {"U_SHAPE", "U_SHAPED", "BOX", "BOX_SHAPED", "CLEAR"}:
+        return "CLEAR"
+    if shape in {"V_SHAPE", "V_SHAPED"}:
+        return "V_SHAPED"
+    if shape in {"NOISE", "NOISY"}:
+        return "NOISY"
+    if shape in {"ARTIFACT", "ARTIFACT_LIKE", "SPURIOUS", "INVERTED", "IRREGULAR", "INVALID"} or stability in {"UNSTABLE", "HIGH_VARIABILITY"}:
+        return "ARTIFACT_LIKE"
+    return "UNCLEAR"
+
+
+def evaluate_spc_art_stage2(
+    matrix: dict[str, Any] | None,
+    row: dict[str, Any],
+    visible_transits: int,
+    observed_transits: int,
+) -> dict[str, Any]:
+    matrix = matrix or {}
+    depth_ppt = safe_float(matrix.get("depth_ppt")) or 0.0
+    duration_hours = safe_float(matrix.get("duration_hours")) or 0.0
+    depth_stability = clean_text(matrix.get("depth_stability")).upper()
+    transit_shape = clean_text(matrix.get("transit_shape")).upper()
+    rotation_risk = clean_text(matrix.get("rotation_risk")).upper()
+    sector_edge_risk = clean_text(matrix.get("sector_edge_risk")).upper()
+    data_gap_risk = clean_text(matrix.get("data_gap_risk")).upper()
+    expected_transits = max(observed_transits, visible_transits, safe_int(row.get("transit_count")))
+    shape_class = classify_folded_lightcurve_status(transit_shape, depth_stability)
+
+    if depth_stability in {"STABLE", "LOW", "OK", "GOOD"}:
+        depth_stability_score = 1.0
+    elif depth_stability in {"UNSTABLE", "HIGH_VARIABILITY"}:
+        depth_stability_score = 0.0
+    elif depth_ppt > 0 and visible_transits >= 3:
+        depth_stability_score = 0.55
+    else:
+        depth_stability_score = 0.5
+
+    transit_status: list[dict[str, Any]] = []
+    for idx in range(max(expected_transits, visible_transits, 0)):
+        flags: list[str] = []
+        status = "NEEDS_REVIEW" if idx < visible_transits else "MISSING"
+        if idx >= visible_transits:
+            flags.append("missing_or_not_visible")
+        if sector_edge_risk == "HIGH" or data_gap_risk == "HIGH":
+            flags.append("edge_or_gap_risk")
+        if depth_stability_score < 0.4:
+            flags.append("depth_outlier_possible")
+        transit_status.append({
+            "index": idx + 1,
+            "status": status,
+            "depthPpt": round(depth_ppt, 5) if depth_ppt else None,
+            "durationHours": round(duration_hours, 5) if duration_hours else None,
+            "flags": flags,
+        })
+
+    missing_checks: list[str] = []
+    if visible_transits < 2:
+        missing_checks.append("Signal reproducibility")
+    if shape_class == "UNCLEAR":
+        missing_checks.append("Folded Light Curve classification")
+    if depth_stability in {"UNKNOWN", ""}:
+        missing_checks.append("Depth stability measurement")
+    if rotation_risk in {"UNKNOWN", "", "POSSIBLE"}:
+        missing_checks.append("Activity/Rotation check")
+    if any(item["status"] != "OK" for item in transit_status):
+        missing_checks.append("Individual transit review")
+
+    activity_flag = rotation_risk in {"HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"}
+    if activity_flag:
+        activity_status = "FLAGGED"
+    elif rotation_risk in {"LOW", "NONE", "OK", "NO"}:
+        activity_status = "LOW_RISK"
+    else:
+        activity_status = "UNCLEAR"
+
+    depth_scatter_ppt = round(depth_ppt * (1 - depth_stability_score), 5) if depth_ppt else None
+    stable_individual = visible_transits >= 2 and depth_stability_score >= 0.65 and all(item["status"] != "MISSING" for item in transit_status)
+    artifact_concern = (
+        shape_class == "ARTIFACT_LIKE"
+        or depth_stability_score < 0.4
+        or activity_flag
+        or sector_edge_risk == "HIGH"
+        or data_gap_risk == "HIGH"
+    )
+    reproducible = visible_transits >= 2
+
+    recommendation = "KEEP_SPC_ART"
+    next_action = "Review individual transits, folded light curve, depth stability, and activity/rotation."
+    if not reproducible:
+        recommendation = "FALSE_POSITIVE"
+        next_action = "Mark as false positive unless new data reproduces the signal."
+    elif stable_individual and shape_class == "CLEAR" and activity_status == "LOW_RISK":
+        recommendation = "PROMOTE_RECHECK"
+        next_action = "Move to recheck/SPC preparation after documenting Stage 2 evidence."
+    elif artifact_concern:
+        recommendation = "KEEP_SPC_ART"
+        next_action = "Keep SPC_ART and resolve artifact/systematics concerns before follow-up."
+
+    return {
+        "applies": True,
+        "singleTransitStatus": "STABLE" if stable_individual else ("NOT_REPRODUCIBLE" if not reproducible else "NEEDS_REVIEW"),
+        "transits": transit_status,
+        "medianDepthPpt": round(depth_ppt, 5) if depth_ppt else None,
+        "depthScatterPpt": depth_scatter_ppt,
+        "depthStabilityScore": round(depth_stability_score, 3),
+        "depthStability": depth_stability or "UNKNOWN",
+        "foldedLightCurveStatus": shape_class,
+        "transitShapeClass": shape_class,
+        "activityStatus": activity_status,
+        "activityFlag": activity_flag,
+        "missingChecks": list(dict.fromkeys(missing_checks)),
+        "recommendation": recommendation,
+        "nextAction": next_action,
+        "plotStatus": "INDIVIDUAL_TRANSIT_PLOTS_NOT_AVAILABLE_IN_DASHBOARD_DATA",
     }
 
 
@@ -1301,6 +1496,11 @@ def build_candidate(
         "signalStatus": final_decision.get("signalStatus", ""),
         "vettingStage2Class": final_decision.get("vettingStage2Class", ""),
         "suggestedAction": final_decision.get("suggestedAction", ""),
+        "spcArtStage2": final_decision.get("spcArtStage2"),
+        "singleTransitStatus": (final_decision.get("spcArtStage2") or {}).get("singleTransitStatus", ""),
+        "depthStabilityScore": (final_decision.get("spcArtStage2") or {}).get("depthStabilityScore"),
+        "foldedLightCurveStatus": (final_decision.get("spcArtStage2") or {}).get("foldedLightCurveStatus", ""),
+        "activityStatus": (final_decision.get("spcArtStage2") or {}).get("activityStatus", ""),
         "fullVetting": {
             "classification": clean_text(full_vetting.get("classification")),
             "evidence_score": safe_float(full_vetting.get("evidence_score")),

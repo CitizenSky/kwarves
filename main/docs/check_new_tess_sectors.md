@@ -26,8 +26,18 @@ Typische Nutzung:
   python scripts/main/check_new_tess_sectors.py --limit 50
   python scripts/main/check_new_tess_sectors.py --tic 13096842
   python scripts/main/check_new_tess_sectors.py --dry-run --limit 20
+  python scripts/main/check_new_tess_sectors.py --limit 100 --batch-size 20 --batch-sleep 15 --sleep 0.5 --retries 2 --retry-sleep 5
+
+MAST-schonende Blockabfrage:
+  - --batch-size legt fest, wie viele TICs in einem Block abgefragt werden.
+  - --batch-sleep pausiert zwischen zwei Bloecken.
+  - --sleep pausiert zwischen einzelnen TIC-Abfragen innerhalb eines Blocks.
+  - --retries und --retry-sleep fangen temporaere MAST-/Netzfehler mit
+    linearem Backoff ab.
+  - Dieselben Werte koennen ueber Umgebungsvariablen gesetzt werden:
+    KWARVES_MAST_BATCH_SIZE, KWARVES_MAST_BATCH_SLEEP,
+    KWARVES_MAST_RETRIES, KWARVES_MAST_RETRY_SLEEP.
 
 Verbesserungsbedarf:
   - Spaeter optional als automatischer Schritt in eine Wochenroutine einbauen.
-  - Bei sehr vielen Kandidaten Batch-/Cache-Strategie optimieren.
-  - Optional MAST-Abfrage parallelisieren, aber mit Rate-Limit.
+  - Optional MAST-Abfrage parallelisieren, aber nur mit strengem Rate-Limit.

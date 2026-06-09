@@ -12,6 +12,8 @@ import {
   checkSecondaryEclipse,
   checkSapPdcsap,
   checkActivityRotation,
+  evaluateSpcArtStage2,
+  classifyFoldedLightCurve,
   runAllChecks,
   MIN_SECTORS_FOR_DATA,
   MIN_TRANSITS_FOR_DATA,
@@ -158,6 +160,68 @@ describe('checkActivityRotation', () => {
   });
   it('warns with UNKNOWN', () => {
     expect(checkActivityRotation(makeCandidate({ rotationRisk: "UNKNOWN" })).status).toBe("warning");
+  });
+});
+
+describe('SPC_ART Stage 2', () => {
+  it('classifies unknown folded light curve as UNCLEAR', () => {
+    expect(classifyFoldedLightCurve(makeCandidate({ transitShape: "UNKNOWN" }))).toBe("UNCLEAR");
+  });
+
+  it('keeps unclear SPC_ART candidates in PURPLE_SPC_ART with concrete missing checks', () => {
+    var result = computeFinalDecision(makeCandidate({
+      matrixStatus: "SPC_ART",
+      evidenceScore: 55,
+      observedSectorCount: 5,
+      matrixVisibleTransits: 3,
+      transitShape: "UNKNOWN",
+      depthStability: "UNKNOWN",
+      rotationRisk: "UNKNOWN",
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO"
+    }));
+    expect(result.status).toBe("PURPLE_SPC_ART");
+    expect(result.vettingStage2Class).toBe("PURPLE_SPC_ART");
+    expect(result.spcArtStage2.singleTransitStatus).toBe("NEEDS_REVIEW");
+    expect(result.spcArtStage2.foldedLightCurveStatus).toBe("UNCLEAR");
+    expect(result.spcArtStage2.activityStatus).toBe("UNCLEAR");
+    expect(result.spcArtStage2.missingChecks).toContain("Depth stability measurement");
+    expect(result.suggestedAction).toContain("Review individual transits");
+  });
+
+  it('promotes stable clear SPC_ART candidates into normal recheck flow', () => {
+    var stage2 = evaluateSpcArtStage2(makeCandidate({
+      matrixStatus: "SPC_ART",
+      matrixVisibleTransits: 3,
+      transitShape: "U_SHAPE",
+      depthStability: "STABLE",
+      rotationRisk: "LOW",
+      depthPpt: 1.2,
+      durationHours: 2.4
+    }));
+    expect(stage2.recommendation).toBe("PROMOTE_RECHECK");
+    expect(stage2.singleTransitStatus).toBe("STABLE");
+    expect(stage2.foldedLightCurveStatus).toBe("CLEAR");
+  });
+
+  it('marks SPC_ART as RED_FP when the signal is not reproducible', () => {
+    var result = computeFinalDecision(makeCandidate({
+      matrixStatus: "SPC_ART",
+      evidenceScore: 55,
+      observedSectorCount: 5,
+      matrixVisibleTransits: 1,
+      transitShape: "UNKNOWN",
+      depthStability: "UNKNOWN",
+      rotationRisk: "UNKNOWN",
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO"
+    }));
+    expect(result.status).toBe("RED_FP");
+    expect(result.vettingStage2Class).toBe("RED_FP");
+    expect(result.signalStatus).toBe("NOT_REPRODUCIBLE");
+    expect(result.failed_test).toBe("Individual Transits");
   });
 });
 

@@ -9,6 +9,8 @@ as RECHECK_NEW_SECTOR so the main scanner can process it again.
 from __future__ import annotations
 
 import argparse
+import math
+import os
 import re
 import sqlite3
 import time
@@ -35,6 +37,10 @@ DEFAULT_SOURCE_STATUSES = (
     "RECHECK",
     "RECHECK_NEW_SECTOR",
 )
+DEFAULT_BATCH_SIZE = int(os.environ.get("KWARVES_MAST_BATCH_SIZE", "20"))
+DEFAULT_BATCH_SLEEP = float(os.environ.get("KWARVES_MAST_BATCH_SLEEP", "15"))
+DEFAULT_RETRIES = int(os.environ.get("KWARVES_MAST_RETRIES", "2"))
+DEFAULT_RETRY_SLEEP = float(os.environ.get("KWARVES_MAST_RETRY_SLEEP", "5"))
 
 
 def connect_db() -> sqlite3.Connection:
@@ -106,6 +112,24 @@ def extract_sectors(search_result) -> set[int]:
 def fetch_available_sectors(tic: int) -> set[int]:
     result = search_lightcurve(f"TIC {tic}", mission="TESS")
     return extract_sectors(result)
+
+
+def fetch_available_sectors_with_retry(tic: int, retries: int, retry_sleep: float) -> set[int]:
+    attempts = max(1, int(retries) + 1)
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return fetch_available_sectors(tic)
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= attempts:
+                break
+            delay = max(0.0, float(retry_sleep)) * attempt
+            print(f"TIC {tic}: retry {attempt}/{attempts - 1} after {type(exc).__name__}; sleep={delay:.1f}s")
+            if delay:
+                time.sleep(delay)
+    assert last_exc is not None
+    raise last_exc
 
 
 def candidate_rows(conn: sqlite3.Connection, limit: int | None, tic: int | None) -> list[sqlite3.Row]:
@@ -198,6 +222,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tic", type=int, help="Check only one TIC.")
     parser.add_argument("--limit", type=int, help="Limit number of candidates checked.")
     parser.add_argument("--sleep", type=float, default=0.2, help="Delay between MAST queries.")
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Number of TICs per MAST request block.")
+    parser.add_argument("--batch-sleep", type=float, default=DEFAULT_BATCH_SLEEP, help="Delay after each MAST request block.")
+    parser.add_argument("--retries", type=int, default=DEFAULT_RETRIES, help="Retries per TIC after transient MAST/network errors.")
+    parser.add_argument("--retry-sleep", type=float, default=DEFAULT_RETRY_SLEEP, help="Base retry delay; retry N sleeps N*delay seconds.")
     parser.add_argument("--dry-run", action="store_true", help="Do not write DB changes.")
     parser.add_argument("--no-mark", action="store_true", help="Record sectors but do not mark RECHECK_NEW_SECTOR.")
     return parser.parse_args()
@@ -212,41 +240,52 @@ def main() -> None:
         checked = 0
         changed = 0
         errors = 0
+        batch_size = max(1, int(args.batch_size or 1))
+        total_batches = max(1, math.ceil(len(rows) / batch_size))
 
-        for row in rows:
-            tic = int(row["TIC"])
-            status = str(row["status"] or "CANDIDATE")
-            try:
-                sectors = fetch_available_sectors(tic)
-                checked += 1
-                if args.dry_run:
-                    old = conn.execute(
-                        f"SELECT sectors_text FROM {TABLE_SECTORS} WHERE TIC=?",
-                        (tic,),
-                    ).fetchone()
-                    previous = {int(s) for s in old[0].split(",") if s.strip().isdigit()} if old else set()
-                    new_sectors = sectors - previous
-                    is_changed = bool(previous and new_sectors)
-                    new_text = sector_text(new_sectors)
-                else:
-                    is_changed, new_text = save_inventory(
-                        conn,
-                        tic,
-                        status,
-                        sectors,
-                        mark=not args.no_mark,
-                    )
-                    conn.commit()
-                if is_changed:
-                    changed += 1
-                    print(f"TIC {tic}: NEW_SECTORS {new_text} status={status}")
-                elif checked % 50 == 0:
-                    print(f"checked {checked}/{len(rows)}")
-            except Exception as exc:
-                errors += 1
-                print(f"TIC {tic}: ERROR {type(exc).__name__}: {exc}")
-            if args.sleep:
-                time.sleep(args.sleep)
+        for batch_start in range(0, len(rows), batch_size):
+            batch = rows[batch_start : batch_start + batch_size]
+            batch_index = batch_start // batch_size + 1
+            print(f"batch {batch_index}/{total_batches}: TICs {batch_start + 1}-{batch_start + len(batch)} of {len(rows)}")
+
+            for row in batch:
+                tic = int(row["TIC"])
+                status = str(row["status"] or "CANDIDATE")
+                try:
+                    sectors = fetch_available_sectors_with_retry(tic, args.retries, args.retry_sleep)
+                    checked += 1
+                    if args.dry_run:
+                        old = conn.execute(
+                            f"SELECT sectors_text FROM {TABLE_SECTORS} WHERE TIC=?",
+                            (tic,),
+                        ).fetchone()
+                        previous = {int(s) for s in old[0].split(",") if s.strip().isdigit()} if old else set()
+                        new_sectors = sectors - previous
+                        is_changed = bool(previous and new_sectors)
+                        new_text = sector_text(new_sectors)
+                    else:
+                        is_changed, new_text = save_inventory(
+                            conn,
+                            tic,
+                            status,
+                            sectors,
+                            mark=not args.no_mark,
+                        )
+                        conn.commit()
+                    if is_changed:
+                        changed += 1
+                        print(f"TIC {tic}: NEW_SECTORS {new_text} status={status}")
+                    elif checked % 50 == 0:
+                        print(f"checked {checked}/{len(rows)}")
+                except Exception as exc:
+                    errors += 1
+                    print(f"TIC {tic}: ERROR {type(exc).__name__}: {exc}")
+                if args.sleep:
+                    time.sleep(args.sleep)
+
+            if batch_index < total_batches and args.batch_sleep:
+                print(f"batch {batch_index}/{total_batches}: sleep {args.batch_sleep:.1f}s before next MAST block")
+                time.sleep(args.batch_sleep)
 
         print(f"Done. checked={checked} new_sector_targets={changed} errors={errors}")
     finally:

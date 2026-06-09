@@ -100,6 +100,111 @@ export function checkActivityRotation(candidate) {
   return { status: "passed", reason: "Rotation risk: low" };
 }
 
+export function isSpcArtCandidate(candidate) {
+  const text = [
+    candidate.matrixStatus,
+    candidate.matrixClass,
+    candidate.status,
+    candidate.reason,
+    candidate.decisionReason,
+    candidate.nextStep,
+    candidate.notes,
+    ...(candidate.displayLabels || [])
+  ].join(" ").toUpperCase();
+  return /SPC_ART|ARTIFACT|SYSTEMATIC|SYSTEMATICS/.test(text);
+}
+
+export function classifyFoldedLightCurve(candidate) {
+  const shape = (candidate.transitShape || "").toUpperCase();
+  const depthStability = (candidate.depthStability || "").toUpperCase();
+  if (["U_SHAPE", "U_SHAPED", "BOX", "BOX_SHAPED", "CLEAR"].includes(shape)) return "CLEAR";
+  if (["V_SHAPE", "V_SHAPED"].includes(shape)) return "V_SHAPED";
+  if (["NOISE", "NOISY"].includes(shape)) return "NOISY";
+  if (["ARTIFACT", "ARTIFACT_LIKE", "SPURIOUS", "INVERTED", "IRREGULAR", "INVALID"].includes(shape)) return "ARTIFACT_LIKE";
+  if (depthStability === "UNSTABLE" || depthStability === "HIGH_VARIABILITY") return "ARTIFACT_LIKE";
+  return "UNCLEAR";
+}
+
+export function evaluateSpcArtStage2(candidate) {
+  const visibleTransits = Number(candidate.matrixVisibleTransits ?? candidate.visibleTransits ?? candidate.matrixTransits ?? candidate.transits ?? 0) || 0;
+  const expectedTransits = Number(candidate.matrixTransits ?? candidate.transits ?? visibleTransits) || visibleTransits;
+  const depthPpt = Number(candidate.depthPpt ?? 0) || 0;
+  const durationHours = Number(candidate.durationHours ?? 0) || 0;
+  const depthStability = (candidate.depthStability || "").toUpperCase();
+  const shapeClass = classifyFoldedLightCurve(candidate);
+  const activityRisk = (candidate.rotationRisk || "").toUpperCase();
+  const sectorEdgeRisk = (candidate.sectorEdgeRisk || "").toUpperCase();
+  const dataGapRisk = (candidate.dataGapRisk || "").toUpperCase();
+
+  let depthStabilityScore = 0.5;
+  if (["STABLE", "LOW", "OK", "GOOD"].includes(depthStability)) depthStabilityScore = 1;
+  else if (["UNSTABLE", "HIGH_VARIABILITY"].includes(depthStability)) depthStabilityScore = 0;
+  else if (depthPpt > 0 && visibleTransits >= 3) depthStabilityScore = 0.55;
+
+  const transitStatus = [];
+  const count = Math.max(expectedTransits, visibleTransits, 0);
+  for (let i = 0; i < count; i += 1) {
+    let status = i < visibleTransits ? "NEEDS_REVIEW" : "MISSING";
+    const flags = [];
+    if (i >= visibleTransits) flags.push("missing_or_not_visible");
+    if (sectorEdgeRisk === "HIGH" || dataGapRisk === "HIGH") flags.push("edge_or_gap_risk");
+    if (depthStabilityScore < 0.4) flags.push("depth_outlier_possible");
+    transitStatus.push({
+      index: i + 1,
+      status,
+      depthPpt: depthPpt || null,
+      durationHours: durationHours || null,
+      flags
+    });
+  }
+
+  const missingChecks = [];
+  if (visibleTransits < 2) missingChecks.push("Signal reproducibility");
+  if (shapeClass === "UNCLEAR") missingChecks.push("Folded Light Curve classification");
+  if (depthStability === "UNKNOWN" || depthStability === "") missingChecks.push("Depth stability measurement");
+  if (activityRisk === "UNKNOWN" || activityRisk === "" || activityRisk === "POSSIBLE") missingChecks.push("Activity/Rotation check");
+  if (transitStatus.some((item) => item.status !== "OK")) missingChecks.push("Individual transit review");
+
+  const activityFlag = ["HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"].includes(activityRisk);
+  const activityStatus = activityFlag ? "FLAGGED" : (["LOW", "NONE", "OK", "NO"].includes(activityRisk) ? "LOW_RISK" : "UNCLEAR");
+  const depthScatterPpt = depthStabilityScore === 1 ? 0 : (depthPpt ? Number((depthPpt * (1 - depthStabilityScore)).toFixed(4)) : null);
+  const stableIndividualTransits = visibleTransits >= 2 && depthStabilityScore >= 0.65 && transitStatus.every((item) => item.status !== "MISSING");
+  const clearFolded = shapeClass === "CLEAR";
+  const artifactConcern = shapeClass === "ARTIFACT_LIKE" || depthStabilityScore < 0.4 || activityFlag || sectorEdgeRisk === "HIGH" || dataGapRisk === "HIGH";
+  const reproducible = visibleTransits >= 2;
+
+  let recommendation = "KEEP_SPC_ART";
+  let nextAction = "Review individual transits, folded light curve, depth stability, and activity/rotation.";
+  if (!reproducible) {
+    recommendation = "FALSE_POSITIVE";
+    nextAction = "Mark as false positive unless new data reproduces the signal.";
+  } else if (stableIndividualTransits && clearFolded && activityStatus === "LOW_RISK") {
+    recommendation = "PROMOTE_RECHECK";
+    nextAction = "Move to recheck/SPC preparation after documenting Stage 2 evidence.";
+  } else if (artifactConcern) {
+    recommendation = "KEEP_SPC_ART";
+    nextAction = "Keep SPC_ART and resolve artifact/systematics concerns before follow-up.";
+  }
+
+  return {
+    applies: true,
+    singleTransitStatus: reproducible ? (stableIndividualTransits ? "STABLE" : "NEEDS_REVIEW") : "NOT_REPRODUCIBLE",
+    transits: transitStatus,
+    medianDepthPpt: depthPpt || null,
+    depthScatterPpt,
+    depthStabilityScore,
+    depthStability: depthStability || "UNKNOWN",
+    foldedLightCurveStatus: shapeClass,
+    transitShapeClass: shapeClass,
+    activityStatus,
+    activityFlag,
+    missingChecks: [...new Set(missingChecks)],
+    recommendation,
+    nextAction,
+    plotStatus: "INDIVIDUAL_TRANSIT_PLOTS_NOT_AVAILABLE_IN_DASHBOARD_DATA"
+  };
+}
+
 export function computeSignalQuality(candidate) {
   const score = candidate.evidenceScore || 0;
   if (score >= STRONG_SCORE) return "strong";
@@ -185,7 +290,8 @@ export function computeFinalDecision(candidate) {
     };
   }
 
-  if (candidate.finalDecision && candidate.finalDecision.vettingStage2Class) {
+  const needsSpcArtStage2 = isSpcArtCandidate(candidate) && !candidate.finalDecision?.spcArtStage2;
+  if (candidate.finalDecision && candidate.finalDecision.vettingStage2Class && !needsSpcArtStage2) {
     return candidate.finalDecision;
   }
 
@@ -222,6 +328,7 @@ export function computeFinalDecision(candidate) {
   const cats = categorizeChecks(checks);
   const signalQuality = computeSignalQuality(candidate);
   const dataQuality = computeDataQuality(candidate);
+  const spcArtStage2 = isSpcArtCandidate(candidate) ? evaluateSpcArtStage2(candidate) : null;
 
   const checkTree = Object.entries(checks).map(([name, result]) => ({
     name,
@@ -294,6 +401,82 @@ export function computeFinalDecision(candidate) {
       blockers: cats.blockers.map(function(b) { return b.check + ": " + b.reason; }),
       check_tree: checkTree
     };
+  }
+
+  if (spcArtStage2) {
+    checkTree.push(
+      {
+        name: "Individual Transits",
+        status: spcArtStage2.singleTransitStatus === "STABLE" ? "passed" : (spcArtStage2.singleTransitStatus === "NOT_REPRODUCIBLE" ? "failed" : "warning"),
+        reason: spcArtStage2.singleTransitStatus + "; " + spcArtStage2.plotStatus
+      },
+      {
+        name: "Depth Stability",
+        status: spcArtStage2.depthStabilityScore >= 0.65 ? "passed" : (spcArtStage2.depthStabilityScore < 0.4 ? "failed" : "warning"),
+        reason: "median=" + (spcArtStage2.medianDepthPpt ?? "-") + " ppt, scatter=" + (spcArtStage2.depthScatterPpt ?? "-") + ", score=" + spcArtStage2.depthStabilityScore
+      },
+      {
+        name: "SPC_ART Stage 2",
+        status: spcArtStage2.recommendation === "PROMOTE_RECHECK" ? "passed" : (spcArtStage2.recommendation === "FALSE_POSITIVE" ? "failed" : "warning"),
+        reason: "Folded LC: " + spcArtStage2.foldedLightCurveStatus + "; Activity: " + spcArtStage2.activityStatus
+      }
+    );
+
+    if (spcArtStage2.recommendation === "FALSE_POSITIVE") {
+      return {
+        status: "RED_FP",
+        vettingStage2Class: "RED_FP",
+        reason: "SPC_ART Stage 2: signal is not reproducible in individual transits.",
+        decisionReason: "SPC_ART Stage 2: signal is not reproducible in individual transits.",
+        failed_test: "Individual Transits",
+        next_action: "exclude",
+        suggestedAction: spcArtStage2.nextAction,
+        signalStatus: "NOT_REPRODUCIBLE",
+        dataStatus: "TESS_DATA_AVAILABLE",
+        monitorStatus: "TESS_DATA_AVAILABLE",
+        signal_quality: signalQuality,
+        data_quality: dataQuality,
+        matrix_cell: "false_positive",
+        scoreDelta: 0,
+        badges: ["RED_FP", "SPC_ART_STAGE2"],
+        warnings: spcArtStage2.missingChecks,
+        spcArtStage2,
+        passed_checks: cats.passed,
+        warning_checks: cats.warning,
+        failed_checks: [...cats.failed, "Individual Transits"],
+        not_run_checks: cats.notRun,
+        blockers: ["Signal not reproducible", ...spcArtStage2.missingChecks],
+        check_tree: checkTree
+      };
+    }
+
+    if (spcArtStage2.recommendation !== "PROMOTE_RECHECK") {
+      return {
+        status: "PURPLE_SPC_ART",
+        vettingStage2Class: "PURPLE_SPC_ART",
+        reason: "SPC_ART Stage 2 required: artifact/systematics concerns remain.",
+        decisionReason: "SPC_ART Stage 2 required: " + (spcArtStage2.missingChecks.length ? spcArtStage2.missingChecks.join(", ") : "artifact/systematics concerns remain") + ".",
+        failed_test: "SPC_ART Stage 2",
+        next_action: "manual_review_required",
+        suggestedAction: spcArtStage2.nextAction,
+        signalStatus: "VISIBLE_SIGNAL",
+        dataStatus: "TESS_DATA_AVAILABLE",
+        monitorStatus: "TESS_DATA_AVAILABLE",
+        signal_quality: signalQuality,
+        data_quality: dataQuality,
+        matrix_cell: "artifact_recheck",
+        scoreDelta: 0,
+        badges: ["PURPLE_SPC_ART", "SPC_ART_STAGE2"],
+        warnings: spcArtStage2.missingChecks,
+        spcArtStage2,
+        passed_checks: cats.passed,
+        warning_checks: [...new Set([...cats.warning, "SPC_ART Stage 2"])],
+        failed_checks: cats.failed,
+        not_run_checks: cats.notRun,
+        blockers: spcArtStage2.missingChecks,
+        check_tree: checkTree
+      };
+    }
   }
 
   // Step 5: Sector coverage
