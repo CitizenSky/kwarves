@@ -529,6 +529,10 @@
         gap: 12px;
       }
 
+      .mobile-overview-mount {
+        display: none;
+      }
+
       .card,
       .panel,
       .tree-node,
@@ -6438,5 +6442,20 @@
         .recheck-chip {
           min-width: 0;
           max-width: 100%;
+        }
+
+        .mobile-overview-mount {
+          display: block;
+          width: 100%;
+        }
+
+        .mobile-overview-mount:empty {
+          display: none;
+        }
+
+        .mobile-overview-mount .kpis {
+          width: 100%;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
         }
       }

@@ -16,6 +16,7 @@ import { currentMapNoticeText } from './logic/colorFor.js';
 import { startAnalyticsTracking, finalizeAnalyticsSession, setSelfFilterEnabled } from './analytics.js';
 
 let visitorCharts = [];
+const mobileOverviewQuery = window.matchMedia("(max-width: 768px)");
 
 export function setNavButtonActive(panelId) {
   document.querySelectorAll("[data-nav-target]").forEach((button) => {
@@ -68,6 +69,27 @@ export function scrollSelectedCandidateIntoView() {
     behavior: "smooth",
     block: "start"
   });
+}
+
+export function syncMobileOverviewPlacement() {
+  const kpis = document.querySelector(".kpis");
+  const mobileMount = document.getElementById("mobileOverviewMount");
+  const selectedCardSection = document.getElementById("selectedCardSection");
+  const desktopCell = selectedCardSection?.parentElement;
+  if (!kpis || !mobileMount || !selectedCardSection || !desktopCell) return;
+
+  if (mobileOverviewQuery.matches) {
+    mobileMount.hidden = false;
+    if (kpis.parentElement !== mobileMount) {
+      mobileMount.appendChild(kpis);
+    }
+    return;
+  }
+
+  if (kpis.parentElement !== desktopCell) {
+    desktopCell.insertBefore(kpis, selectedCardSection);
+  }
+  mobileMount.hidden = true;
 }
 
 export function selectCandidate(candidate, source = "table", options = {}) {
@@ -1420,6 +1442,7 @@ window.addEventListener("popstate", () => {
 
 window.addEventListener("resize", () => {
   window.requestAnimationFrame(() => {
+    syncMobileOverviewPlacement();
     draw2dMap();
     resize3d();
     const tessState = buildTessScheduleState();
@@ -1450,6 +1473,8 @@ applyLanguageToUi();
 setupGlobalAnalytics();
 updateDate();
 startAnalyticsTracking();
+syncMobileOverviewPlacement();
+mobileOverviewQuery.addEventListener("change", syncMobileOverviewPlacement);
 
 loadData().then((ok) => {
   if (!ok) {
@@ -1469,6 +1494,7 @@ loadData().then((ok) => {
   state.selectedCurve = curveForCandidate(urlCandidate);
   setPanelCollapsed("mapPanel", false, true);
   renderAll();
+  syncMobileOverviewPlacement();
   if (urlCandidate) syncCandidateUrl(urlCandidate, true);
   state.sortBy = "evidence";
   state.sortOrder = "desc";
