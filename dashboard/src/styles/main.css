@@ -5732,13 +5732,20 @@
           display: none !important;
         }
 
+        #tablePanel {
+          width: calc(100% + 14px) !important;
+          max-width: calc(100% + 14px) !important;
+          margin-right: -7px !important;
+          margin-left: -7px !important;
+        }
+
         #tablePanel .table-wrap {
           width: 100% !important;
           max-width: 100% !important;
           max-height: none !important;
           min-height: 0 !important;
           margin: 0 !important;
-          padding: 10px !important;
+          padding: 6px !important;
           overflow: visible !important;
           -webkit-overflow-scrolling: auto !important;
         }
@@ -5767,14 +5774,14 @@
 
         #tablePanel tbody {
           display: grid !important;
-          gap: 8px !important;
+          gap: 6px !important;
         }
 
         #tablePanel tr {
           display: grid !important;
           grid-template-columns: minmax(0, 1fr) auto !important;
-          gap: 8px 10px !important;
-          padding: 11px !important;
+          gap: 6px 8px !important;
+          padding: 9px !important;
           border: 1px solid var(--line) !important;
           border-radius: 8px !important;
           background: #ffffff !important;
@@ -5783,8 +5790,8 @@
 
         #tablePanel td {
           display: grid !important;
-          grid-template-columns: auto minmax(0, 1fr) !important;
-          gap: 6px !important;
+          grid-template-columns: minmax(38px, auto) minmax(0, 1fr) !important;
+          gap: 5px !important;
           align-items: center !important;
           padding: 0 !important;
           border: 0 !important;
@@ -5800,9 +5807,10 @@
         #tablePanel td:nth-child(1) {
           display: flex !important;
           align-items: center !important;
-          justify-content: space-between !important;
-          gap: 8px !important;
-          font-size: 15px !important;
+          justify-content: flex-start !important;
+          gap: 6px !important;
+          font-size: 14px !important;
+          flex-wrap: wrap !important;
         }
 
         #tablePanel td:nth-child(3),
@@ -5816,7 +5824,7 @@
           align-self: end !important;
           justify-self: end !important;
           display: grid !important;
-          gap: 8px !important;
+          gap: 6px !important;
           justify-items: end !important;
         }
 
@@ -6196,14 +6204,14 @@
 
         #tablePanel tbody {
           display: grid;
-          gap: 8px;
+          gap: 6px;
         }
 
         #tablePanel tr {
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
-          gap: 8px 10px;
-          padding: 11px;
+          gap: 6px 8px;
+          padding: 9px;
           border: 1px solid var(--line);
           border-radius: 8px;
           background: #ffffff;
@@ -6218,15 +6226,15 @@
 
         #tablePanel td {
           display: grid;
-          grid-template-columns: minmax(42px, auto) minmax(0, 1fr);
-          gap: 6px;
+          grid-template-columns: minmax(38px, auto) minmax(0, 1fr);
+          gap: 5px;
           align-items: center;
           min-width: 0;
           max-width: 100%;
           padding: 0;
           border: 0;
           color: var(--ink);
-          font-size: 12px;
+          font-size: 11px;
           line-height: 1.25;
           white-space: normal;
           overflow-wrap: anywhere;
@@ -6249,9 +6257,9 @@
           display: flex;
           align-items: center;
           justify-content: flex-start;
-          gap: 8px;
+          gap: 6px;
           min-width: 0;
-          font-size: 15px;
+          font-size: 14px;
           flex-wrap: wrap;
         }
 
