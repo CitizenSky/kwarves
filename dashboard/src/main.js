@@ -45,14 +45,44 @@ export function updateDate() {
   if (dashDate) dashDate.textContent = dateStr;
 }
 
-export function selectCandidate(candidate, source = "table") {
+export function candidateFromUrl() {
+  const tic = Number(new URLSearchParams(window.location.search).get("tic"));
+  if (!Number.isFinite(tic)) return null;
+  return data.candidates.find((candidate) => candidate.tic === tic) || null;
+}
+
+export function syncCandidateUrl(candidate, replace = false) {
+  const url = new URL(window.location.href);
+  if (candidate?.tic) {
+    url.searchParams.set("tic", String(candidate.tic));
+  } else {
+    url.searchParams.delete("tic");
+  }
+  const method = replace ? "replaceState" : "pushState";
+  window.history[method]({}, "", url);
+}
+
+export function scrollSelectedCandidateIntoView() {
+  if (!window.matchMedia("(max-width: 900px)").matches) return;
+  document.getElementById("selectedCardSection")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
+
+export function selectCandidate(candidate, source = "table", options = {}) {
+  if (!candidate) return;
+  const { updateUrl = true, replaceUrl = false, scrollToDetail = source === "table" } = options;
   state.selected = candidate;
+  state.selectedCandidate = candidate;
+  state.activeCandidateId = candidate.tic;
   renderSelected();
   renderYellowReasonPanel();
   renderTable();
   draw2dMap();
   update3dSelection();
   renderTess();
+  if (updateUrl) syncCandidateUrl(candidate, replaceUrl);
   const curve = curveForCandidate(candidate);
   if (curve && source !== "curve") {
     state.selectedCurve = curve;
@@ -63,6 +93,9 @@ export function selectCandidate(candidate, source = "table") {
       });
     }
     renderCurves(false, true);
+  }
+  if (scrollToDetail) {
+    window.requestAnimationFrame(() => scrollSelectedCandidateIntoView());
   }
 }
 
@@ -84,12 +117,6 @@ export function renderAll() {
   renderDocs();
   renderTess();
   renderAdmin();
-  
-  // Setze ersten Kandidaten als ausgewählt wenn noch keiner gesetzt
-  if (!state.selected && data.candidates.length > 0) {
-    console.log('[kwarves] Setting first candidate as selected');
-    state.selected = data.candidates[0];
-  }
   
   renderSelected();
   renderTable();
@@ -1164,6 +1191,15 @@ els.rows.addEventListener("click", (event) => {
   if (candidate) selectCandidate(candidate);
 });
 
+els.rows.addEventListener("keydown", (event) => {
+  if (!["Enter", " "].includes(event.key)) return;
+  const row = event.target.closest("tr[data-tic]");
+  if (!row) return;
+  event.preventDefault();
+  const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.tic));
+  if (candidate) selectCandidate(candidate);
+});
+
 els.topCandidateRows.addEventListener("click", (event) => {
   const row = event.target.closest("tr[data-profile-tic]");
   if (!row) return;
@@ -1363,6 +1399,25 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeNotifications();
 });
 
+window.addEventListener("popstate", () => {
+  const candidate = candidateFromUrl();
+  if (candidate) {
+    selectCandidate(candidate, "url", { updateUrl: false, scrollToDetail: false });
+    return;
+  }
+  state.selected = null;
+  state.selectedCandidate = null;
+  state.activeCandidateId = null;
+  state.selectedCurve = null;
+  renderSelected();
+  renderYellowReasonPanel();
+  renderTable();
+  renderCurves(false);
+  draw2dMap();
+  update3dSelection();
+  renderTess();
+});
+
 window.addEventListener("resize", () => {
   window.requestAnimationFrame(() => {
     draw2dMap();
@@ -1406,10 +1461,15 @@ loadData().then((ok) => {
     return;
   }
   console.log('[kwarves] Data loaded successfully, starting render');
-  state.selected = publicCandidatePool()[0] || publicVisibleCandidates()[0] || null;
-  state.selectedCurve = curveForCandidate(state.selected) || data.lightcurveCandidates[0] || null;
+  const urlCandidate = candidateFromUrl();
+  state.selected = urlCandidate;
+  state.selectedCandidate = urlCandidate;
+  state.activeCandidateId = urlCandidate?.tic || null;
+  state.restoreSelectedTablePage = Boolean(urlCandidate);
+  state.selectedCurve = curveForCandidate(urlCandidate);
   setPanelCollapsed("mapPanel", false, true);
   renderAll();
+  if (urlCandidate) syncCandidateUrl(urlCandidate, true);
   state.sortBy = "evidence";
   state.sortOrder = "desc";
   if (state.tessMapMode === "3d") {

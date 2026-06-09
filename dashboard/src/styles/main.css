@@ -2335,6 +2335,30 @@
         background: #eef5f3;
       }
 
+      #tablePanel tr.active-row {
+        border-color: #147a68;
+        background: #eef8f5;
+        box-shadow: inset 0 0 0 1px #147a68, 0 4px 14px rgba(19, 34, 31, 0.06);
+      }
+
+      #tablePanel tr.active-row td {
+        background: transparent;
+      }
+
+      .selected-candidate-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        margin-left: 8px;
+        padding: 0 7px;
+        border-radius: 999px;
+        background: #dff5ee;
+        color: #126550;
+        font-size: 10px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
       .score {
         display: grid;
         grid-template-columns: 42px 1fr;
@@ -5859,6 +5883,16 @@
           width: 100% !important;
           height: clamp(260px, 70vw, 380px) !important;
         }
+      }
+
+      #tablePanel tr.active-row {
+        border-color: #147a68 !important;
+        background: #eef8f5 !important;
+        box-shadow: inset 0 0 0 1px #147a68, 0 4px 14px rgba(19, 34, 31, 0.06) !important;
+      }
+
+      #tablePanel tr.active-row td {
+        background: transparent !important;
       }
 
       @media (max-width: 768px) {

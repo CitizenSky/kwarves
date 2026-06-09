@@ -60,9 +60,15 @@ export function scrollSelectedCurveIntoView(behavior = "smooth") {
 
 export function renderCurves(reset = true, syncScroll = false) {
   const curves = filteredCurves();
-  const selectedFallback = curveForCandidate(state.selected);
+  const activeCandidate = state.selectedCandidate || state.selected;
+  const selectedFallback = curveForCandidate(activeCandidate);
+  if (!activeCandidate) {
+    state.selectedCurve = null;
+  }
   if (reset || !state.selectedCurve || !curves.some((item) => item.tic === state.selectedCurve.tic)) {
-    state.selectedCurve = curves.find((item) => state.selected && item.tic === state.selected.tic) || selectedFallback || curves[0] || null;
+    state.selectedCurve = activeCandidate
+      ? curves.find((item) => item.tic === activeCandidate.tic) || selectedFallback || null
+      : null;
   }
   if (els.curveList) {
     els.curveList.innerHTML = curves.map((candidate) => `
@@ -81,9 +87,9 @@ export function renderCurves(reset = true, syncScroll = false) {
 export function renderCurveViewer() {
   const candidate = state.selectedCurve;
   if (!candidate) {
-    els.curveTitle.textContent = t("no_curve_found");
+    els.curveTitle.textContent = "Bitte Kandidaten auswaehlen";
     els.curveMeta.textContent = "";
-    els.curveImageWrap.innerHTML = `<div class="notice">${t("no_curve_for_filter")}</div>`;
+    els.curveImageWrap.innerHTML = `<div class="notice">Bitte Kandidaten auswaehlen, um die Lichtkurve zu sehen.</div>`;
     return;
   }
 

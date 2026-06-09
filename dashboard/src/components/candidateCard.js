@@ -217,14 +217,22 @@ function renderActionCard(candidate) {
 }
 
 export function renderSelected() {
-  const candidate = state.selected || publicCandidatePool()[0] || publicVisibleCandidates()[0];
+  const candidate = state.selectedCandidate || state.selected;
   if (!candidate) {
-    if (els.selectedCardTitle) els.selectedCardTitle.textContent = "Kein Kandidat";
-    if (els.selectedCardTic) els.selectedCardTic.textContent = "-";
-    if (els.selectedCard) els.selectedCard.innerHTML = "";
+    if (els.selectedCardTitle) els.selectedCardTitle.textContent = "Bitte Kandidaten auswaehlen";
+    if (els.selectedCardTic) els.selectedCardTic.textContent = "";
+    if (els.selectedCard) {
+      els.selectedCard.innerHTML = `
+        <div class="notice">
+          Bitte Kandidaten auswaehlen, um Candidate Report, Scientific Evidence, Transit Informationen und Vetting Details zu sehen.
+        </div>
+      `;
+    }
     return;
   }
   state.selected = candidate;
+  state.selectedCandidate = candidate;
+  state.activeCandidateId = candidate.tic;
   const evidence = candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? formatFloat(candidate.evidenceScore, 0) : "-";
   const hzLabel = candidate.hz || "-";
   const distLabel = candidate.distance ? `${candidate.distance} ly` : "-";
@@ -284,8 +292,11 @@ export function renderSelected() {
 }
 
 export function renderYellowReasonPanel() {
-  const selected = state.selected || top20Candidates()[0] || publicCandidatePool()[0];
-  if (!selected) return;
+  const selected = state.selectedCandidate || state.selected;
+  if (!selected) {
+    els.yellowSelectedReason.innerHTML = `<p>Bitte Kandidaten auswaehlen.</p>`;
+    return;
+  }
   const summary = selected.yellowSummary || (
     selected.color === "yellow" || (selected.reasonTags || []).some((tag) => tag.startsWith("Y_"))
       ? t("yellow_summary_default")

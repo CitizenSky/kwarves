@@ -197,6 +197,13 @@ export function renderTable() {
   const tableCount = document.getElementById("tableCount");
   if (tableCount) tableCount.textContent = `${formatNumber(total)} ${t("table_count_label")}`;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (state.restoreSelectedTablePage && state.activeCandidateId) {
+    const selectedIndex = rows.findIndex((candidate) => candidate.tic === state.activeCandidateId);
+    if (selectedIndex >= 0) {
+      state.tablePage = Math.floor(selectedIndex / PAGE_SIZE);
+    }
+    state.restoreSelectedTablePage = false;
+  }
   if (state.tablePage >= totalPages) state.tablePage = totalPages - 1;
   if (state.tablePage < 0) state.tablePage = 0;
   const start = state.tablePage * PAGE_SIZE;
@@ -210,6 +217,8 @@ export function renderTable() {
   els.rows.innerHTML = pageRows.map((candidate) => {
     const rowClass = candidateVisualClass(candidate);
     const hzBadge = candidate.hz ? `<span class="table-hz-badge">${candidate.hz}</span>` : "";
+    const isActive = (state.selectedCandidate || state.selected)?.tic === candidate.tic;
+    const selectedBadge = isActive ? `<span class="selected-candidate-badge">Ausgewaehlt</span>` : "";
     let prio = "—";
     let prioClass = "";
     const evidence = candidate.evidenceScore || 0;
@@ -217,8 +226,8 @@ export function renderTable() {
     else if (evidence >= 50 || candidate.color === "green") { prio = "Mittel"; prioClass = "prio-mid"; }
     else { prio = "Niedrig"; prioClass = "prio-low"; }
     return `
-    <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
-      <td data-label="TIC"><strong>TIC ${candidate.tic}</strong>${hzBadge}</td>
+    <tr data-tic="${candidate.tic}" class="${isActive ? "active-row" : ""}" tabindex="0" aria-current="${isActive ? "true" : "false"}">
+      <td data-label="TIC"><strong>TIC ${candidate.tic}</strong>${hzBadge}${selectedBadge}</td>
       <td data-label="Status"><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
       <td data-label="Evidence">${formatFloat(candidate.evidenceScore, 0)}</td>
       <td data-label="Distanz">${candidate.distance ? candidate.distance + " ly" : "-"}</td>
