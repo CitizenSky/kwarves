@@ -9,10 +9,12 @@ import json
 import math
 import os
 import re
+import signal
 import shutil
 import sqlite3
 import subprocess
 import sys
+import time
 from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -37,6 +39,10 @@ AUTO_TESS_BATCH_SIZE = int(os.environ.get("KWARVES_MAST_BATCH_SIZE", "20"))
 AUTO_TESS_BATCH_SLEEP = float(os.environ.get("KWARVES_MAST_BATCH_SLEEP", "15"))
 AUTO_TESS_RETRIES = int(os.environ.get("KWARVES_MAST_RETRIES", "2"))
 AUTO_TESS_RETRY_SLEEP = float(os.environ.get("KWARVES_MAST_RETRY_SLEEP", "5"))
+AUTO_TESS_TIMEOUT = float(os.environ.get("KWARVES_MAST_TIMEOUT", "45"))
+AUTO_UPDATE_COMMAND_TIMEOUT = float(os.environ.get("KWARVES_AUTO_UPDATE_COMMAND_TIMEOUT", "900"))
+MATRIX_BUILD_TIMEOUT = float(os.environ.get("KWARVES_MATRIX_BUILD_TIMEOUT", "900"))
+GAIA_API_TIMEOUT = float(os.environ.get("KWARVES_GAIA_API_TIMEOUT", "45"))
 
 # Pipeline thresholds (loaded from shared config file)
 _PIPELINE_CFG: dict[str, Any] | None = None
@@ -66,7 +72,11 @@ TESS_SECTOR_SCHEDULE = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build dashboard-data.js with optional automatic TESS refresh and matrix rebuild.")
+    parser.add_argument("--limit", type=int, default=None, help="Limit dashboard candidates built from the manifest.")
+    parser.add_argument("--tic", type=int, default=None, help="Build only one dashboard candidate.")
     parser.add_argument("--no-auto-update", action="store_true", help="Skip automatic TESS sector refresh and matrix rebuild.")
+    parser.add_argument("--skip-mast", action="store_true", help="Alias for --no-auto-update; avoids MAST calls during this dashboard build.")
+    parser.add_argument("--offline-cache", action="store_true", help="Use local DB/cache only; skips MAST auto-update and Gaia network fetches.")
     parser.add_argument("--force-auto-update", action="store_true", help="Run TESS refresh even when inventory is still fresh.")
     parser.add_argument("--auto-update-limit", type=int, default=None, help="Limit candidates checked against MAST during automatic refresh.")
     parser.add_argument("--auto-update-sleep", type=float, default=AUTO_TESS_SLEEP, help="Delay between MAST queries during automatic refresh.")
@@ -74,6 +84,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--auto-update-batch-sleep", type=float, default=AUTO_TESS_BATCH_SLEEP, help="Delay between automatic MAST refresh blocks.")
     parser.add_argument("--auto-update-retries", type=int, default=AUTO_TESS_RETRIES, help="Retries per TIC during automatic MAST refresh.")
     parser.add_argument("--auto-update-retry-sleep", type=float, default=AUTO_TESS_RETRY_SLEEP, help="Base retry delay for automatic MAST refresh.")
+    parser.add_argument("--auto-update-timeout", type=float, default=AUTO_TESS_TIMEOUT, help="Timeout in seconds for each MAST TIC lookup.")
+    parser.add_argument("--auto-update-command-timeout", type=float, default=AUTO_UPDATE_COMMAND_TIMEOUT, help="Timeout in seconds for the sector refresh subprocess.")
+    parser.add_argument("--matrix-build-timeout", type=float, default=MATRIX_BUILD_TIMEOUT, help="Timeout in seconds for the candidate matrix rebuild subprocess.")
+    parser.add_argument("--gaia-api-timeout", type=float, default=GAIA_API_TIMEOUT, help="Timeout in seconds for each Gaia API chunk.")
+    parser.add_argument("--progress-every", type=int, default=25, help="Print dashboard build progress every N candidates.")
     parser.add_argument("--no-sector-mark", action="store_true", help="Record new sectors but do not mark candidates RECHECK_NEW_SECTOR.")
     return parser.parse_args()
 
@@ -200,7 +215,30 @@ def save_gaia_cache(cache: dict[int, dict[str, float | None]], path: Path = GAIA
             )
 
 
-def fetch_gaia_coordinates(source_ids: list[int]) -> dict[int, dict[str, float | None]]:
+class ApiTimeoutError(TimeoutError):
+    pass
+
+
+def run_with_timeout(label: str, timeout_seconds: float, func, *args, **kwargs):
+    if timeout_seconds <= 0 or not hasattr(signal, "SIGALRM"):
+        return func(*args, **kwargs)
+
+    def _handler(signum, frame):
+        raise ApiTimeoutError(f"{label} timed out after {timeout_seconds:.1f}s")
+
+    old_handler = signal.signal(signal.SIGALRM, _handler)
+    signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+    try:
+        return func(*args, **kwargs)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+def fetch_gaia_coordinates(source_ids: list[int], timeout_seconds: float = GAIA_API_TIMEOUT, offline_cache: bool = False) -> dict[int, dict[str, float | None]]:
+    if offline_cache:
+        print("[gaia] offline-cache enabled; using cached/local coordinates only", flush=True)
+        return {}
     if not source_ids or not GAIA_FETCH_ENABLED:
         return {}
     try:
@@ -226,13 +264,16 @@ def fetch_gaia_coordinates(source_ids: list[int]) -> dict[int, dict[str, float |
         """
         fetched: dict[int, dict[str, float | None]] = {}
         upload = Table({"source_id": ids})
-        job = Gaia.launch_job_async(
+        job = run_with_timeout(
+            f"Gaia {table_name}",
+            timeout_seconds,
+            Gaia.launch_job_async,
             query=query,
             upload_resource=upload,
             upload_table_name="src_ids",
             verbose=False,
         )
-        rows = job.get_results()
+        rows = run_with_timeout(f"Gaia results {table_name}", timeout_seconds, job.get_results)
         for row in rows:
             source_id = parse_gaia_source_id(row["source_id"])
             if source_id is None:
@@ -328,12 +369,44 @@ def sector_inventory_is_stale(max_age_hours: float = AUTO_TESS_MAX_AGE_HOURS) ->
         return False
 
 
-def run_command(command: list[str], label: str) -> None:
-    print(f"[auto-update] {label}: {' '.join(command)}")
-    subprocess.run(command, cwd=SCRIPT_ROOT, check=True)
+def run_command(
+    command: list[str],
+    label: str,
+    *,
+    timeout_seconds: float,
+    retries: int = 0,
+    retry_sleep: float = 0.0,
+) -> None:
+    attempts = max(1, int(retries) + 1)
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        started = time.monotonic()
+        try:
+            print(
+                f"[auto-update] {label}: attempt {attempt}/{attempts}, timeout={timeout_seconds:.0f}s: {' '.join(command)}",
+                flush=True,
+            )
+            subprocess.run(command, cwd=SCRIPT_ROOT, check=True, timeout=timeout_seconds if timeout_seconds > 0 else None)
+            elapsed = time.monotonic() - started
+            print(f"[auto-update] {label}: done in {elapsed:.1f}s", flush=True)
+            return
+        except subprocess.TimeoutExpired as exc:
+            last_exc = exc
+            print(f"[auto-update] {label}: TIMEOUT after {timeout_seconds:.0f}s", flush=True)
+        except subprocess.CalledProcessError as exc:
+            last_exc = exc
+            print(f"[auto-update] {label}: FAILED exit={exc.returncode}", flush=True)
+        if attempt < attempts:
+            delay = max(0.0, float(retry_sleep)) * attempt
+            print(f"[auto-update] {label}: retrying after {delay:.1f}s", flush=True)
+            if delay:
+                time.sleep(delay)
+    raise RuntimeError(f"{label} failed after {attempts} attempt(s): {last_exc}")
 
 
 def run_auto_update(args: argparse.Namespace) -> bool:
+    if args.skip_mast or args.offline_cache:
+        args.no_auto_update = True
     if args.no_auto_update or not AUTO_TESS_UPDATE_ENABLED:
         print("[auto-update] skipped")
         return False
@@ -354,14 +427,37 @@ def run_auto_update(args: argparse.Namespace) -> bool:
         str(args.auto_update_retries),
         "--retry-sleep",
         str(args.auto_update_retry_sleep),
+        "--timeout",
+        str(args.auto_update_timeout),
     ]
-    if args.auto_update_limit:
-        sector_cmd.extend(["--limit", str(args.auto_update_limit)])
+    update_limit = args.auto_update_limit if args.auto_update_limit is not None else args.limit
+    if args.tic:
+        sector_cmd.extend(["--tic", str(args.tic)])
+    elif update_limit:
+        sector_cmd.extend(["--limit", str(update_limit)])
     if args.no_sector_mark:
         sector_cmd.append("--no-mark")
 
-    run_command(sector_cmd, "refresh TESS sector inventory")
-    run_command([sys.executable, str(SCRIPT_ROOT / "main" / "build_candidate_matrix.py")], "rebuild candidate matrix")
+    matrix_cmd = [sys.executable, str(SCRIPT_ROOT / "main" / "build_candidate_matrix.py")]
+    if args.tic:
+        matrix_cmd.extend(["--tic", str(args.tic)])
+    elif args.limit:
+        matrix_cmd.extend(["--limit", str(args.limit)])
+
+    run_command(
+        sector_cmd,
+        "refresh TESS sector inventory",
+        timeout_seconds=args.auto_update_command_timeout,
+        retries=args.auto_update_retries,
+        retry_sleep=args.auto_update_retry_sleep,
+    )
+    run_command(
+        matrix_cmd,
+        "rebuild candidate matrix",
+        timeout_seconds=args.matrix_build_timeout,
+        retries=0,
+        retry_sleep=0,
+    )
     return True
 
 
@@ -1769,12 +1865,38 @@ def apply_candidate_ranking(candidates: list[dict[str, Any]], previous_by_tic: d
 
 def main() -> int:
     args = parse_args()
+    build_started = time.monotonic()
     previous_payload = load_existing_dashboard_data()
     previous_by_tic = existing_candidate_index(previous_payload)
-    auto_updated = run_auto_update(args)
+    summary_counts = {"processed": 0, "updated": 0, "failed": 0, "skipped": 0}
+    auto_updated = False
+    try:
+        auto_updated = run_auto_update(args)
+    except Exception as exc:
+        print(f"[auto-update] ERROR {type(exc).__name__}: {exc}", flush=True)
+        summary_counts["failed"] += 1
     db_rows, matrix_rows, sector_rows, local_coord_rows = load_db_rows()
     with MANIFEST_PATH.open(newline="", encoding="utf-8") as handle:
         manifest_rows = list(csv.DictReader(handle))
+    original_manifest_count = len(manifest_rows)
+    if args.tic:
+        manifest_rows = [row for row in manifest_rows if safe_int(row.get("TIC")) == args.tic]
+        summary_counts["skipped"] += original_manifest_count - len(manifest_rows)
+        if not manifest_rows:
+            print(f"[build] ERROR TIC {args.tic} not found in manifest", flush=True)
+            print(f"[summary] processed=0 updated=0 failed={summary_counts['failed'] + 1} skipped={summary_counts['skipped']}", flush=True)
+            return 1
+    elif args.limit:
+        manifest_rows = manifest_rows[: max(0, int(args.limit))]
+        summary_counts["skipped"] += original_manifest_count - len(manifest_rows)
+    print(
+        f"[build] candidates selected={len(manifest_rows)} skipped={summary_counts['skipped']} "
+        f"mode={'tic=' + str(args.tic) if args.tic else ('limit=' + str(args.limit) if args.limit else 'full')}",
+        flush=True,
+    )
+    if not manifest_rows:
+        print(f"[summary] processed=0 updated=0 failed={summary_counts['failed']} skipped={summary_counts['skipped']}", flush=True)
+        return 1
 
     gaia_cache = load_gaia_cache()
     manifest_tics = [safe_int(row.get("TIC")) for row in manifest_rows]
@@ -1791,7 +1913,11 @@ def main() -> int:
                 continue
         source_ids_to_query.append(gaia_source_id)
 
-    fetched_coords = fetch_gaia_coordinates(source_ids_to_query)
+    fetched_coords = fetch_gaia_coordinates(
+        source_ids_to_query,
+        timeout_seconds=args.gaia_api_timeout,
+        offline_cache=args.offline_cache,
+    )
     if fetched_coords:
         gaia_cache.update(fetched_coords)
         save_gaia_cache(gaia_cache)
@@ -1799,20 +1925,40 @@ def main() -> int:
     full_vetting_reports = load_full_vetting_reports()
     tess_state = build_tess_state()
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
-    candidates = [
-        build_candidate(
-            row,
-            db_rows.get(safe_int(row.get("TIC"))),
-            matrix_rows.get(safe_int(row.get("TIC"))),
-            sector_rows.get(safe_int(row.get("TIC"))),
-            local_coord_rows.get(safe_int(row.get("TIC"))),
-            gaia_cache,
-            max_distance,
-            tess_state,
-            full_vetting_reports.get(safe_int(row.get("TIC"))),
+    candidates: list[dict[str, Any]] = []
+    failed_candidates: list[dict[str, Any]] = []
+    progress_every = max(1, int(args.progress_every or 1))
+    total_selected = len(manifest_rows)
+    for index, row in enumerate(manifest_rows, start=1):
+        tic = safe_int(row.get("TIC"))
+        if index == 1 or index == total_selected or index % progress_every == 0 or args.tic:
+            print(f"[build] candidate {index}/{total_selected} TIC {tic}", flush=True)
+        try:
+            candidate = build_candidate(
+                row,
+                db_rows.get(tic),
+                matrix_rows.get(tic),
+                sector_rows.get(tic),
+                local_coord_rows.get(tic),
+                gaia_cache,
+                max_distance,
+                tess_state,
+                full_vetting_reports.get(tic),
+            )
+            candidates.append(candidate)
+            summary_counts["processed"] += 1
+        except Exception as exc:
+            summary_counts["failed"] += 1
+            failed_candidates.append({"tic": tic, "error": f"{type(exc).__name__}: {exc}"})
+            print(f"[build] TIC {tic}: ERROR {type(exc).__name__}: {exc}", flush=True)
+    if failed_candidates:
+        print(f"[build] failed candidates: {json.dumps(failed_candidates[:20], ensure_ascii=False)}", flush=True)
+    if not candidates:
+        print(
+            f"[summary] processed=0 updated=0 failed={summary_counts['failed']} skipped={summary_counts['skipped']}",
+            flush=True,
         )
-        for row in manifest_rows
-    ]
+        return 1
     # Override color based on final decision status
     for candidate in candidates:
         fd = candidate.get("finalDecision", {})
@@ -1837,6 +1983,7 @@ def main() -> int:
                 candidate["color"] = "gray"
 
     apply_candidate_ranking(candidates, previous_by_tic)
+    summary_counts["updated"] = sum(1 for candidate in candidates if candidate.get("updateStatus") == "UPDATED")
 
     lightcurve_candidates = [
         candidate for candidate in candidates
@@ -1899,6 +2046,12 @@ def main() -> int:
     )
     print(f"wrote {OUT_PATH}")
     print(json.dumps(summary, ensure_ascii=False))
+    elapsed = time.monotonic() - build_started
+    print(
+        f"[summary] processed={summary_counts['processed']} updated={summary_counts['updated']} "
+        f"failed={summary_counts['failed']} skipped={summary_counts['skipped']} elapsed={elapsed:.1f}s",
+        flush=True,
+    )
     return 0
 
 

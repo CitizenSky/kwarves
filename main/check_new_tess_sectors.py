@@ -12,6 +12,7 @@ import argparse
 import math
 import os
 import re
+import signal
 import sqlite3
 import time
 from datetime import datetime
@@ -41,6 +42,7 @@ DEFAULT_BATCH_SIZE = int(os.environ.get("KWARVES_MAST_BATCH_SIZE", "20"))
 DEFAULT_BATCH_SLEEP = float(os.environ.get("KWARVES_MAST_BATCH_SLEEP", "15"))
 DEFAULT_RETRIES = int(os.environ.get("KWARVES_MAST_RETRIES", "2"))
 DEFAULT_RETRY_SLEEP = float(os.environ.get("KWARVES_MAST_RETRY_SLEEP", "5"))
+DEFAULT_TIMEOUT = float(os.environ.get("KWARVES_MAST_TIMEOUT", "45"))
 
 
 def connect_db() -> sqlite3.Connection:
@@ -109,17 +111,43 @@ def extract_sectors(search_result) -> set[int]:
     return sectors
 
 
-def fetch_available_sectors(tic: int) -> set[int]:
-    result = search_lightcurve(f"TIC {tic}", mission="TESS")
+class MastTimeoutError(TimeoutError):
+    pass
+
+
+def run_with_timeout(label: str, timeout_seconds: float, func, *args, **kwargs):
+    if timeout_seconds <= 0 or not hasattr(signal, "SIGALRM"):
+        return func(*args, **kwargs)
+
+    def _handler(signum, frame):
+        raise MastTimeoutError(f"{label} timed out after {timeout_seconds:.1f}s")
+
+    old_handler = signal.signal(signal.SIGALRM, _handler)
+    signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+    try:
+        return func(*args, **kwargs)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+def fetch_available_sectors(tic: int, timeout_seconds: float = DEFAULT_TIMEOUT) -> set[int]:
+    result = run_with_timeout(
+        f"MAST TIC {tic}",
+        timeout_seconds,
+        search_lightcurve,
+        f"TIC {tic}",
+        mission="TESS",
+    )
     return extract_sectors(result)
 
 
-def fetch_available_sectors_with_retry(tic: int, retries: int, retry_sleep: float) -> set[int]:
+def fetch_available_sectors_with_retry(tic: int, retries: int, retry_sleep: float, timeout_seconds: float) -> set[int]:
     attempts = max(1, int(retries) + 1)
     last_exc: Exception | None = None
     for attempt in range(1, attempts + 1):
         try:
-            return fetch_available_sectors(tic)
+            return fetch_available_sectors(tic, timeout_seconds=timeout_seconds)
         except Exception as exc:
             last_exc = exc
             if attempt >= attempts:
@@ -226,6 +254,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-sleep", type=float, default=DEFAULT_BATCH_SLEEP, help="Delay after each MAST request block.")
     parser.add_argument("--retries", type=int, default=DEFAULT_RETRIES, help="Retries per TIC after transient MAST/network errors.")
     parser.add_argument("--retry-sleep", type=float, default=DEFAULT_RETRY_SLEEP, help="Base retry delay; retry N sleeps N*delay seconds.")
+    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="Timeout in seconds per MAST TIC lookup.")
     parser.add_argument("--dry-run", action="store_true", help="Do not write DB changes.")
     parser.add_argument("--no-mark", action="store_true", help="Record sectors but do not mark RECHECK_NEW_SECTOR.")
     return parser.parse_args()
@@ -252,7 +281,8 @@ def main() -> None:
                 tic = int(row["TIC"])
                 status = str(row["status"] or "CANDIDATE")
                 try:
-                    sectors = fetch_available_sectors_with_retry(tic, args.retries, args.retry_sleep)
+                    print(f"TIC {tic}: query MAST timeout={args.timeout:.1f}s retries={args.retries}", flush=True)
+                    sectors = fetch_available_sectors_with_retry(tic, args.retries, args.retry_sleep, args.timeout)
                     checked += 1
                     if args.dry_run:
                         old = conn.execute(
