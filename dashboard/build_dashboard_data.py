@@ -904,7 +904,13 @@ def compute_final_decision(
     # Matrix color
     matrix_color = clean_text((matrix or {}).get("status_color")).upper()
     is_orange = matrix_color == "ORANGE"
-    spc_art_stage2 = evaluate_spc_art_stage2(matrix, row, visible_transits or 0, observed_transits) if (has_spcar_art or is_orange) else None
+    spc_art_stage2 = evaluate_spc_art_stage2(
+        matrix,
+        row,
+        visible_transits or 0,
+        observed_transits,
+        has_lightcurve_product=bool(monitor_result.get("productsAvailable")),
+    ) if (has_spcar_art or is_orange) else None
     
     # === DECISION LOGIC ===
     
@@ -1123,11 +1129,29 @@ def classify_folded_lightcurve_status(transit_shape: str, depth_stability: str) 
     return "UNCLEAR"
 
 
+def normalize_stage2_missing_status(
+    raw_value: str,
+    *,
+    has_lightcurve_product: bool,
+    visible_transits: int,
+    min_transits: int = 2,
+) -> str:
+    value = clean_text(raw_value).upper()
+    if value and value not in {"UNKNOWN", "NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS"}:
+        return value
+    if visible_transits < min_transits:
+        return "INSUFFICIENT_TRANSITS"
+    if not has_lightcurve_product:
+        return "MISSING_RAW_DATA"
+    return "NOT_COMPUTED"
+
+
 def evaluate_spc_art_stage2(
     matrix: dict[str, Any] | None,
     row: dict[str, Any],
     visible_transits: int,
     observed_transits: int,
+    has_lightcurve_product: bool = False,
 ) -> dict[str, Any]:
     matrix = matrix or {}
     depth_ppt = safe_float(matrix.get("depth_ppt")) or 0.0
@@ -1139,6 +1163,16 @@ def evaluate_spc_art_stage2(
     data_gap_risk = clean_text(matrix.get("data_gap_risk")).upper()
     expected_transits = max(observed_transits, visible_transits, safe_int(row.get("transit_count")))
     shape_class = classify_folded_lightcurve_status(transit_shape, depth_stability)
+    transit_shape_status = normalize_stage2_missing_status(
+        transit_shape,
+        has_lightcurve_product=has_lightcurve_product,
+        visible_transits=visible_transits,
+    )
+    depth_stability_status = normalize_stage2_missing_status(
+        depth_stability,
+        has_lightcurve_product=has_lightcurve_product,
+        visible_transits=visible_transits,
+    )
 
     if depth_stability in {"STABLE", "LOW", "OK", "GOOD"}:
         depth_stability_score = 1.0
@@ -1172,12 +1206,26 @@ def evaluate_spc_art_stage2(
         missing_checks.append("Signal reproducibility")
     if shape_class == "UNCLEAR":
         missing_checks.append("Folded Light Curve classification")
-    if depth_stability in {"UNKNOWN", ""}:
+    if depth_stability_status in {"NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS", "UNKNOWN"}:
         missing_checks.append("Depth stability measurement")
     if rotation_risk in {"UNKNOWN", "", "POSSIBLE"}:
         missing_checks.append("Activity/Rotation check")
     if any(item["status"] != "OK" for item in transit_status):
         missing_checks.append("Individual transit review")
+
+    blocking_issues: list[str] = []
+    if transit_shape_status == "MISSING_RAW_DATA":
+        blocking_issues.append("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.")
+    elif transit_shape_status == "INSUFFICIENT_TRANSITS":
+        blocking_issues.append("Transit shape not computed because fewer than two visible transits are available.")
+    elif transit_shape_status == "NOT_COMPUTED":
+        blocking_issues.append("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.")
+    if depth_stability_status == "MISSING_RAW_DATA":
+        blocking_issues.append("Depth stability not computed because individual-transit depth measurements are missing from the data export.")
+    elif depth_stability_status == "INSUFFICIENT_TRANSITS":
+        blocking_issues.append("Depth stability not computed because fewer than two visible transits are available.")
+    elif depth_stability_status == "NOT_COMPUTED":
+        blocking_issues.append("Depth stability metric exists neither in candidate_matrix nor in Stage 2 raw measurements.")
 
     activity_flag = rotation_risk in {"HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"}
     if activity_flag:
@@ -1212,15 +1260,28 @@ def evaluate_spc_art_stage2(
 
     return {
         "applies": True,
+        "source": "DATA_BUILD",
+        "fallbackUsed": False,
+        "stage2Completed": True,
+        "computationStatus": "COMPUTED_WITH_LIMITED_EXPORT_DATA" if blocking_issues else "COMPUTED",
+        "blockingIssues": blocking_issues,
         "singleTransitStatus": "STABLE" if stable_individual else ("NOT_REPRODUCIBLE" if not reproducible else "NEEDS_REVIEW"),
+        "individualTransitStatus": "STABLE" if stable_individual else ("NOT_REPRODUCIBLE" if not reproducible else "NEEDS_REVIEW"),
         "transits": transit_status,
+        "individualTransitCount": len(transit_status),
+        "visibleTransits": visible_transits,
+        "totalTransits": expected_transits,
         "medianDepthPpt": round(depth_ppt, 5) if depth_ppt else None,
         "depthScatterPpt": depth_scatter_ppt,
         "depthStabilityScore": round(depth_stability_score, 3),
-        "depthStability": depth_stability or "UNKNOWN",
+        "depthStability": depth_stability_status,
+        "rawDepthStability": depth_stability or "UNKNOWN",
+        "transitShape": transit_shape_status,
+        "rawTransitShape": transit_shape or "UNKNOWN",
         "foldedLightCurveStatus": shape_class,
         "transitShapeClass": shape_class,
         "activityStatus": activity_status,
+        "activityRotationStatus": activity_status,
         "activityFlag": activity_flag,
         "missingChecks": list(dict.fromkeys(missing_checks)),
         "recommendation": recommendation,
@@ -1438,6 +1499,12 @@ def build_candidate(
         display_markierungs_klasse = clean_text(merged.get("markierungs_klasse"))
         display_notes = clean_text(merged.get("notes"))
         display_folder = candidate_folder
+    spc_art_stage2_export = final_decision.get("spcArtStage2") or {}
+    raw_transit_shape = clean_text(matrix.get("transit_shape"))
+    raw_depth_stability = clean_text(matrix.get("depth_stability"))
+    exported_transit_shape = spc_art_stage2_export.get("transitShape") or raw_transit_shape
+    exported_depth_stability = spc_art_stage2_export.get("depthStability") or raw_depth_stability
+    stage2_blocking_issues = spc_art_stage2_export.get("blockingIssues") or spc_art_stage2_export.get("missingChecks") or []
     return {
         "tic": tic,
         "status": "WAIT_FOR_TESS" if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS" else clean_text(merged.get("status")),
@@ -1484,8 +1551,14 @@ def build_candidate(
         "durationHours": safe_float(matrix.get("duration_hours")),
         "sapPdcsapMatch": sap_pdcsap_match,
         "oddEvenResult": odd_even_result,
-        "transitShape": clean_text(matrix.get("transit_shape")),
-        "depthStability": clean_text(matrix.get("depth_stability")),
+        "transitShape": exported_transit_shape,
+        "depthStability": exported_depth_stability,
+        "rawTransitShape": raw_transit_shape,
+        "rawDepthStability": raw_depth_stability,
+        "transit_shape": exported_transit_shape,
+        "depth_stability": exported_depth_stability,
+        "raw_transit_shape": raw_transit_shape,
+        "raw_depth_stability": raw_depth_stability,
         "dataGapRisk": clean_text(matrix.get("data_gap_risk")),
         "sectorEdgeRisk": clean_text(matrix.get("sector_edge_risk")),
         "secondaryEclipse": clean_text(matrix.get("secondary_eclipse")),
@@ -1520,11 +1593,26 @@ def build_candidate(
         "signalStatus": final_decision.get("signalStatus", ""),
         "vettingStage2Class": final_decision.get("vettingStage2Class", ""),
         "suggestedAction": final_decision.get("suggestedAction", ""),
-        "spcArtStage2": final_decision.get("spcArtStage2"),
-        "singleTransitStatus": (final_decision.get("spcArtStage2") or {}).get("singleTransitStatus", ""),
-        "depthStabilityScore": (final_decision.get("spcArtStage2") or {}).get("depthStabilityScore"),
-        "foldedLightCurveStatus": (final_decision.get("spcArtStage2") or {}).get("foldedLightCurveStatus", ""),
-        "activityStatus": (final_decision.get("spcArtStage2") or {}).get("activityStatus", ""),
+        "spcArtStage2": spc_art_stage2_export or None,
+        "singleTransitStatus": spc_art_stage2_export.get("singleTransitStatus", ""),
+        "individualTransitStatus": spc_art_stage2_export.get("individualTransitStatus", ""),
+        "individual_transit_status": spc_art_stage2_export.get("individualTransitStatus", ""),
+        "depthStabilityScore": spc_art_stage2_export.get("depthStabilityScore"),
+        "depth_stability_score": spc_art_stage2_export.get("depthStabilityScore"),
+        "foldedLightCurveStatus": spc_art_stage2_export.get("foldedLightCurveStatus", ""),
+        "activityStatus": spc_art_stage2_export.get("activityStatus", ""),
+        "activityRotationStatus": spc_art_stage2_export.get("activityRotationStatus", ""),
+        "activity_rotation_status": spc_art_stage2_export.get("activityRotationStatus", ""),
+        "stage2Completed": bool(spc_art_stage2_export.get("stage2Completed")),
+        "stage2_completed": bool(spc_art_stage2_export.get("stage2Completed")),
+        "stage2FallbackUsed": bool(spc_art_stage2_export.get("fallbackUsed")),
+        "stage2_fallback_used": bool(spc_art_stage2_export.get("fallbackUsed")),
+        "stage2ComputationStatus": spc_art_stage2_export.get("computationStatus", "NOT_COMPUTED"),
+        "stage2_computation_status": spc_art_stage2_export.get("computationStatus", "NOT_COMPUTED"),
+        "stage2BlockingIssues": stage2_blocking_issues,
+        "stage2_blocking_issues": stage2_blocking_issues,
+        "visible_transits": spc_art_stage2_export.get("visibleTransits", matrix_visible_transits),
+        "total_transits": spc_art_stage2_export.get("totalTransits", safe_int_or_none(matrix.get("n_transits"))),
         "fullVetting": {
             "classification": clean_text(full_vetting.get("classification")),
             "evidence_score": safe_float(full_vetting.get("evidence_score")),

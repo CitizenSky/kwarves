@@ -28,11 +28,12 @@ export function checkSignalDetection(candidate) {
 
 export function checkFoldedLightCurve(candidate) {
   const shape = (candidate.transitShape || "").toUpperCase();
+  const missingShapeStatuses = ["UNKNOWN", "NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS", ""];
   if (shape === "V_SHAPE") {
     return { status: "failed", reason: "V-shape transit suggests EB而非 planet" };
   }
-  if (shape === "UNKNOWN" || shape === "" || !shape) {
-    return { status: "warning", reason: "Transit shape unknown; needs manual review" };
+  if (missingShapeStatuses.includes(shape) || !shape) {
+    return { status: "warning", reason: "Transit shape " + (shape || "UNKNOWN") + "; needs Stage 2 review" };
   }
   if (shape === "ASYMMETRIC") {
     return { status: "warning", reason: "Asymmetric transit shape; possible blend or grazing" };
@@ -125,12 +126,38 @@ export function classifyFoldedLightCurve(candidate) {
   return "UNCLEAR";
 }
 
+function normalizeStage2MissingStatus(value, candidate, minTransits = 2) {
+  const status = String(value || "").toUpperCase();
+  if (status && !["UNKNOWN", "NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS"].includes(status)) {
+    return status;
+  }
+  const visibleTransits = Number(candidate.matrixVisibleTransits ?? candidate.visibleTransits ?? 0) || 0;
+  const hasLightcurveProduct = Boolean(candidate.lightcurveImg || candidate.lightcurveImgDeploy || candidate.astroMonitor?.productsAvailable);
+  if (visibleTransits < minTransits) return "INSUFFICIENT_TRANSITS";
+  if (!hasLightcurveProduct) return "MISSING_RAW_DATA";
+  return "NOT_COMPUTED";
+}
+
+function getStoredSpcArtStage2(candidate) {
+  const stage2 = candidate?.spcArtStage2 || candidate?.finalDecision?.spcArtStage2;
+  if (!stage2 || !stage2.applies) return null;
+  return {
+    ...stage2,
+    source: stage2.source || "DATA_BUILD",
+    fallbackUsed: Boolean(stage2.fallbackUsed),
+    stage2Completed: stage2.stage2Completed !== false,
+    blockingIssues: stage2.blockingIssues || stage2.missingChecks || []
+  };
+}
+
 export function evaluateSpcArtStage2(candidate) {
   const visibleTransits = Number(candidate.matrixVisibleTransits ?? candidate.visibleTransits ?? candidate.matrixTransits ?? candidate.transits ?? 0) || 0;
   const expectedTransits = Number(candidate.matrixTransits ?? candidate.transits ?? visibleTransits) || visibleTransits;
   const depthPpt = Number(candidate.depthPpt ?? 0) || 0;
   const durationHours = Number(candidate.durationHours ?? 0) || 0;
   const depthStability = (candidate.depthStability || "").toUpperCase();
+  const depthStabilityStatus = normalizeStage2MissingStatus(depthStability, candidate);
+  const transitShapeStatus = normalizeStage2MissingStatus(candidate.transitShape, candidate);
   const shapeClass = classifyFoldedLightCurve(candidate);
   const activityRisk = (candidate.rotationRisk || "").toUpperCase();
   const sectorEdgeRisk = (candidate.sectorEdgeRisk || "").toUpperCase();
@@ -161,9 +188,17 @@ export function evaluateSpcArtStage2(candidate) {
   const missingChecks = [];
   if (visibleTransits < 2) missingChecks.push("Signal reproducibility");
   if (shapeClass === "UNCLEAR") missingChecks.push("Folded Light Curve classification");
-  if (depthStability === "UNKNOWN" || depthStability === "") missingChecks.push("Depth stability measurement");
+  if (["UNKNOWN", "NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS", ""].includes(depthStabilityStatus)) missingChecks.push("Depth stability measurement");
   if (activityRisk === "UNKNOWN" || activityRisk === "" || activityRisk === "POSSIBLE") missingChecks.push("Activity/Rotation check");
   if (transitStatus.some((item) => item.status !== "OK")) missingChecks.push("Individual transit review");
+
+  const blockingIssues = [];
+  if (transitShapeStatus === "MISSING_RAW_DATA") blockingIssues.push("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.");
+  else if (transitShapeStatus === "INSUFFICIENT_TRANSITS") blockingIssues.push("Transit shape not computed because fewer than two visible transits are available.");
+  else if (transitShapeStatus === "NOT_COMPUTED") blockingIssues.push("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
+  if (depthStabilityStatus === "MISSING_RAW_DATA") blockingIssues.push("Depth stability not computed because individual-transit depth measurements are missing from the data export.");
+  else if (depthStabilityStatus === "INSUFFICIENT_TRANSITS") blockingIssues.push("Depth stability not computed because fewer than two visible transits are available.");
+  else if (depthStabilityStatus === "NOT_COMPUTED") blockingIssues.push("Depth stability metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
 
   const activityFlag = ["HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"].includes(activityRisk);
   const activityStatus = activityFlag ? "FLAGGED" : (["LOW", "NONE", "OK", "NO"].includes(activityRisk) ? "LOW_RISK" : "UNCLEAR");
@@ -188,15 +223,28 @@ export function evaluateSpcArtStage2(candidate) {
 
   return {
     applies: true,
+    source: "RUNTIME_FALLBACK",
+    fallbackUsed: true,
+    stage2Completed: true,
+    computationStatus: blockingIssues.length ? "COMPUTED_WITH_LIMITED_EXPORT_DATA" : "COMPUTED",
+    blockingIssues,
     singleTransitStatus: reproducible ? (stableIndividualTransits ? "STABLE" : "NEEDS_REVIEW") : "NOT_REPRODUCIBLE",
+    individualTransitStatus: reproducible ? (stableIndividualTransits ? "STABLE" : "NEEDS_REVIEW") : "NOT_REPRODUCIBLE",
     transits: transitStatus,
+    individualTransitCount: transitStatus.length,
+    visibleTransits,
+    totalTransits: expectedTransits,
     medianDepthPpt: depthPpt || null,
     depthScatterPpt,
     depthStabilityScore,
-    depthStability: depthStability || "UNKNOWN",
+    depthStability: depthStabilityStatus,
+    rawDepthStability: candidate.rawDepthStability || depthStability || "UNKNOWN",
+    transitShape: transitShapeStatus,
+    rawTransitShape: candidate.rawTransitShape || candidate.transitShape || "UNKNOWN",
     foldedLightCurveStatus: shapeClass,
     transitShapeClass: shapeClass,
     activityStatus,
+    activityRotationStatus: activityStatus,
     activityFlag,
     missingChecks: [...new Set(missingChecks)],
     recommendation,
@@ -290,9 +338,12 @@ export function computeFinalDecision(candidate) {
     };
   }
 
-  const needsSpcArtStage2 = isSpcArtCandidate(candidate) && !candidate.finalDecision?.spcArtStage2;
+  const storedSpcArtStage2 = getStoredSpcArtStage2(candidate);
+  const needsSpcArtStage2 = isSpcArtCandidate(candidate) && !storedSpcArtStage2;
   if (candidate.finalDecision && candidate.finalDecision.vettingStage2Class && !needsSpcArtStage2) {
-    return candidate.finalDecision;
+    return storedSpcArtStage2
+      ? { ...candidate.finalDecision, spcArtStage2: storedSpcArtStage2 }
+      : candidate.finalDecision;
   }
 
   const tessCheck = checkTessData(candidate);
@@ -328,7 +379,7 @@ export function computeFinalDecision(candidate) {
   const cats = categorizeChecks(checks);
   const signalQuality = computeSignalQuality(candidate);
   const dataQuality = computeDataQuality(candidate);
-  const spcArtStage2 = isSpcArtCandidate(candidate) ? evaluateSpcArtStage2(candidate) : null;
+  const spcArtStage2 = isSpcArtCandidate(candidate) ? (storedSpcArtStage2 || evaluateSpcArtStage2(candidate)) : null;
 
   const checkTree = Object.entries(checks).map(([name, result]) => ({
     name,
