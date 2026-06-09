@@ -28,6 +28,7 @@ LIGHTCURVE_WEB_DIR = DASHBOARD_DIR / "lightcurves"
 DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
 VETTING_REPORTS_DIR = PROJECT_ROOT / "vetting_reports"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
+LEVEL5_SINGLE_TRANSIT_ROOT = PROJECT_ROOT / "level5_detailvalidierung" / "level5_02_einzeltransit_plots"
 OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
 GAIA_FETCH_BATCH_SIZE = int(os.environ.get("GAIA_FETCH_BATCH_SIZE", "350"))
@@ -157,6 +158,12 @@ def safe_int_or_none(value: Any) -> int | None:
         return int(float(value))
     except Exception:
         return None
+
+
+def safe_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
 
 
 def parse_gaia_source_id(value: Any) -> int | None:
@@ -573,6 +580,188 @@ def sync_curve_asset(source_path: Path, tic: int) -> Path | None:
         return None
 
 
+def robust_median(values: list[float]) -> float | None:
+    values = sorted(value for value in values if math.isfinite(value))
+    if not values:
+        return None
+    mid = len(values) // 2
+    if len(values) % 2:
+        return values[mid]
+    return (values[mid - 1] + values[mid]) / 2.0
+
+
+def robust_scatter(values: list[float]) -> float | None:
+    median = robust_median(values)
+    if median is None:
+        return None
+    deviations = [abs(value - median) for value in values if math.isfinite(value)]
+    mad = robust_median(deviations)
+    if mad is not None and mad > 0:
+        return 1.4826 * mad
+    if len(values) >= 2:
+        mean = sum(values) / len(values)
+        return math.sqrt(sum((value - mean) ** 2 for value in values) / len(values))
+    return 0.0
+
+
+def classify_depth_stability_from_single_transits(stats: dict[str, Any]) -> str:
+    visible_count = safe_int(stats.get("visible_transit_count"))
+    min_ratio = safe_float(stats.get("min_depth_ratio"))
+    depth_cv = safe_float(stats.get("depth_cv"))
+    if visible_count < 2:
+        return "INSUFFICIENT_TRANSITS"
+    if min_ratio is not None and min_ratio < 0.35:
+        return "UNSTABLE"
+    if depth_cv is not None and depth_cv > 0.75:
+        return "UNSTABLE"
+    if min_ratio is not None and min_ratio < 0.6:
+        return "BORDERLINE"
+    if depth_cv is not None and depth_cv > 0.5:
+        return "BORDERLINE"
+    return "STABLE"
+
+
+def single_transit_score_from_stats(stats: dict[str, Any]) -> float:
+    stability = clean_text(stats.get("depth_stability")).upper()
+    if stability == "STABLE":
+        return 1.0
+    if stability == "BORDERLINE":
+        return 0.55
+    if stability == "UNSTABLE":
+        return 0.0
+    return 0.5
+
+
+def load_level5_single_transit_data(root: Path = LEVEL5_SINGLE_TRANSIT_ROOT) -> dict[int, dict[str, Any]]:
+    """Load existing Level-5 single-transit CSV/PNG artifacts by TIC.
+
+    This intentionally does not analyze light curves; it only persists already
+    materialized Level-5 outputs.
+    """
+    data: dict[int, dict[str, Any]] = {}
+    if not root.exists():
+        return data
+    for csv_path in sorted(root.glob("**/TIC_*_visible_single_transits_level5.csv")):
+        match = re.search(r"TIC_(\d+)_visible_single_transits_level5\.csv$", csv_path.name)
+        if not match:
+            continue
+        tic = safe_int(match.group(1))
+        if not tic:
+            continue
+        events: list[dict[str, Any]] = []
+        try:
+            with csv_path.open(newline="", encoding="utf-8") as handle:
+                for row in csv.DictReader(handle):
+                    events.append({
+                        "epoch": safe_int_or_none(row.get("epoch")),
+                        "expected_time": safe_float(row.get("expected_time")),
+                        "expectedTime": safe_float(row.get("expected_time")),
+                        "depth_ppt": safe_float(row.get("depth_ppt")),
+                        "depthPpt": safe_float(row.get("depth_ppt")),
+                        "local_snr": safe_float(row.get("local_snr")),
+                        "localSnr": safe_float(row.get("local_snr")),
+                        "n_in": safe_int_or_none(row.get("n_in")),
+                        "nIn": safe_int_or_none(row.get("n_in")),
+                        "n_out": safe_int_or_none(row.get("n_out")),
+                        "nOut": safe_int_or_none(row.get("n_out")),
+                        "visible": safe_bool(row.get("visible")),
+                    })
+        except Exception:
+            continue
+        visible_events = [event for event in events if event.get("visible")]
+        visible_depths = [event["depthPpt"] for event in visible_events if event.get("depthPpt") is not None]
+        visible_snrs = [event["localSnr"] for event in visible_events if event.get("localSnr") is not None]
+        median_depth = robust_median(visible_depths)
+        depth_scatter = robust_scatter(visible_depths)
+        depth_cv = (
+            depth_scatter / median_depth
+            if depth_scatter is not None and median_depth is not None and median_depth > 0
+            else None
+        )
+        min_depth_ratio = (
+            min(visible_depths) / median_depth
+            if visible_depths and median_depth is not None and median_depth > 0
+            else None
+        )
+        plot_path = csv_path.with_name(f"TIC_{tic}_single_transits.png")
+        stats = {
+            "source": "LEVEL5_SINGLE_TRANSITS",
+            "csvPath": rel_from_dashboard(csv_path),
+            "csv_path": rel_from_dashboard(csv_path),
+            "csvAvailable": True,
+            "csv_available": True,
+            "individual_transit_count": len(events),
+            "individualTransitCount": len(events),
+            "visible_transit_count": len(visible_events),
+            "visibleTransitCount": len(visible_events),
+            "robust_transit_count": sum(1 for event in events if (event.get("localSnr") or 0) >= 5 and event.get("visible")),
+            "robustTransitCount": sum(1 for event in events if (event.get("localSnr") or 0) >= 5 and event.get("visible")),
+            "median_depth_ppt": round(median_depth, 5) if median_depth is not None else None,
+            "medianDepthPpt": round(median_depth, 5) if median_depth is not None else None,
+            "depth_scatter_ppt": round(depth_scatter, 5) if depth_scatter is not None else None,
+            "depthScatterPpt": round(depth_scatter, 5) if depth_scatter is not None else None,
+            "depth_cv": round(depth_cv, 5) if depth_cv is not None else None,
+            "depthCv": round(depth_cv, 5) if depth_cv is not None else None,
+            "median_single_transit_snr": round(robust_median(visible_snrs), 5) if visible_snrs else None,
+            "medianSingleTransitSnr": round(robust_median(visible_snrs), 5) if visible_snrs else None,
+            "min_depth_ratio": round(min_depth_ratio, 5) if min_depth_ratio is not None else None,
+            "minDepthRatio": round(min_depth_ratio, 5) if min_depth_ratio is not None else None,
+            "transit_visibility_ratio": round(len(visible_events) / len(events), 5) if events else None,
+            "transitVisibilityRatio": round(len(visible_events) / len(events), 5) if events else None,
+            "depth_stability": "",
+            "depthStability": "",
+            "plotAvailable": plot_path.exists(),
+            "plot_available": plot_path.exists(),
+            "plotStatus": "PLOT_AVAILABLE" if plot_path.exists() else "PLOT_NOT_AVAILABLE",
+            "individualTransitPlotPath": rel_from_dashboard(plot_path) if plot_path.exists() else "",
+            "individual_transit_plot_path": rel_from_dashboard(plot_path) if plot_path.exists() else "",
+        }
+        stability = classify_depth_stability_from_single_transits(stats)
+        stats["depth_stability"] = stability
+        stats["depthStability"] = stability
+        data[tic] = {
+            "statistics": stats,
+            "events": events,
+            "plotPath": stats["individualTransitPlotPath"],
+            "plotStatus": stats["plotStatus"],
+        }
+    return data
+
+
+def missing_level5_single_transit_data() -> dict[str, Any]:
+    stats = {
+        "source": "MISSING_LEVEL5_SINGLE_TRANSIT_CSV",
+        "csvAvailable": False,
+        "csv_available": False,
+        "individual_transit_count": 0,
+        "individualTransitCount": 0,
+        "visible_transit_count": 0,
+        "visibleTransitCount": 0,
+        "robust_transit_count": 0,
+        "robustTransitCount": 0,
+        "median_depth_ppt": None,
+        "medianDepthPpt": None,
+        "depth_scatter_ppt": None,
+        "depthScatterPpt": None,
+        "depth_cv": None,
+        "depthCv": None,
+        "median_single_transit_snr": None,
+        "medianSingleTransitSnr": None,
+        "min_depth_ratio": None,
+        "minDepthRatio": None,
+        "transit_visibility_ratio": None,
+        "transitVisibilityRatio": None,
+        "depth_stability": "MISSING_LEVEL5_SINGLE_TRANSIT_CSV",
+        "depthStability": "MISSING_LEVEL5_SINGLE_TRANSIT_CSV",
+        "plotAvailable": False,
+        "plot_available": False,
+        "plotStatus": "PLOT_NOT_AVAILABLE",
+        "individualTransitPlotPath": "",
+        "individual_transit_plot_path": "",
+    }
+    return {"statistics": stats, "events": [], "plotPath": "", "plotStatus": "PLOT_NOT_AVAILABLE"}
+
+
 def load_db_rows() -> tuple[
     dict[int, dict[str, Any]],
     dict[int, dict[str, Any]],
@@ -854,6 +1043,7 @@ def compute_final_decision(
     observed_sectors: list[int],
     period: float,
     monitor_result: dict[str, Any] | None = None,
+    single_transit_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     _cfg = _load_pipeline_config()
     """
@@ -1006,6 +1196,7 @@ def compute_final_decision(
         visible_transits or 0,
         observed_transits,
         has_lightcurve_product=bool(monitor_result.get("productsAvailable")),
+        single_transit_data=single_transit_data,
     ) if (has_spcar_art or is_orange) else None
     
     # === DECISION LOGIC ===
@@ -1248,8 +1439,12 @@ def evaluate_spc_art_stage2(
     visible_transits: int,
     observed_transits: int,
     has_lightcurve_product: bool = False,
+    single_transit_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     matrix = matrix or {}
+    single_transit_data = single_transit_data or missing_level5_single_transit_data()
+    single_stats = dict(single_transit_data.get("statistics") or {})
+    single_events = list(single_transit_data.get("events") or [])
     depth_ppt = safe_float(matrix.get("depth_ppt")) or 0.0
     duration_hours = safe_float(matrix.get("duration_hours")) or 0.0
     depth_stability = clean_text(matrix.get("depth_stability")).upper()
@@ -1264,6 +1459,121 @@ def evaluate_spc_art_stage2(
         has_lightcurve_product=has_lightcurve_product,
         visible_transits=visible_transits,
     )
+
+    has_level5_events = bool(single_events)
+    single_source = clean_text(single_stats.get("source")) or "MISSING_LEVEL5_SINGLE_TRANSIT_CSV"
+    plot_status = clean_text(single_stats.get("plotStatus")) or "PLOT_NOT_AVAILABLE"
+
+    if has_level5_events:
+        visible_events = [event for event in single_events if bool(event.get("visible"))]
+        visible_transits = safe_int(single_stats.get("visibleTransitCount") or single_stats.get("visible_transit_count")) or len(visible_events)
+        expected_transits = safe_int(single_stats.get("individualTransitCount") or single_stats.get("individual_transit_count")) or len(single_events)
+        depth_stability = clean_text(single_stats.get("depthStability") or single_stats.get("depth_stability")).upper()
+        depth_stability_status = depth_stability or "UNKNOWN"
+        depth_stability_score = single_transit_score_from_stats(single_stats)
+        median_depth_ppt = safe_float(single_stats.get("medianDepthPpt") or single_stats.get("median_depth_ppt"))
+        depth_scatter_ppt = safe_float(single_stats.get("depthScatterPpt") or single_stats.get("depth_scatter_ppt"))
+        median_single_snr = safe_float(single_stats.get("medianSingleTransitSnr") or single_stats.get("median_single_transit_snr"))
+        transit_status: list[dict[str, Any]] = []
+        for idx, event in enumerate(single_events):
+            event_visible = bool(event.get("visible"))
+            event_snr = safe_float(event.get("localSnr") or event.get("local_snr"))
+            flags: list[str] = []
+            if not event_visible:
+                flags.append("missing_or_not_visible")
+            if event_snr is not None and event_snr < 5:
+                flags.append("low_single_transit_snr")
+            if sector_edge_risk == "HIGH" or data_gap_risk == "HIGH":
+                flags.append("edge_or_gap_risk")
+            if depth_stability_score < 0.4:
+                flags.append("depth_outlier_possible")
+            transit_status.append({
+                "index": idx + 1,
+                "epoch": event.get("epoch"),
+                "expectedTime": event.get("expectedTime") if event.get("expectedTime") is not None else event.get("expected_time"),
+                "status": "OK" if event_visible and not flags else ("MISSING" if not event_visible else "NEEDS_REVIEW"),
+                "depthPpt": event.get("depthPpt") if event.get("depthPpt") is not None else event.get("depth_ppt"),
+                "localSnr": event_snr,
+                "nIn": event.get("nIn") if event.get("nIn") is not None else event.get("n_in"),
+                "nOut": event.get("nOut") if event.get("nOut") is not None else event.get("n_out"),
+                "visible": event_visible,
+                "flags": flags,
+            })
+
+        missing_checks: list[str] = []
+        if visible_transits < 2:
+            missing_checks.append("Signal reproducibility")
+        if shape_class == "UNCLEAR":
+            missing_checks.append("Folded Light Curve classification")
+        if depth_stability_status in {"NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS", "UNKNOWN", ""}:
+            missing_checks.append("Depth stability measurement")
+        if rotation_risk in {"UNKNOWN", "", "POSSIBLE"}:
+            missing_checks.append("Activity/Rotation check")
+        if any(item["status"] != "OK" for item in transit_status):
+            missing_checks.append("Individual transit review")
+
+        blocking_issues: list[str] = []
+        if transit_shape_status == "MISSING_RAW_DATA":
+            blocking_issues.append("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.")
+        elif transit_shape_status == "INSUFFICIENT_TRANSITS":
+            blocking_issues.append("Transit shape not computed because fewer than two visible transits are available.")
+        elif transit_shape_status == "NOT_COMPUTED":
+            blocking_issues.append("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.")
+        if plot_status == "PLOT_NOT_AVAILABLE":
+            missing_checks.append("PLOT_NOT_AVAILABLE")
+
+        activity_flag = rotation_risk in {"HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"}
+        activity_status = "FLAGGED" if activity_flag else ("LOW_RISK" if rotation_risk in {"LOW", "NONE", "OK", "NO"} else "UNCLEAR")
+        stable_individual = visible_transits >= 2 and depth_stability_score >= 0.65 and all(item["status"] != "MISSING" for item in transit_status)
+        artifact_concern = shape_class == "ARTIFACT_LIKE" or depth_stability_score < 0.4 or activity_flag or sector_edge_risk == "HIGH" or data_gap_risk == "HIGH"
+        reproducible = visible_transits >= 2
+
+        recommendation = "KEEP_SPC_ART"
+        next_action = "Review individual transits, folded light curve, depth stability, and activity/rotation."
+        if not reproducible:
+            recommendation = "FALSE_POSITIVE"
+            next_action = "Mark as false positive unless new data reproduces the signal."
+        elif stable_individual and shape_class == "CLEAR" and activity_status == "LOW_RISK":
+            recommendation = "PROMOTE_RECHECK"
+            next_action = "Move to recheck/SPC preparation after documenting Stage 2 evidence."
+        elif artifact_concern:
+            recommendation = "KEEP_SPC_ART"
+            next_action = "Keep SPC_ART and resolve artifact/systematics concerns before follow-up."
+
+        return {
+            "applies": True,
+            "source": "LEVEL5_SINGLE_TRANSITS",
+            "fallbackUsed": False,
+            "stage2Completed": True,
+            "computationStatus": "COMPUTED" if not blocking_issues else "COMPUTED_WITH_LIMITED_EXPORT_DATA",
+            "blockingIssues": blocking_issues,
+            "singleTransitStatus": "STABLE" if stable_individual else ("NOT_REPRODUCIBLE" if not reproducible else "NEEDS_REVIEW"),
+            "individualTransitStatus": "STABLE" if stable_individual else ("NOT_REPRODUCIBLE" if not reproducible else "NEEDS_REVIEW"),
+            "transits": transit_status,
+            "individualTransitCount": len(transit_status),
+            "visibleTransits": visible_transits,
+            "totalTransits": expected_transits,
+            "medianDepthPpt": median_depth_ppt,
+            "depthScatterPpt": depth_scatter_ppt,
+            "medianSingleTransitSnr": median_single_snr,
+            "depthStabilityScore": round(depth_stability_score, 3),
+            "depthStability": depth_stability_status,
+            "rawDepthStability": depth_stability or "UNKNOWN",
+            "transitShape": transit_shape_status,
+            "rawTransitShape": transit_shape or "UNKNOWN",
+            "foldedLightCurveStatus": shape_class,
+            "transitShapeClass": shape_class,
+            "activityStatus": activity_status,
+            "activityRotationStatus": activity_status,
+            "activityFlag": activity_flag,
+            "missingChecks": list(dict.fromkeys(missing_checks)),
+            "recommendation": recommendation,
+            "nextAction": next_action,
+            "plotStatus": plot_status,
+            "individualTransitPlotPath": clean_text(single_stats.get("individualTransitPlotPath") or single_stats.get("individual_transit_plot_path")),
+            "individualTransitStatistics": single_stats,
+            "individualTransitEvents": single_events,
+        }
     depth_stability_status = normalize_stage2_missing_status(
         depth_stability,
         has_lightcurve_product=has_lightcurve_product,
@@ -1298,6 +1608,8 @@ def evaluate_spc_art_stage2(
         })
 
     missing_checks: list[str] = []
+    if single_source == "MISSING_LEVEL5_SINGLE_TRANSIT_CSV":
+        missing_checks.append("MISSING_LEVEL5_SINGLE_TRANSIT_CSV")
     if visible_transits < 2:
         missing_checks.append("Signal reproducibility")
     if shape_class == "UNCLEAR":
@@ -1310,6 +1622,8 @@ def evaluate_spc_art_stage2(
         missing_checks.append("Individual transit review")
 
     blocking_issues: list[str] = []
+    if single_source == "MISSING_LEVEL5_SINGLE_TRANSIT_CSV":
+        blocking_issues.append("MISSING_LEVEL5_SINGLE_TRANSIT_CSV")
     if transit_shape_status == "MISSING_RAW_DATA":
         blocking_issues.append("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.")
     elif transit_shape_status == "INSUFFICIENT_TRANSITS":
@@ -1382,7 +1696,10 @@ def evaluate_spc_art_stage2(
         "missingChecks": list(dict.fromkeys(missing_checks)),
         "recommendation": recommendation,
         "nextAction": next_action,
-        "plotStatus": "INDIVIDUAL_TRANSIT_PLOTS_NOT_AVAILABLE_IN_DASHBOARD_DATA",
+        "plotStatus": plot_status,
+        "individualTransitPlotPath": clean_text(single_stats.get("individualTransitPlotPath") or single_stats.get("individual_transit_plot_path")),
+        "individualTransitStatistics": single_stats,
+        "individualTransitEvents": single_events,
     }
 
 
@@ -1444,11 +1761,19 @@ def build_candidate(
     max_distance: float,
     tess_state: dict[str, Any],
     full_vetting: dict[str, Any] | None = None,
+    single_transit_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
     matrix = matrix_row or {}
     sector = sector_row or {}
     tic = safe_int(merged.get("TIC"))
+    single_transit_data = single_transit_data or missing_level5_single_transit_data()
+    single_transit_statistics = dict(single_transit_data.get("statistics") or {})
+    single_transit_events = list(single_transit_data.get("events") or [])
+    single_transit_plot_path = clean_text(
+        single_transit_statistics.get("individualTransitPlotPath")
+        or single_transit_statistics.get("individual_transit_plot_path")
+    )
     color = color_for(merged, matrix)
     is_violet = clean_text(merged.get("hz_markierung")).upper() == "VIOLETT"
     distance = safe_float(merged.get("distance_ly")) or 0.0
@@ -1564,6 +1889,7 @@ def build_candidate(
         observed_sectors=observed_sectors,
         period=period,
         monitor_result=monitor_result,
+        single_transit_data=single_transit_data,
     )
     if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS":
         color = "gray"
@@ -1690,6 +2016,14 @@ def build_candidate(
         "vettingStage2Class": final_decision.get("vettingStage2Class", ""),
         "suggestedAction": final_decision.get("suggestedAction", ""),
         "spcArtStage2": spc_art_stage2_export or None,
+        "individualTransitStatistics": single_transit_statistics,
+        "individual_transit_statistics": single_transit_statistics,
+        "individualTransitEvents": single_transit_events,
+        "individual_transit_events": single_transit_events,
+        "individualTransitPlotPath": single_transit_plot_path,
+        "individual_transit_plot_path": single_transit_plot_path,
+        "individualTransitPlotStatus": single_transit_statistics.get("plotStatus", "PLOT_NOT_AVAILABLE"),
+        "individual_transit_plot_status": single_transit_statistics.get("plotStatus", "PLOT_NOT_AVAILABLE"),
         "singleTransitStatus": spc_art_stage2_export.get("singleTransitStatus", ""),
         "individualTransitStatus": spc_art_stage2_export.get("individualTransitStatus", ""),
         "individual_transit_status": spc_art_stage2_export.get("individualTransitStatus", ""),
@@ -1923,6 +2257,7 @@ def main() -> int:
         save_gaia_cache(gaia_cache)
 
     full_vetting_reports = load_full_vetting_reports()
+    level5_single_transits = load_level5_single_transit_data()
     tess_state = build_tess_state()
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates: list[dict[str, Any]] = []
@@ -1944,6 +2279,7 @@ def main() -> int:
                 max_distance,
                 tess_state,
                 full_vetting_reports.get(tic),
+                level5_single_transits.get(tic),
             )
             candidates.append(candidate)
             summary_counts["processed"] += 1

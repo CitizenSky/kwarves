@@ -138,6 +138,26 @@ function normalizeStage2MissingStatus(value, candidate, minTransits = 2) {
   return "NOT_COMPUTED";
 }
 
+function classifySingleTransitStability(stats) {
+  const visibleCount = Number(stats.visibleTransitCount ?? stats.visible_transit_count ?? 0) || 0;
+  const minDepthRatio = Number(stats.minDepthRatio ?? stats.min_depth_ratio ?? NaN);
+  const depthCv = Number(stats.depthCv ?? stats.depth_cv ?? NaN);
+  if (visibleCount < 2) return "INSUFFICIENT_TRANSITS";
+  if (Number.isFinite(minDepthRatio) && minDepthRatio < 0.35) return "UNSTABLE";
+  if (Number.isFinite(depthCv) && depthCv > 0.75) return "UNSTABLE";
+  if (Number.isFinite(minDepthRatio) && minDepthRatio < 0.6) return "BORDERLINE";
+  if (Number.isFinite(depthCv) && depthCv > 0.5) return "BORDERLINE";
+  return "STABLE";
+}
+
+function singleTransitScore(stats) {
+  const stability = String(stats.depthStability || stats.depth_stability || classifySingleTransitStability(stats)).toUpperCase();
+  if (stability === "STABLE") return 1;
+  if (stability === "BORDERLINE") return 0.55;
+  if (stability === "UNSTABLE") return 0;
+  return 0.5;
+}
+
 function getStoredSpcArtStage2(candidate) {
   const stage2 = candidate?.spcArtStage2 || candidate?.finalDecision?.spcArtStage2;
   if (!stage2 || !stage2.applies) return null;
@@ -210,6 +230,8 @@ function withStoredSpcArtStage2Decision(decision, stage2) {
 }
 
 export function evaluateSpcArtStage2(candidate) {
+  const individualStats = candidate.individualTransitStatistics || candidate.individual_transit_statistics || {};
+  const individualEvents = candidate.individualTransitEvents || candidate.individual_transit_events || [];
   const visibleTransits = Number(candidate.matrixVisibleTransits ?? candidate.visibleTransits ?? candidate.matrixTransits ?? candidate.transits ?? 0) || 0;
   const expectedTransits = Number(candidate.matrixTransits ?? candidate.transits ?? visibleTransits) || visibleTransits;
   const depthPpt = Number(candidate.depthPpt ?? 0) || 0;
@@ -221,6 +243,97 @@ export function evaluateSpcArtStage2(candidate) {
   const activityRisk = (candidate.rotationRisk || "").toUpperCase();
   const sectorEdgeRisk = (candidate.sectorEdgeRisk || "").toUpperCase();
   const dataGapRisk = (candidate.dataGapRisk || "").toUpperCase();
+
+  if (Array.isArray(individualEvents) && individualEvents.length) {
+    const depthStabilityScore = singleTransitScore(individualStats);
+    const visibleFromStats = Number(individualStats.visibleTransitCount ?? individualStats.visible_transit_count ?? 0) || individualEvents.filter((event) => event.visible).length;
+    const totalFromStats = Number(individualStats.individualTransitCount ?? individualStats.individual_transit_count ?? 0) || individualEvents.length;
+    const depthStabilityStatus = String(individualStats.depthStability || individualStats.depth_stability || classifySingleTransitStability(individualStats)).toUpperCase();
+    const transitStatus = individualEvents.map((event, index) => {
+      const localSnr = Number(event.localSnr ?? event.local_snr ?? NaN);
+      const visible = Boolean(event.visible);
+      const flags = [];
+      if (!visible) flags.push("missing_or_not_visible");
+      if (Number.isFinite(localSnr) && localSnr < 5) flags.push("low_single_transit_snr");
+      if (sectorEdgeRisk === "HIGH" || dataGapRisk === "HIGH") flags.push("edge_or_gap_risk");
+      if (depthStabilityScore < 0.4) flags.push("depth_outlier_possible");
+      return {
+        index: index + 1,
+        epoch: event.epoch,
+        expectedTime: event.expectedTime ?? event.expected_time,
+        status: visible && !flags.length ? "OK" : (visible ? "NEEDS_REVIEW" : "MISSING"),
+        depthPpt: event.depthPpt ?? event.depth_ppt ?? null,
+        localSnr: Number.isFinite(localSnr) ? localSnr : null,
+        nIn: event.nIn ?? event.n_in ?? null,
+        nOut: event.nOut ?? event.n_out ?? null,
+        visible,
+        flags
+      };
+    });
+    const missingChecks = [];
+    if (visibleFromStats < 2) missingChecks.push("Signal reproducibility");
+    if (shapeClass === "UNCLEAR") missingChecks.push("Folded Light Curve classification");
+    if (["UNKNOWN", "NOT_COMPUTED", "MISSING_RAW_DATA", "INSUFFICIENT_TRANSITS", ""].includes(depthStabilityStatus)) missingChecks.push("Depth stability measurement");
+    if (activityRisk === "UNKNOWN" || activityRisk === "" || activityRisk === "POSSIBLE") missingChecks.push("Activity/Rotation check");
+    if (transitStatus.some((item) => item.status !== "OK")) missingChecks.push("Individual transit review");
+    const blockingIssues = [];
+    if (transitShapeStatus === "MISSING_RAW_DATA") blockingIssues.push("Transit shape not computed because raw folded-light-curve metrics are missing from the data export.");
+    else if (transitShapeStatus === "INSUFFICIENT_TRANSITS") blockingIssues.push("Transit shape not computed because fewer than two visible transits are available.");
+    else if (transitShapeStatus === "NOT_COMPUTED") blockingIssues.push("Transit shape metric exists neither in candidate_matrix nor in Stage 2 raw measurements.");
+    const plotStatus = individualStats.plotStatus || candidate.individualTransitPlotStatus || "PLOT_NOT_AVAILABLE";
+    if (plotStatus === "PLOT_NOT_AVAILABLE") missingChecks.push("PLOT_NOT_AVAILABLE");
+    const activityFlag = ["HIGH", "STRONG", "FAST_ROTATION_ACTIVITY_RECHECK"].includes(activityRisk);
+    const activityStatus = activityFlag ? "FLAGGED" : (["LOW", "NONE", "OK", "NO"].includes(activityRisk) ? "LOW_RISK" : "UNCLEAR");
+    const stableIndividualTransits = visibleFromStats >= 2 && depthStabilityScore >= 0.65 && transitStatus.every((item) => item.status !== "MISSING");
+    const reproducible = visibleFromStats >= 2;
+    const artifactConcern = shapeClass === "ARTIFACT_LIKE" || depthStabilityScore < 0.4 || activityFlag || sectorEdgeRisk === "HIGH" || dataGapRisk === "HIGH";
+    let recommendation = "KEEP_SPC_ART";
+    let nextAction = "Review individual transits, folded light curve, depth stability, and activity/rotation.";
+    if (!reproducible) {
+      recommendation = "FALSE_POSITIVE";
+      nextAction = "Mark as false positive unless new data reproduces the signal.";
+    } else if (stableIndividualTransits && shapeClass === "CLEAR" && activityStatus === "LOW_RISK") {
+      recommendation = "PROMOTE_RECHECK";
+      nextAction = "Move to recheck/SPC preparation after documenting Stage 2 evidence.";
+    } else if (artifactConcern) {
+      recommendation = "KEEP_SPC_ART";
+      nextAction = "Keep SPC_ART and resolve artifact/systematics concerns before follow-up.";
+    }
+    return {
+      applies: true,
+      source: "LEVEL5_SINGLE_TRANSITS",
+      fallbackUsed: false,
+      stage2Completed: true,
+      computationStatus: blockingIssues.length ? "COMPUTED_WITH_LIMITED_EXPORT_DATA" : "COMPUTED",
+      blockingIssues,
+      singleTransitStatus: reproducible ? (stableIndividualTransits ? "STABLE" : "NEEDS_REVIEW") : "NOT_REPRODUCIBLE",
+      individualTransitStatus: reproducible ? (stableIndividualTransits ? "STABLE" : "NEEDS_REVIEW") : "NOT_REPRODUCIBLE",
+      transits: transitStatus,
+      individualTransitCount: transitStatus.length,
+      visibleTransits: visibleFromStats,
+      totalTransits: totalFromStats,
+      medianDepthPpt: individualStats.medianDepthPpt ?? individualStats.median_depth_ppt ?? null,
+      depthScatterPpt: individualStats.depthScatterPpt ?? individualStats.depth_scatter_ppt ?? null,
+      medianSingleTransitSnr: individualStats.medianSingleTransitSnr ?? individualStats.median_single_transit_snr ?? null,
+      depthStabilityScore,
+      depthStability: depthStabilityStatus,
+      rawDepthStability: depthStabilityStatus || "UNKNOWN",
+      transitShape: transitShapeStatus,
+      rawTransitShape: candidate.rawTransitShape || candidate.transitShape || "UNKNOWN",
+      foldedLightCurveStatus: shapeClass,
+      transitShapeClass: shapeClass,
+      activityStatus,
+      activityRotationStatus: activityStatus,
+      activityFlag,
+      missingChecks: [...new Set(missingChecks)],
+      recommendation,
+      nextAction,
+      plotStatus,
+      individualTransitPlotPath: individualStats.individualTransitPlotPath || candidate.individualTransitPlotPath || "",
+      individualTransitStatistics: individualStats,
+      individualTransitEvents: individualEvents
+    };
+  }
 
   let depthStabilityScore = 0.5;
   if (["STABLE", "LOW", "OK", "GOOD"].includes(depthStability)) depthStabilityScore = 1;

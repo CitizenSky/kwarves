@@ -110,6 +110,10 @@ function renderSpcArtStage2(stage2) {
   var missing = stage2.missingChecks && stage2.missingChecks.length ? stage2.missingChecks.join(", ") : "-";
   var blocking = stage2.blockingIssues && stage2.blockingIssues.length ? stage2.blockingIssues.join(" | ") : "-";
   var transitCount = stage2.transits && stage2.transits.length ? String(stage2.transits.length) : "-";
+  var visibleCount = stage2.visibleTransits ?? "-";
+  var depthScatter = stage2.depthScatterPpt ?? "-";
+  var medianSingleSnr = stage2.medianSingleTransitSnr ?? "-";
+  var plotAvailable = stage2.plotStatus === "PLOT_AVAILABLE" ? "Ja" : "Nein";
   var source = stage2.source || (stage2.fallbackUsed ? "RUNTIME_FALLBACK" : "DATA_BUILD");
   return '' +
     '<div class="fd-section"><div class="fd-section-title">SPC_ART Stage 2</div>' +
@@ -122,6 +126,10 @@ function renderSpcArtStage2(stage2) {
       '<div class="fd-kv"><span>Fehlende Werte</span><strong>' + blocking + '</strong></div>' +
       '<div class="fd-kv"><span>Nächste Aktion</span><strong>' + (stage2.nextAction || "-") + '</strong></div>' +
       '<div class="fd-kv"><span>Einzeltransite</span><strong>' + (stage2.singleTransitStatus || "-") + ' (' + transitCount + ' Events)</strong></div>' +
+      '<div class="fd-kv"><span>Sichtbare Transits</span><strong>' + visibleCount + '</strong></div>' +
+      '<div class="fd-kv"><span>Depth Scatter</span><strong>' + depthScatter + ' ppt</strong></div>' +
+      '<div class="fd-kv"><span>Median Single-SNR</span><strong>' + medianSingleSnr + '</strong></div>' +
+      '<div class="fd-kv"><span>Plot verfügbar</span><strong>' + plotAvailable + ' · ' + (stage2.plotStatus || "-") + '</strong></div>' +
       '<div class="fd-kv"><span>Depth Stability</span><strong>' + (stage2.depthStability || "-") + ' · Score ' + (stage2.depthStabilityScore ?? "-") + '</strong></div>' +
       '<div class="fd-kv"><span>Folded LC</span><strong>' + (stage2.foldedLightCurveStatus || "-") + ' · Shape ' + (stage2.transitShape || stage2.transitShapeClass || "-") + '</strong></div>' +
       '<div class="fd-kv"><span>Activity</span><strong>' + (stage2.activityStatus || stage2.activityRotationStatus || "-") + '</strong></div>' +

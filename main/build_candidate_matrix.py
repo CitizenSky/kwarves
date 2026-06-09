@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import html
+import json
 import math
 import os
 import re
@@ -30,6 +31,7 @@ LEVEL5_SUMMARIES = [
     PROJECT_ROOT / "level5_detailvalidierung" / "level5_06_bestanden" / "level5_all_6_summary.csv",
     PROJECT_ROOT / "level5_detailvalidierung" / "level5_06_bestanden" / "level5_recheck_summary.csv",
 ]
+LEVEL5_SINGLE_TRANSIT_ROOT = PROJECT_ROOT / "level5_detailvalidierung" / "level5_02_einzeltransit_plots"
 
 
 COLOR_FOLDERS = {
@@ -80,6 +82,18 @@ FIELDS = [
     "distance_ly",
     "visible_transits",
     "clean_sector_count",
+    "individual_transit_count",
+    "visible_transit_count",
+    "robust_transit_count",
+    "median_depth_ppt",
+    "depth_scatter_ppt",
+    "depth_cv",
+    "median_single_transit_snr",
+    "min_depth_ratio",
+    "transit_visibility_ratio",
+    "individual_transit_plot_path",
+    "individual_transit_statistics_json",
+    "individual_transit_events_json",
     "level0_candidate_folder",
     "reference_plot",
     "updated_at",
@@ -126,6 +140,46 @@ def finite(value: float) -> bool:
     return isinstance(value, float) and math.isfinite(value)
 
 
+def none_if_nan(value: float) -> float | None:
+    return value if finite(value) else None
+
+
+def safe_int_or_none(value: Any) -> int | None:
+    try:
+        if value in (None, ""):
+            return None
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def robust_median(values: list[float]) -> float | None:
+    clean = sorted(value for value in values if finite(value))
+    if not clean:
+        return None
+    midpoint = len(clean) // 2
+    if len(clean) % 2:
+        return clean[midpoint]
+    return (clean[midpoint - 1] + clean[midpoint]) / 2.0
+
+
+def robust_scatter(values: list[float]) -> float | None:
+    clean = [value for value in values if finite(value)]
+    if not clean:
+        return None
+    median = robust_median(clean)
+    if median is None:
+        return None
+    deviations = [abs(value - median) for value in clean]
+    mad = robust_median(deviations)
+    if mad is not None and mad > 0:
+        return 1.4826 * mad
+    if len(clean) >= 2:
+        mean = sum(clean) / len(clean)
+        return math.sqrt(sum((value - mean) ** 2 for value in clean) / len(clean))
+    return 0.0
+
+
 def connect_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=60)
     conn.row_factory = sqlite3.Row
@@ -153,6 +207,105 @@ def load_level5_rows() -> dict[int, dict[str, str]]:
         for tic, row in load_csv_by_tic(path, tic_field=tic_field).items():
             merged.setdefault(tic, {}).update(row)
     return merged
+
+
+def rel_project(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def classify_depth_stability_from_single_transits(stats: dict[str, Any]) -> str:
+    visible_count = safe_int(stats.get("visible_transit_count"))
+    min_ratio = safe_float(stats.get("min_depth_ratio"))
+    depth_cv = safe_float(stats.get("depth_cv"))
+    if visible_count < 2:
+        return "INSUFFICIENT_TRANSITS"
+    if finite(min_ratio) and min_ratio < 0.35:
+        return "UNSTABLE"
+    if finite(depth_cv) and depth_cv > 0.75:
+        return "UNSTABLE"
+    if finite(min_ratio) and min_ratio < 0.6:
+        return "BORDERLINE"
+    if finite(depth_cv) and depth_cv > 0.5:
+        return "BORDERLINE"
+    return "STABLE"
+
+
+def load_level5_single_transit_data(root: Path = LEVEL5_SINGLE_TRANSIT_ROOT) -> dict[int, dict[str, Any]]:
+    """Persist already materialized Level-5 single-transit CSV/PNG outputs."""
+    data: dict[int, dict[str, Any]] = {}
+    if not root.exists():
+        return data
+    for csv_path in sorted(root.glob("**/TIC_*_visible_single_transits_level5.csv")):
+        match = re.search(r"TIC_(\d+)_visible_single_transits_level5\.csv$", csv_path.name)
+        if not match:
+            continue
+        tic = safe_int(match.group(1))
+        if not tic:
+            continue
+        events: list[dict[str, Any]] = []
+        with csv_path.open(newline="", encoding="utf-8") as handle:
+            for csv_row in csv.DictReader(handle):
+                events.append({
+                    "epoch": safe_int_or_none(csv_row.get("epoch")),
+                    "expected_time": none_if_nan(safe_float(csv_row.get("expected_time"))),
+                    "depth_ppt": none_if_nan(safe_float(csv_row.get("depth_ppt"))),
+                    "local_snr": none_if_nan(safe_float(csv_row.get("local_snr"))),
+                    "visible": boolish(csv_row.get("visible")),
+                    "n_in": safe_int_or_none(csv_row.get("n_in")),
+                    "n_out": safe_int_or_none(csv_row.get("n_out")),
+                })
+        visible_events = [event for event in events if event["visible"]]
+        visible_depths = [event["depth_ppt"] for event in visible_events if event["depth_ppt"] is not None]
+        visible_snrs = [event["local_snr"] for event in visible_events if event["local_snr"] is not None]
+        median_depth = robust_median(visible_depths)
+        depth_scatter = robust_scatter(visible_depths)
+        depth_cv = depth_scatter / median_depth if depth_scatter is not None and median_depth and median_depth > 0 else None
+        min_depth_ratio = min(visible_depths) / median_depth if visible_depths and median_depth and median_depth > 0 else None
+        median_snr = robust_median(visible_snrs)
+        plot_path = csv_path.with_name(f"TIC_{tic}_single_transits.png")
+        stats = {
+            "source": "LEVEL5_SINGLE_TRANSITS",
+            "csv_path": rel_project(csv_path),
+            "csv_available": True,
+            "individual_transit_count": len(events),
+            "visible_transit_count": len(visible_events),
+            "robust_transit_count": sum(1 for event in visible_events if (event.get("local_snr") or 0) >= 5),
+            "median_depth_ppt": round(median_depth, 5) if median_depth is not None else None,
+            "depth_scatter_ppt": round(depth_scatter, 5) if depth_scatter is not None else None,
+            "depth_cv": round(depth_cv, 5) if depth_cv is not None else None,
+            "median_single_transit_snr": round(median_snr, 5) if median_snr is not None else None,
+            "min_depth_ratio": round(min_depth_ratio, 5) if min_depth_ratio is not None else None,
+            "transit_visibility_ratio": round(len(visible_events) / len(events), 5) if events else None,
+            "plot_available": plot_path.exists(),
+            "plot_status": "PLOT_AVAILABLE" if plot_path.exists() else "PLOT_NOT_AVAILABLE",
+            "individual_transit_plot_path": rel_project(plot_path) if plot_path.exists() else "",
+        }
+        stats["depth_stability"] = classify_depth_stability_from_single_transits(stats)
+        data[tic] = {"statistics": stats, "events": events}
+    return data
+
+
+def missing_level5_single_transit_data() -> dict[str, Any]:
+    stats = {
+        "source": "MISSING_LEVEL5_SINGLE_TRANSIT_CSV",
+        "csv_available": False,
+        "individual_transit_count": 0,
+        "visible_transit_count": 0,
+        "robust_transit_count": 0,
+        "median_depth_ppt": None,
+        "depth_scatter_ppt": None,
+        "depth_cv": None,
+        "median_single_transit_snr": None,
+        "min_depth_ratio": None,
+        "transit_visibility_ratio": None,
+        "plot_available": False,
+        "plot_status": "PLOT_NOT_AVAILABLE",
+        "individual_transit_plot_path": "",
+    }
+    return {"statistics": stats, "events": []}
 
 
 def load_candidates(conn: sqlite3.Connection, limit: int | None, tic: int | None) -> list[sqlite3.Row]:
@@ -503,9 +656,17 @@ def build_row(
     row: sqlite3.Row,
     level2: dict[str, str],
     level5: dict[str, str],
+    level5_single: dict[str, Any],
     level0: dict[str, str],
     updated_at: str,
 ) -> dict[str, Any]:
+    level5_single = level5_single or missing_level5_single_transit_data()
+    single_stats = dict(level5_single.get("statistics") or {})
+    single_events = list(level5_single.get("events") or [])
+    if single_stats and not finite(safe_float(level5.get("min_depth_ratio"))):
+        level5 = {**level5, "min_depth_ratio": single_stats.get("min_depth_ratio") or ""}
+    if single_stats and not finite(safe_float(level5.get("depth_cv"))):
+        level5 = {**level5, "depth_cv": single_stats.get("depth_cv") or ""}
     metrics: dict[str, Any] = {
         "candidate_id": row["id"],
         "tic_id": row["TIC"],
@@ -531,6 +692,18 @@ def build_row(
         "distance_ly": safe_float(row["distance_ly"]),
         "visible_transits": safe_int(row["visible_transits"]),
         "clean_sector_count": safe_int(row["clean_sector_count"]),
+        "individual_transit_count": single_stats.get("individual_transit_count"),
+        "visible_transit_count": single_stats.get("visible_transit_count"),
+        "robust_transit_count": single_stats.get("robust_transit_count"),
+        "median_depth_ppt": single_stats.get("median_depth_ppt"),
+        "depth_scatter_ppt": single_stats.get("depth_scatter_ppt"),
+        "depth_cv": single_stats.get("depth_cv"),
+        "median_single_transit_snr": single_stats.get("median_single_transit_snr"),
+        "min_depth_ratio": single_stats.get("min_depth_ratio"),
+        "transit_visibility_ratio": single_stats.get("transit_visibility_ratio"),
+        "individual_transit_plot_path": single_stats.get("individual_transit_plot_path", ""),
+        "individual_transit_statistics_json": json.dumps(single_stats, ensure_ascii=False, separators=(",", ":")) if single_stats else "",
+        "individual_transit_events_json": json.dumps(single_events, ensure_ascii=False, separators=(",", ":")) if single_events else "",
         "level0_candidate_folder": level0.get("candidate_folder", ""),
         "reference_plot": level2.get("reference_plot") or level2.get("level2_folder_plot") or "",
         "updated_at": updated_at,
@@ -594,12 +767,42 @@ def ensure_table(conn: sqlite3.Connection) -> None:
             distance_ly REAL,
             visible_transits INTEGER,
             clean_sector_count INTEGER,
+            individual_transit_count INTEGER,
+            visible_transit_count INTEGER,
+            robust_transit_count INTEGER,
+            median_depth_ppt REAL,
+            depth_scatter_ppt REAL,
+            depth_cv REAL,
+            median_single_transit_snr REAL,
+            min_depth_ratio REAL,
+            transit_visibility_ratio REAL,
+            individual_transit_plot_path TEXT,
+            individual_transit_statistics_json TEXT,
+            individual_transit_events_json TEXT,
             level0_candidate_folder TEXT,
             reference_plot TEXT,
             updated_at TEXT
         )
         """
     )
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(candidate_matrix)").fetchall()}
+    column_types = {
+        "individual_transit_count": "INTEGER",
+        "visible_transit_count": "INTEGER",
+        "robust_transit_count": "INTEGER",
+        "median_depth_ppt": "REAL",
+        "depth_scatter_ppt": "REAL",
+        "depth_cv": "REAL",
+        "median_single_transit_snr": "REAL",
+        "min_depth_ratio": "REAL",
+        "transit_visibility_ratio": "REAL",
+        "individual_transit_plot_path": "TEXT",
+        "individual_transit_statistics_json": "TEXT",
+        "individual_transit_events_json": "TEXT",
+    }
+    for column, column_type in column_types.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE candidate_matrix ADD COLUMN {column} {column_type}")
 
 
 def write_db(conn: sqlite3.Connection, rows: list[dict[str, Any]]) -> None:
@@ -757,6 +960,7 @@ def main() -> int:
     updated_at = datetime.now().isoformat(timespec="seconds")
     level2 = load_csv_by_tic(LEVEL2_CSV)
     level5 = load_level5_rows()
+    level5_single = load_level5_single_transit_data()
     level0 = load_csv_by_tic(LEVEL0_MANIFEST)
     conn = connect_db()
     try:
@@ -766,6 +970,7 @@ def main() -> int:
                 row,
                 level2.get(int(row["TIC"]), {}),
                 level5.get(int(row["TIC"]), {}),
+                level5_single.get(int(row["TIC"]), {}),
                 level0.get(int(row["TIC"]), {}),
                 updated_at,
             )

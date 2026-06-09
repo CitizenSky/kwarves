@@ -286,6 +286,52 @@ describe('SPC_ART Stage 2', () => {
     expect(result.check_tree.find((check) => check.name === "Depth Stability").reason).toContain("score=0.55");
     expect(result.check_tree.some((check) => check.reason === "Transit shape: UNKNOWN, Depth stability: UNKNOWN")).toBe(false);
   });
+
+  it('uses Level-5 single-transit events instead of synthetic fallback transits', () => {
+    var stage2 = evaluateSpcArtStage2(makeCandidate({
+      matrixStatus: "SPC_ART",
+      matrixClass: "SPC_ART",
+      evidenceScore: 66,
+      observedSectorCount: 8,
+      matrixVisibleTransits: 3,
+      matrixTransits: 3,
+      transitShape: "U_SHAPE",
+      depthStability: "UNKNOWN",
+      rotationRisk: "LOW",
+      sapPdcsapMatch: "OK",
+      oddEvenResult: "OK",
+      secondaryEclipse: "NO",
+      individualTransitStatistics: {
+        source: "LEVEL5_SINGLE_TRANSITS",
+        individualTransitCount: 3,
+        visibleTransitCount: 3,
+        robustTransitCount: 3,
+        medianDepthPpt: 1.23,
+        depthScatterPpt: 0.08,
+        depthCv: 0.065,
+        medianSingleTransitSnr: 8.4,
+        minDepthRatio: 0.9,
+        transitVisibilityRatio: 1,
+        depthStability: "STABLE",
+        plotStatus: "PLOT_AVAILABLE",
+        individualTransitPlotPath: "level5_detailvalidierung/level5_02_einzeltransit_plots/TIC_1_single_transits.png"
+      },
+      individualTransitEvents: [
+        { epoch: 0, expectedTime: 100.1, depthPpt: 1.2, localSnr: 8.1, visible: true, nIn: 12, nOut: 80 },
+        { epoch: 1, expectedTime: 105.1, depthPpt: 1.3, localSnr: 8.7, visible: true, nIn: 11, nOut: 78 },
+        { epoch: 2, expectedTime: 110.1, depthPpt: 1.22, localSnr: 8.4, visible: true, nIn: 13, nOut: 82 }
+      ]
+    }));
+
+    expect(stage2.source).toBe("LEVEL5_SINGLE_TRANSITS");
+    expect(stage2.fallbackUsed).toBe(false);
+    expect(stage2.individualTransitCount).toBe(3);
+    expect(stage2.visibleTransits).toBe(3);
+    expect(stage2.depthScatterPpt).toBe(0.08);
+    expect(stage2.medianSingleTransitSnr).toBe(8.4);
+    expect(stage2.plotStatus).toBe("PLOT_AVAILABLE");
+    expect(stage2.transits.map((item) => item.depthPpt)).toEqual([1.2, 1.3, 1.22]);
+  });
 });
 
 describe('computeSignalQuality', () => {
