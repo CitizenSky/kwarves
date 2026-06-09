@@ -5056,9 +5056,10 @@
 
         #tablePanel .panel-header {
           display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          gap: 8px;
-          padding: 9px 10px;
+          position: relative;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 7px 10px;
+          padding: 10px 12px 9px;
         }
 
         #tablePanel .toolbar-left,
@@ -5071,18 +5072,29 @@
 
         #tablePanel .toolbar-left {
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr);
-          align-items: center;
+          grid-column: 1 / -1;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+          align-items: start;
+          padding-right: 42px;
         }
 
         #tablePanel .toolbar-center {
-          order: 3;
-          font-size: 11px;
+          grid-column: 1;
+          grid-row: 2;
+          align-self: center;
+          width: auto;
+          color: var(--muted);
+          font-size: 12px;
+          font-weight: 820;
           text-align: left;
         }
 
         #tablePanel .toolbar-right {
-          order: 2;
+          grid-column: 1 / -1;
+          grid-row: 3;
+          display: block;
+          padding-right: 0;
         }
 
         #tablePanel .table-sort-row,
@@ -5105,14 +5117,73 @@
 
         #tablePanel .toolbar-left h2 {
           margin: 0;
+          font-size: 22px;
+          line-height: 1.05;
         }
 
         #tablePanel .small-button,
         #mapPanel .small-button,
         .page-btn {
           flex: 0 0 auto;
-          min-height: 34px;
+          min-height: 30px;
           white-space: nowrap;
+        }
+
+        #tablePanel .table-sort-row {
+          width: fit-content;
+          max-width: 100%;
+          padding: 3px;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          background: #f3f7f5;
+        }
+
+        #tablePanel .table-sort-row .small-button {
+          min-width: 48px;
+          min-height: 32px;
+          border-color: transparent;
+          background: transparent;
+          box-shadow: none;
+        }
+
+        #tablePanel .table-sort-row .small-button.active {
+          border-color: #183431;
+          background: #183431;
+          color: #ffffff;
+        }
+
+        #tablePanel .filter-row {
+          margin-top: 2px;
+        }
+
+        #tablePanel .filter-row .small-button {
+          min-height: 32px;
+          padding: 0 12px;
+          border-radius: 999px;
+          background: #ffffff;
+        }
+
+        #tablePanel .filter-row .small-button.active {
+          background: #183431;
+          color: #ffffff;
+        }
+
+        #tablePanel .panel-actions {
+          position: absolute;
+          top: 10px;
+          right: 12px;
+          width: auto;
+          min-width: 0;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        #tablePanel .panel-actions .icon-button,
+        #tablePanel .panel-collapse-toggle {
+          width: 34px;
+          min-height: 34px;
+          border-radius: 999px;
+          background: #ffffff;
         }
 
         #tablePanel .table-wrap {
