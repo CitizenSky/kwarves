@@ -32,6 +32,12 @@ PRIORITY_CSV = (
     / "level1_05_GRUEN_VIOLETT_SPC_HZ"
     / "05_GRUEN_VIOLETT_SPC_HZ_priority.csv"
 )
+COMBINED_PRIORITY_CSV = (
+    PROJECT_ROOT
+    / "level5_detailvalidierung"
+    / "level5_01_input_kandidaten"
+    / "level5_combined_priority.csv"
+)
 LEVEL5_ROOT = PROJECT_ROOT / "level5_detailvalidierung"
 SINGLE_ROOT = LEVEL5_ROOT / "level5_02_einzeltransit_plots"
 ODD_EVEN_ROOT = LEVEL5_ROOT / "level5_03_odd_even_test"
@@ -77,11 +83,19 @@ class Candidate:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Level-5 checks for A_LEVEL5_NOW green/purple HZ candidates.")
+    parser = argparse.ArgumentParser(description="Run Level-5 checks for priority candidates.")
     parser.add_argument("--group", default="A_LEVEL5_NOW", help="Priority group from the green/purple review CSV.")
+    parser.add_argument(
+        "--priority-csv",
+        type=Path,
+        default=PRIORITY_CSV,
+        help=f"Priority CSV to read. Use {COMBINED_PRIORITY_CSV} for merged HZ/SPC Stage-2 coverage.",
+    )
+    parser.add_argument("--tic", type=int, default=None, help="Run Level 5 for one TIC from the selected priority CSV.")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--online-gaia-missing", action="store_true", help="Query Gaia TAP when no local nearby file exists.")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--write-summary", action="store_true", help="Write the batch summary CSV/MD. Defaults off for --tic.")
     return parser.parse_args()
 
 
@@ -134,9 +148,13 @@ def phase_days(time: np.ndarray, period: float, t0: float) -> np.ndarray:
     return ((time - t0 + 0.5 * period) % period) - 0.5 * period
 
 
-def load_priority_rows(group: str, limit: int | None) -> list[dict[str, str]]:
-    with PRIORITY_CSV.open(newline="", encoding="utf-8") as handle:
-        rows = [row for row in csv.DictReader(handle) if row.get("priority_group") == group]
+def load_priority_rows(path: Path, group: str, limit: int | None, tic: int | None = None) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if group and group.upper() not in {"ALL", "*"}:
+        rows = [row for row in rows if row.get("priority_group") == group]
+    if tic:
+        rows = [row for row in rows if safe_int(row.get("TIC")) == tic]
     rows.sort(key=lambda row: safe_int(row.get("rank"), 9999))
     return rows[:limit] if limit else rows
 
@@ -894,7 +912,10 @@ def recommended_action(payload: dict[str, Any]) -> str:
 
 def main() -> int:
     args = parse_args()
-    priority_rows = load_priority_rows(args.group, args.limit)
+    priority_rows = load_priority_rows(args.priority_csv, args.group, args.limit, args.tic)
+    if args.tic and not priority_rows:
+        print(f"TIC {args.tic} not found in {args.priority_csv} for group {args.group}", flush=True)
+        return 1
     candidates = load_candidates(priority_rows)
     payloads = []
     for candidate in candidates:
@@ -902,7 +923,10 @@ def main() -> int:
         payload = process_candidate(candidate, args.online_gaia_missing, args.overwrite)
         payloads.append(payload)
         print(f"  -> {payload.get('status')} flags={';'.join(payload.get('flags') or []) or 'ok'}", flush=True)
-    write_summary(payloads)
+    if args.write_summary or not args.tic:
+        write_summary(payloads)
+    else:
+        print("Summary write skipped for targeted --tic run")
     print(f"Processed: {len(payloads)}")
     print(f"Summary: {SUMMARY_ROOT / 'green_purple_A_level5_summary.csv'}")
     return 0
