@@ -218,11 +218,11 @@ export function renderTable() {
     else { prio = "Niedrig"; prioClass = "prio-low"; }
     return `
     <tr data-tic="${candidate.tic}" class="${state.selected && state.selected.tic === candidate.tic ? "active-row" : ""}">
-      <td><strong>TIC ${candidate.tic}</strong>${hzBadge}</td>
-      <td><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
-      <td>${formatFloat(candidate.evidenceScore, 0)}</td>
-      <td>${candidate.distance ? candidate.distance + " ly" : "-"}</td>
-      <td><span class="prio-pill ${prioClass}">${prio}</span></td>
+      <td data-label="TIC"><strong>TIC ${candidate.tic}</strong>${hzBadge}</td>
+      <td data-label="Status"><span class="pill ${rowClass}">${candidateLabel(candidate)}</span></td>
+      <td data-label="Evidence">${formatFloat(candidate.evidenceScore, 0)}</td>
+      <td data-label="Distanz">${candidate.distance ? candidate.distance + " ly" : "-"}</td>
+      <td data-label="Prioritaet"><span class="prio-pill ${prioClass}">${prio}</span></td>
     </tr>
   `;
   }).join("");
