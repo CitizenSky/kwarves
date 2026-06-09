@@ -6491,3 +6491,113 @@
           gap: 8px;
         }
       }
+
+      @media (max-width: 768px) {
+        #tablePanel {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin-right: 0 !important;
+          margin-left: 0 !important;
+        }
+
+        #tablePanel .table-wrap {
+          padding: 8px !important;
+          overflow: visible !important;
+        }
+
+        #tablePanel tbody {
+          display: grid !important;
+          gap: 10px !important;
+        }
+
+        #tablePanel tr {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto !important;
+          gap: 8px 10px !important;
+          padding: 12px !important;
+        }
+
+        #tablePanel td {
+          display: block !important;
+          min-width: 0 !important;
+          padding: 0 !important;
+          font-size: 13px !important;
+          line-height: 1.35 !important;
+          white-space: normal !important;
+          overflow: visible !important;
+          overflow-wrap: anywhere !important;
+        }
+
+        #tablePanel td::before {
+          display: none !important;
+        }
+
+        #tablePanel td:nth-child(1) {
+          grid-column: 1 / -1 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          font-size: 15px !important;
+          flex-wrap: wrap !important;
+        }
+
+        #tablePanel td:nth-child(2) {
+          grid-column: 1 / -1 !important;
+        }
+
+        #tablePanel td:nth-child(3),
+        #tablePanel td:nth-child(4) {
+          grid-column: 1 !important;
+          color: var(--ink) !important;
+        }
+
+        #tablePanel td:nth-child(3)::before {
+          content: "Evidence ";
+          display: inline !important;
+          color: var(--muted);
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+
+        #tablePanel td:nth-child(4)::before {
+          content: "Distanz ";
+          display: inline !important;
+          color: var(--muted);
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+
+        #tablePanel td:nth-child(5) {
+          grid-column: 2 !important;
+          grid-row: 3 / 5 !important;
+          align-self: end !important;
+          justify-self: end !important;
+          display: grid !important;
+          gap: 8px !important;
+          justify-items: end !important;
+        }
+
+        #tablePanel .pill {
+          width: auto !important;
+          max-width: 100% !important;
+          padding: 5px 8px !important;
+          line-height: 1.2 !important;
+          white-space: normal !important;
+          overflow: visible !important;
+          text-overflow: clip !important;
+        }
+
+        #tablePanel .table-hz-badge,
+        #tablePanel .selected-candidate-badge {
+          max-width: 100% !important;
+          white-space: normal !important;
+          overflow-wrap: anywhere !important;
+        }
+
+        #tablePanel .candidate-select-button {
+          min-width: 82px !important;
+          min-height: 34px !important;
+        }
+      }
