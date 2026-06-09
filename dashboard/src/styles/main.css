@@ -4761,6 +4761,194 @@
         }
       }
 
+      @media (min-width: 769px) {
+        .quad-grid {
+          --workbench-height: calc(100vh - 154px);
+          grid-template-areas:
+            "candidates details details"
+            "candidates lightcurve starmap";
+          grid-template-columns: minmax(340px, 420px) minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-rows: minmax(340px, 0.72fr) minmax(0, 1fr);
+          gap: 14px;
+          height: var(--workbench-height);
+          min-height: 680px;
+          align-items: stretch;
+        }
+
+        .quad-grid > .quad-cell {
+          height: auto;
+          min-height: 0;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) {
+          position: sticky;
+          top: 76px;
+          height: var(--workbench-height);
+          max-height: var(--workbench-height);
+        }
+
+        .quad-grid > .quad-cell:nth-child(2),
+        .quad-grid > .quad-cell:nth-child(3),
+        .quad-grid > .quad-cell:nth-child(4) {
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) #tablePanel,
+        .quad-grid > .quad-cell:nth-child(3) .curve-detail-card,
+        .quad-grid > .quad-cell:nth-child(4) #mapPanel {
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) {
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr);
+          gap: 10px;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .kpis {
+          display: grid;
+          grid-template-columns: repeat(6, minmax(92px, 1fr));
+          gap: 8px;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .card {
+          min-height: 58px;
+          padding: 9px 10px;
+          gap: 5px;
+          border-top-width: 2px;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .big-number {
+          font-size: 18px;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .metric-line {
+          font-size: 11px;
+        }
+
+        #tablePanel {
+          display: flex;
+          flex-direction: column;
+        }
+
+        #tablePanel .panel-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+          align-items: start;
+        }
+
+        #tablePanel .toolbar-left,
+        #tablePanel .toolbar-right,
+        #tablePanel .toolbar-center {
+          width: 100%;
+          min-width: 0;
+        }
+
+        #tablePanel .toolbar-left {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+        }
+
+        #tablePanel .toolbar-left h2 {
+          margin: 0;
+        }
+
+        #tablePanel .toolbar-center {
+          order: 3;
+          text-align: left;
+        }
+
+        #tablePanel .toolbar-right {
+          order: 2;
+        }
+
+        #tablePanel .table-sort-row,
+        #tablePanel .filter-row {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding-bottom: 2px;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
+        }
+
+        #tablePanel .table-wrap {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow: auto;
+        }
+
+        #selectedCardSection {
+          min-height: 0;
+        }
+
+        #selectedCardSection .selected-card {
+          max-height: clamp(250px, 30vh, 420px);
+          overflow: auto;
+        }
+
+        .curve-detail-card .curve-img-wrap {
+          min-height: 0;
+          overflow: auto;
+        }
+
+        .curve-detail-card .curve-img-wrap img {
+          max-height: clamp(300px, 34vh, 520px);
+        }
+
+        #mapPanel .panel-body {
+          min-height: 0;
+          overflow: auto;
+        }
+
+        #mapPanel .map-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        #mapPanel .map-frame,
+        .quad-cell .map-frame {
+          height: clamp(280px, 34vh, 460px);
+        }
+
+        #mapPanel .map-side {
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+      }
+
+      @media (min-width: 769px) and (max-width: 1180px) {
+        .quad-grid {
+          --workbench-height: auto;
+          grid-template-areas:
+            "candidates details"
+            "candidates lightcurve"
+            "candidates starmap";
+          grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+          grid-template-rows: auto minmax(300px, auto) minmax(320px, auto);
+          height: auto;
+          min-height: 0;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) {
+          top: 68px;
+          height: calc(100vh - 138px);
+          max-height: calc(100vh - 138px);
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .kpis {
+          grid-template-columns: repeat(3, minmax(92px, 1fr));
+        }
+
+        #selectedCardSection .selected-card {
+          max-height: clamp(260px, 38vh, 500px);
+        }
+      }
+
       @media (max-width: 768px) {
         html,
         body {
