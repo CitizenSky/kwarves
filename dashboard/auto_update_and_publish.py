@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
-"""Refresh Kwarves dashboard data and publish changed dashboard files."""
+"""Refresh Kwarves split dashboard data and publish changed dashboard files."""
 
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
-DATA_PATH = SCRIPT_ROOT / "dashboard" / "dashboard-data.js"
+SUMMARY_PATH = SCRIPT_ROOT / "dashboard" / "candidates-summary.json"
+DETAILS_DIR = SCRIPT_ROOT / "dashboard" / "candidate-details"
 NOTIFICATION_PATH = SCRIPT_ROOT / "dashboard" / "dashboard-notifications.js"
 TRACKED_OUTPUTS = [
-    "dashboard/dashboard-data.js",
+    "dashboard/candidates-summary.json",
+    "dashboard/candidate-details",
     "dashboard/dashboard-notifications.js",
     "dashboard/gaia_coordinates_cache.csv",
 ]
@@ -80,14 +81,23 @@ def current_branch() -> str:
     return result.stdout.strip() or "main"
 
 
-def load_dashboard_data() -> dict:
-    if not DATA_PATH.exists():
-        return {}
-    text = DATA_PATH.read_text(encoding="utf-8")
-    match = re.search(r"window\.ASTRO_DASHBOARD_DATA\s*=\s*(\{.*\});?\s*$", text, re.S)
-    if not match:
-        return {}
-    return json.loads(match.group(1))
+def load_dashboard_candidates() -> dict:
+    candidates: list[dict] = []
+    if DETAILS_DIR.exists():
+        for detail_path in sorted(DETAILS_DIR.glob("TIC_*.json")):
+            try:
+                candidate = json.loads(detail_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if candidate.get("tic"):
+                candidates.append(candidate)
+    generated_at = datetime.now().isoformat(timespec="seconds")
+    if SUMMARY_PATH.exists():
+        try:
+            generated_at = json.loads(SUMMARY_PATH.read_text(encoding="utf-8")).get("generatedAt") or generated_at
+        except Exception:
+            pass
+    return {"generatedAt": generated_at, "candidates": candidates}
 
 
 def candidate_index(payload: dict) -> dict[str, dict]:
@@ -227,9 +237,9 @@ def write_notifications(payload: dict) -> None:
 
 
 def main() -> int:
-    before = load_dashboard_data()
+    before = load_dashboard_candidates()
     run(["python3", "dashboard/build_dashboard_data.py"])
-    after = load_dashboard_data()
+    after = load_dashboard_candidates()
     write_notifications(build_notifications(before, after))
 
     changed = changed_tracked_outputs()

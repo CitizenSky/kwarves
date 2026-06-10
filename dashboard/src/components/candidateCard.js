@@ -351,6 +351,7 @@ export function renderSelected() {
   state.selected = candidate;
   state.selectedCandidate = candidate;
   state.activeCandidateId = candidate.tic;
+  const detailLoadError = candidate._detailLoadError;
   const evidence = candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? formatFloat(candidate.evidenceScore, 0) : "-";
   const hzLabel = candidate.hz || "-";
   const distLabel = candidate.distance ? `${candidate.distance} ly` : "-";
@@ -381,6 +382,13 @@ export function renderSelected() {
   }
 
   els.selectedCard.innerHTML = `
+    ${detailLoadError ? `
+      <div class="notice error-notice">
+        <strong>Detaildaten konnten nicht geladen werden.</strong>
+        <span>${detailLoadError.message || "Die Lazy-Detaildatei fehlt oder ist nicht erreichbar."}</span>
+        ${detailLoadError.detail ? `<small>${detailLoadError.detail}</small>` : ""}
+      </div>
+    ` : ""}
     ${renderCandidateSummaryHeader(candidate)}
     ${renderVettingProgressTree(candidate)}
     ${renderBlockingIssuesPanel(candidate)}

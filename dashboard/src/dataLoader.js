@@ -8,10 +8,10 @@ export const data = { summary: {}, tree: [], candidates: [], lightcurveCandidate
 export const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
 
 const detailCache = new Map();
-let fallbackLoadPromise = null;
 
 function applyDashboardPayload(payload, source = "unknown") {
   if (!payload || !Array.isArray(payload.candidates)) return false;
+  delete data.loadError;
   data.generatedAt = payload.generatedAt || "";
   data.summary = payload.summary || {};
   data.tess = payload.tess || {};
@@ -33,33 +33,13 @@ async function fetchJson(path) {
   return response.json();
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      existing.addEventListener("load", resolve, { once: true });
-      existing.addEventListener("error", reject, { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.onload = resolve;
-    script.onerror = () => reject(new Error(`Failed to load ${src}`));
-    document.head.appendChild(script);
-  });
-}
-
-async function loadDashboardDataFallback() {
-  if (!fallbackLoadPromise) {
-    fallbackLoadPromise = (async () => {
-      await loadScript("dashboard-data.js");
-      if (!window.ASTRO_DASHBOARD_DATA) throw new Error("dashboard-data.js loaded without ASTRO_DASHBOARD_DATA");
-      applyDashboardPayload(window.ASTRO_DASHBOARD_DATA, "dashboard-data.js fallback");
-      return window.ASTRO_DASHBOARD_DATA;
-    })();
-  }
-  return fallbackLoadPromise;
+function setDataStatusError(message) {
+  const statusEl = document.getElementById("dataStatus");
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.style.background = "#d75047";
+  statusEl.style.color = "#fff";
+  statusEl.style.opacity = "1";
 }
 
 export function loadData() {
@@ -68,9 +48,14 @@ export function loadData() {
   return fetchJson("candidates-summary.json")
     .then((payload) => applyDashboardPayload(payload, "candidates-summary.json"))
     .catch((error) => {
-      console.warn("[kwarves] candidates-summary.json unavailable, using dashboard-data.js fallback.", error);
-      if (statusEl) statusEl.textContent = "Summary nicht verfügbar, lade Fallback...";
-      return loadDashboardDataFallback().then(() => data.candidates.length > 0);
+      console.error("[kwarves] candidates-summary.json unavailable; dashboard cannot start.", error);
+      data.loadError = {
+        type: "SUMMARY_LOAD_FAILED",
+        message: "Kandidaten-Summary konnte nicht geladen werden.",
+        detail: error?.message || String(error)
+      };
+      setDataStatusError("Datenfehler: candidates-summary.json konnte nicht geladen werden.");
+      return false;
     })
     .then((ok) => {
       const count = data.candidates?.length || 0;
@@ -80,7 +65,7 @@ export function loadData() {
           statusEl.style.background = "#00b894";
           statusEl.style.color = "#fff";
           setTimeout(() => { statusEl.style.opacity = "0"; setTimeout(() => statusEl.remove(), 500); }, 3000);
-        } else {
+        } else if (!data.loadError) {
           statusEl.textContent = "Datenfehler: 0 Kandidaten geladen";
           statusEl.style.background = "#ff4444";
           statusEl.style.color = "#fff";
@@ -105,16 +90,34 @@ export async function loadCandidateDetails(candidateOrTic) {
       Object.assign(target, detail, { _detailLoaded: true });
       return target;
     } catch (error) {
-      console.warn(`[kwarves] detail load failed for TIC ${tic}; using dashboard-data.js fallback.`, error);
-      const fallback = await loadDashboardDataFallback();
-      const detail = fallback.candidates?.find((candidate) => candidate.tic === tic) || existing;
-      if (detail && existing && detail !== existing) Object.assign(existing, detail, { _detailLoaded: true });
-      else if (detail) detail._detailLoaded = true;
-      return existing || detail || null;
+      console.error(`[kwarves] detail load failed for TIC ${tic}.`, error);
+      if (existing) {
+        existing._detailLoadError = {
+          type: "DETAIL_LOAD_FAILED",
+          message: `Detaildaten fuer TIC ${tic} konnten nicht geladen werden.`,
+          detail: error?.message || String(error)
+        };
+        return existing;
+      }
+      return {
+        tic,
+        _detailLoadError: {
+          type: "DETAIL_LOAD_FAILED",
+          message: `Detaildaten fuer TIC ${tic} konnten nicht geladen werden.`,
+          detail: error?.message || String(error)
+        }
+      };
     }
   })();
   detailCache.set(tic, detailPromise);
   return detailPromise;
+}
+
+export function resetDashboardDataForTests() {
+  Object.keys(data).forEach((key) => delete data[key]);
+  Object.assign(data, { summary: {}, tree: [], candidates: [], lightcurveCandidates: [], priorityCandidates: [] });
+  detailCache.clear();
+  if (typeof window !== "undefined") delete window.ASTRO_DASHBOARD_DATA;
 }
 
 export const els = {

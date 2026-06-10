@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static data bundle used by dashboard/index.html."""
+"""Build the split static data bundle used by dashboard/index.html."""
 
 from __future__ import annotations
 
@@ -29,7 +29,6 @@ DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
 VETTING_REPORTS_DIR = PROJECT_ROOT / "vetting_reports"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
 LEVEL5_SINGLE_TRANSIT_ROOT = PROJECT_ROOT / "level5_detailvalidierung" / "level5_02_einzeltransit_plots"
-OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
 CANDIDATE_SUMMARY_PATH = DASHBOARD_DIR / "candidates-summary.json"
 CANDIDATE_DETAILS_DIR = DASHBOARD_DIR / "candidate-details"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
@@ -74,7 +73,7 @@ TESS_SECTOR_SCHEDULE = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build dashboard-data.js with optional automatic TESS refresh and matrix rebuild.")
+    parser = argparse.ArgumentParser(description="Build split dashboard JSON with optional automatic TESS refresh and matrix rebuild.")
     parser.add_argument("--limit", type=int, default=None, help="Limit dashboard candidates built from the manifest.")
     parser.add_argument("--tic", type=int, default=None, help="Build only one dashboard candidate.")
     parser.add_argument("--no-auto-update", action="store_true", help="Skip automatic TESS sector refresh and matrix rebuild.")
@@ -96,18 +95,30 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_existing_dashboard_data(path: Path = OUT_PATH) -> dict[str, Any]:
+def load_existing_dashboard_data(path: Path = CANDIDATE_SUMMARY_PATH) -> dict[str, Any]:
+    if CANDIDATE_DETAILS_DIR.exists():
+        candidates: list[dict[str, Any]] = []
+        for detail_path in sorted(CANDIDATE_DETAILS_DIR.glob("TIC_*.json")):
+            try:
+                candidate = json.loads(detail_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if candidate.get("tic"):
+                candidates.append(candidate)
+        if candidates:
+            payload = {"candidates": candidates}
+            if path.exists():
+                try:
+                    summary_payload = json.loads(path.read_text(encoding="utf-8"))
+                    payload["generatedAt"] = summary_payload.get("generatedAt")
+                    payload["summary"] = summary_payload.get("summary")
+                except Exception:
+                    pass
+            return payload
     if not path.exists():
         return {}
     try:
-        text = path.read_text(encoding="utf-8")
-    except Exception:
-        return {}
-    match = re.search(r"window\.ASTRO_DASHBOARD_DATA\s*=\s*(\{.*\});?\s*$", text, re.S)
-    if not match:
-        return {}
-    try:
-        return json.loads(match.group(1))
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
 
@@ -2729,15 +2740,8 @@ def main() -> int:
         "priorityCandidates": priority_candidates,
     }
 
-    OUT_PATH.write_text(
-        "window.ASTRO_DASHBOARD_DATA = "
-        + json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-        + ";\n",
-        encoding="utf-8",
-    )
     write_candidate_summary_data(data)
     write_candidate_detail_data(candidates)
-    print(f"wrote {OUT_PATH}")
     print(f"wrote {CANDIDATE_SUMMARY_PATH}")
     print(f"wrote {CANDIDATE_DETAILS_DIR} ({len(candidates)} files)")
     print(json.dumps(summary, ensure_ascii=False))

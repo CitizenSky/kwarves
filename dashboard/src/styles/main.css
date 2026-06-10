@@ -2480,6 +2480,18 @@
         overflow-wrap: anywhere;
       }
 
+      .error-notice {
+        border-color: rgba(215, 80, 71, 0.35);
+        background: #fff0ef;
+        color: #7d211b;
+      }
+
+      .error-notice span,
+      .error-notice small {
+        display: block;
+        margin-top: 4px;
+      }
+
       .toast {
         position: fixed;
         right: 18px;
