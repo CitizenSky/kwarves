@@ -140,6 +140,48 @@ function renderSpcArtStage2(stage2) {
     '</div>';
 }
 
+function methodEffectLabel(effect) {
+  if (effect === "support") return "stützt";
+  if (effect === "weaken") return "schwächt";
+  if (effect === "neutral") return "offen";
+  return "n/a";
+}
+
+function renderMultiMethodEvidence(candidate) {
+  var flags = candidate.methodEvidenceFlags || candidate.method_evidence_flags || [];
+  if (!flags.length) return "";
+  var score = candidate.multiMethodScore ?? candidate.multi_method_score ?? "-";
+  var cleanForExofop = candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop;
+  var statusRows = [
+    ["Transit", candidate.transitEvidenceStatus || candidate.transit_evidence_status],
+    ["TTV", candidate.ttvStatus || candidate.ttv_status],
+    ["Gaia Astrometry", candidate.gaiaAstrometryStatus || candidate.gaia_astrometry_status],
+    ["Variability", candidate.variabilityStatus || candidate.variability_status],
+    ["Known Object", candidate.knownObjectStatus || candidate.known_object_status],
+    ["Blend", candidate.blendStatus || candidate.blend_status],
+    ["RV Priority", candidate.rvPriorityStatus || candidate.rv_priority_status],
+    ["Science Priority", candidate.sciencePriorityStatus || candidate.science_priority_status]
+  ];
+  var flagsHtml = flags.map(function (flag) {
+    return '<div class="mme-flag mme-' + (flag.effect || "neutral") + '">' +
+      '<div><strong>' + flag.method + '</strong><span>' + methodEffectLabel(flag.effect) + '</span></div>' +
+      '<div class="mme-status">' + (flag.status || "-") + ' · ' + (flag.score ?? "-") + '/100</div>' +
+      '<p>' + (flag.reason || "-") + '</p>' +
+    '</div>';
+  }).join("");
+  var statusHtml = statusRows.map(function (row) {
+    return '<div class="fd-kv"><span>' + row[0] + '</span><strong>' + (row[1] || "-") + '</strong></div>';
+  }).join("");
+  return '' +
+    '<div class="fd-section multi-method-evidence">' +
+      '<div class="fd-section-title">Multi-Method Evidence</div>' +
+      '<div class="fd-kv"><span>Multi-Method Score</span><strong>' + score + '/100</strong></div>' +
+      '<div class="fd-kv"><span>EXOFOP Gate</span><strong>' + (cleanForExofop ? "Clean" : "Blocked") + '</strong></div>' +
+      statusHtml +
+      '<div class="mme-grid">' + flagsHtml + '</div>' +
+    '</div>';
+}
+
 export function renderFinalDecisionPanel(candidate) {
   if (!candidate) return "";
   var fd = computeFinalDecision(candidate);
@@ -178,6 +220,7 @@ export function renderFinalDecisionPanel(candidate) {
       '<div class="fd-reason">' + (fd.reason || "") + '</div>' +
       nextHtml +
       stageHtml +
+      renderMultiMethodEvidence(candidate) +
       renderSpcArtStage2(fd.spcArtStage2 || candidate.spcArtStage2) +
       '<div class="fd-matrix">' +
         '<div class="fd-matrix-row"><div class="fd-axis">Signalqualität</div><div class="fd-quadrant" style="border-color:' + signalColor + '"><div class="fd-quadrant-label">' + String(fd.signal_quality).toUpperCase() + '</div><div class="fd-quadrant-desc">Transit-Signal</div></div></div>' +

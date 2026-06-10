@@ -6737,3 +6737,103 @@
           padding-bottom: 5px;
         }
       }
+
+      .multi-method-evidence .mme-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .mme-flag {
+        display: grid;
+        gap: 5px;
+        padding: 9px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .mme-flag > div:first-child {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .mme-flag strong,
+      .mme-status {
+        overflow-wrap: anywhere;
+      }
+
+      .mme-flag span,
+      .mme-status {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .mme-flag p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .mme-support {
+        border-left: 3px solid var(--green);
+      }
+
+      .mme-weaken {
+        border-left: 3px solid var(--red);
+      }
+
+      .mme-neutral {
+        border-left: 3px solid var(--gold);
+      }
+
+      @media (min-width: 769px) {
+        #tablePanel table {
+          table-layout: fixed !important;
+        }
+
+        #tablePanel th:nth-child(1),
+        #tablePanel td:nth-child(1) {
+          width: 21% !important;
+        }
+
+        #tablePanel th:nth-child(2),
+        #tablePanel td:nth-child(2) {
+          width: 42% !important;
+        }
+
+        #tablePanel th:nth-child(3),
+        #tablePanel td:nth-child(3) {
+          width: 8% !important;
+        }
+
+        #tablePanel th:nth-child(4),
+        #tablePanel td:nth-child(4) {
+          width: 16% !important;
+        }
+
+        #tablePanel th:nth-child(5),
+        #tablePanel td:nth-child(5) {
+          width: 13% !important;
+        }
+
+        #tablePanel td:nth-child(2) .pill {
+          max-width: none !important;
+          white-space: normal !important;
+          overflow: visible !important;
+          overflow-wrap: anywhere !important;
+          text-overflow: clip !important;
+        }
+      }
+
+      @media (min-width: 1281px) {
+        .quad-grid {
+          grid-template-columns: minmax(680px, 1.28fr) minmax(380px, .72fr) !important;
+        }
+      }

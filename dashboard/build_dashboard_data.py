@@ -1781,6 +1781,211 @@ def build_astro_monitor_result(
     }
 
 
+def _method_flag(method: str, status: str, effect: str, reason: str, score: int) -> dict[str, Any]:
+    return {
+        "method": method,
+        "status": status,
+        "effect": effect,
+        "reason": reason,
+        "score": max(0, min(100, int(score))),
+    }
+
+
+def _clean_status(status: str) -> bool:
+    return clean_text(status).upper() in {"CLEAN", "SUPPORTS", "LOW_RISK", "HIGH_PRIORITY", "MEDIUM_PRIORITY"}
+
+
+def build_multi_method_evidence(
+    *,
+    tic: int,
+    merged: dict[str, Any],
+    matrix: dict[str, Any],
+    monitor_result: dict[str, Any],
+    full_vetting: dict[str, Any],
+    single_transit_statistics: dict[str, Any],
+    observed_sectors: list[int],
+    distance: float,
+    period: float,
+    snr: float,
+    evidence_score: float | None,
+    hz: str,
+    is_violet: bool,
+) -> dict[str, Any]:
+    flags: list[dict[str, Any]] = []
+
+    visible_transits = safe_int_or_none(matrix.get("visible_transits")) or safe_int(merged.get("visible_transits"))
+    total_transits = safe_int_or_none(matrix.get("n_transits")) or safe_int(merged.get("transit_count"))
+    products_available = bool(monitor_result.get("productsAvailable"))
+    sectors_available = bool(observed_sectors)
+    transit_shape = clean_text(matrix.get("transit_shape")).upper()
+    depth_stability = clean_text(matrix.get("depth_stability")).upper()
+    sap_pdcsap = clean_text(matrix.get("sap_pdcsap_match")).upper()
+    odd_even = clean_text(matrix.get("odd_even_result")).upper()
+    secondary = clean_text(matrix.get("secondary_eclipse")).upper()
+    rotation_risk = clean_text(matrix.get("rotation_risk")).upper()
+    text = " ".join(clean_text(value).upper() for value in (
+        merged.get("status"),
+        merged.get("spc_class"),
+        merged.get("notes"),
+        matrix.get("status"),
+        matrix.get("extended_class"),
+        matrix.get("decision_reason"),
+        matrix.get("next_step"),
+        *(full_vetting.get("flags") or []),
+    ))
+
+    if not sectors_available or not products_available:
+        transit_status = "NO_TESS_DATA"
+        flags.append(_method_flag("transit", transit_status, "weaken", "No TESS sectors/lightcurve products available.", 0))
+    elif (evidence_score or 0) >= 65 and visible_transits >= 3 and snr >= 7:
+        transit_status = "SUPPORTS"
+        flags.append(_method_flag("transit", transit_status, "support", f"BLS/TLS signal with SNR {snr:.1f}, {visible_transits} visible transits.", 90))
+    elif (evidence_score or 0) >= 35 and visible_transits >= 2:
+        transit_status = "PARTIAL_SUPPORT"
+        flags.append(_method_flag("transit", transit_status, "support", f"Signal present but limited by {visible_transits} visible transits.", 62))
+    else:
+        transit_status = "WEAK_OR_INSUFFICIENT"
+        flags.append(_method_flag("transit", transit_status, "weaken", "Transit evidence is weak or insufficient.", 25))
+
+    individual_count = safe_int_or_none(single_transit_statistics.get("individualTransitCount") or single_transit_statistics.get("individual_transit_count")) or 0
+    visible_count = safe_int_or_none(single_transit_statistics.get("visibleTransitCount") or single_transit_statistics.get("visible_transit_count")) or 0
+    depth_cv = safe_float(single_transit_statistics.get("depthCv") or single_transit_statistics.get("depth_cv"))
+    if individual_count < 2 or visible_count < 2:
+        ttv_status = "NOT_ENOUGH_TRANSITS"
+        flags.append(_method_flag("ttv", ttv_status, "neutral", "Too few measured individual transits for a TTV check.", 45))
+    elif depth_cv is not None and depth_cv > 0.75:
+        ttv_status = "TIMING_OR_DEPTH_SCATTER_RISK"
+        flags.append(_method_flag("ttv", ttv_status, "weaken", "Individual transits show high scatter; timing fit needs review.", 35))
+    else:
+        ttv_status = "NO_STRONG_TTV_FLAG"
+        flags.append(_method_flag("ttv", ttv_status, "support", "Individual transit set has no strong TTV scatter flag.", 70))
+
+    gaia_ruwe = safe_float(monitor_result.get("gaiaRuwe"))
+    gaia_duplicated = bool(monitor_result.get("gaiaDuplicatedSource"))
+    if gaia_ruwe is not None and gaia_ruwe > 1.4:
+        gaia_status = "RUWE_ELEVATED"
+        flags.append(_method_flag("gaia_astrometry", gaia_status, "weaken", f"Gaia RUWE {gaia_ruwe:.2f} is elevated.", 35))
+    elif gaia_duplicated:
+        gaia_status = "DUPLICATED_SOURCE"
+        flags.append(_method_flag("gaia_astrometry", gaia_status, "weaken", "Gaia duplicated_source is set.", 35))
+    elif gaia_ruwe is None:
+        gaia_status = "NOT_AVAILABLE"
+        flags.append(_method_flag("gaia_astrometry", gaia_status, "neutral", "Gaia RUWE/duplicated_source not available in local export.", 50))
+    else:
+        gaia_status = "CLEAN"
+        flags.append(_method_flag("gaia_astrometry", gaia_status, "support", "Gaia astrometry has no elevated RUWE/duplicate flag.", 80))
+
+    simbad_variable_or_binary = bool(monitor_result.get("simbadVariableOrBinary"))
+    if rotation_risk in {"HIGH", "POSSIBLE", "FAST_ROTATION_ACTIVITY_RECHECK"} or simbad_variable_or_binary:
+        variability_status = "ACTIVITY_OR_VARIABLE_RISK"
+        flags.append(_method_flag("variability", variability_status, "weaken", "Rotation/activity or variable/binary flag needs review.", 35))
+    elif rotation_risk in {"LOW", "OK", "NO"}:
+        variability_status = "CLEAN"
+        flags.append(_method_flag("variability", variability_status, "support", "No strong stellar-activity flag in local checks.", 80))
+    else:
+        variability_status = "NOT_CHECKED"
+        flags.append(_method_flag("variability", variability_status, "neutral", "Long-term variability catalog/check is not available.", 50))
+
+    known_match = (
+        bool(monitor_result.get("exoFopMatch"))
+        or "TOI" in text
+        or "EXOFOP" in text
+        or "KNOWN_PLANET" in text
+        or "NASA_EXOPLANET" in text
+        or "ECLIPSING_BINARY" in text
+        or " EB" in f" {text}"
+    )
+    if "FALSE_POSITIVE" in text or "EB_RISK" in text or "ECLIPSING_BINARY" in text:
+        known_object_status = "KNOWN_FP_OR_EB"
+        flags.append(_method_flag("known_object", known_object_status, "weaken", "Known-object text indicates FP/EB risk.", 10))
+    elif known_match:
+        known_object_status = "KNOWN_MATCH_REVIEW"
+        flags.append(_method_flag("known_object", known_object_status, "neutral", "Known-object catalog match exists and needs explicit review.", 55))
+    else:
+        known_object_status = "NO_KNOWN_MATCH"
+        flags.append(_method_flag("known_object", known_object_status, "support", "No ExoFOP/TOI/NASA/EB/SIMBAD match in local fields.", 75))
+
+    if gaia_duplicated or (gaia_ruwe is not None and gaia_ruwe > 1.4):
+        blend_status = "POSSIBLE_BLEND"
+        flags.append(_method_flag("blend", blend_status, "weaken", "Gaia astrometric flags can indicate blend/contamination risk.", 35))
+    else:
+        blend_status = "NO_LOCAL_BLEND_FLAG"
+        flags.append(_method_flag("blend", blend_status, "support", "No local Gaia duplicated/RUWE blend flag.", 70))
+
+    radius = safe_float(merged.get("planet_radius_earth")) or 0.0
+    teff = safe_float(merged.get("teff")) or 0.0
+    rv_score = 0
+    if distance and distance <= 150:
+        rv_score += 25
+    elif distance and distance <= 300:
+        rv_score += 15
+    else:
+        rv_score += 5
+    if 0.8 <= radius <= 3.5:
+        rv_score += 20
+    elif radius:
+        rv_score += 8
+    if 1 <= period <= 80:
+        rv_score += 18
+    elif period:
+        rv_score += 8
+    if 3200 <= teff <= 5600:
+        rv_score += 15
+    if snr >= 10:
+        rv_score += 12
+    if is_violet:
+        rv_score += 10
+    rv_score = max(0, min(100, rv_score))
+    rv_priority_status = "HIGH_PRIORITY" if rv_score >= 70 else ("MEDIUM_PRIORITY" if rv_score >= 45 else "LOW_PRIORITY")
+    flags.append(_method_flag("rv_priority", rv_priority_status, "support" if rv_score >= 45 else "neutral", f"RV priority score {rv_score}/100 from distance, stellar type, radius, period and SNR.", rv_score))
+
+    science_score = 0
+    if is_violet or (hz and hz not in {"", "ZU_HEISS", "UNKNOWN"}):
+        science_score += 30
+    if distance and distance <= 150:
+        science_score += 20
+    elif distance and distance <= 300:
+        science_score += 12
+    if 0.8 <= radius <= 2.5:
+        science_score += 20
+    elif 2.5 < radius <= 4:
+        science_score += 12
+    if 3500 <= teff <= 5400:
+        science_score += 12
+    science_score += min(18, max(0, visible_transits) * 4)
+    science_score = max(0, min(100, science_score))
+    science_priority_status = "HIGH_PRIORITY" if science_score >= 70 else ("MEDIUM_PRIORITY" if science_score >= 45 else "LOW_PRIORITY")
+    flags.append(_method_flag("science_priority", science_priority_status, "support" if science_score >= 45 else "neutral", f"Science value score {science_score}/100 from HZ, distance, stellar type, radius and observed transits.", science_score))
+
+    weighted_score = round(sum(flag["score"] for flag in flags) / max(1, len(flags)))
+    clean_for_exofop = (
+        transit_status in {"SUPPORTS", "PARTIAL_SUPPORT"}
+        and blend_status == "NO_LOCAL_BLEND_FLAG"
+        and known_object_status == "NO_KNOWN_MATCH"
+        and variability_status == "CLEAN"
+    )
+    if not clean_for_exofop:
+        # TODO(EXOFOP_READY): replace this conservative gate with the final upload workflow once
+        # pixel/centroid, formal catalog crossmatches, and human review exports are available.
+        flags.append(_method_flag("exofop_gate", "BLOCKED", "weaken", "EXOFOP_READY blocked until transit, blend, known-object and variability checks are clean.", 0))
+        weighted_score = round(sum(flag["score"] for flag in flags) / max(1, len(flags)))
+
+    return {
+        "ticId": tic,
+        "flags": flags,
+        "score": weighted_score,
+        "cleanForExofop": clean_for_exofop,
+        "transitEvidenceStatus": transit_status,
+        "ttvStatus": ttv_status,
+        "gaiaAstrometryStatus": gaia_status,
+        "variabilityStatus": variability_status,
+        "knownObjectStatus": known_object_status,
+        "blendStatus": blend_status,
+        "rvPriorityStatus": rv_priority_status,
+        "sciencePriorityStatus": science_priority_status,
+    }
+
+
 
 
 def build_candidate(
@@ -1808,6 +2013,7 @@ def build_candidate(
     )
     color = color_for(merged, matrix)
     is_violet = clean_text(merged.get("hz_markierung")).upper() == "VIOLETT"
+    hz_status = clean_text(merged.get("hz_status") or merged.get("hz_class"))
     distance = safe_float(merged.get("distance_ly")) or 0.0
     period = safe_float(merged.get("best_period")) or 0.0
     snr = safe_float(merged.get("transit_snr")) or 0.0
@@ -1913,6 +2119,23 @@ def build_candidate(
         matrix=matrix,
         gaia_coord=gaia_coord,
     )
+    multi_method = build_multi_method_evidence(
+        tic=tic,
+        merged=merged,
+        matrix=matrix,
+        monitor_result=monitor_result,
+        full_vetting=full_vetting,
+        single_transit_statistics=single_transit_statistics,
+        observed_sectors=observed_sectors,
+        distance=distance,
+        period=period,
+        snr=snr,
+        evidence_score=evidence_score,
+        hz=hz_status,
+        is_violet=is_violet,
+    )
+    if not multi_method["cleanForExofop"] and dashboard_exofop_readiness.upper() in {"EXOFOP_READY", "READY_FOR_EXOFOP"}:
+        dashboard_exofop_readiness = "NOT_EXOFOP_READY"
     final_decision = compute_final_decision(
         row=merged,
         matrix=matrix,
@@ -1990,7 +2213,7 @@ def build_candidate(
         "markierung": display_markierung,
         "markierungsKlasse": display_markierungs_klasse,
         "hzMarkierung": clean_text(merged.get("hz_markierung")),
-        "hz": clean_text(merged.get("hz_status") or merged.get("hz_class")),
+        "hz": hz_status,
         "distance": round(distance, 2),
         "teff": round(safe_float(merged.get("teff")) or 0.0, 0),
         "starRadius": round(safe_float(merged.get("stellar_radius")) or 0.0, 3),
@@ -2074,6 +2297,28 @@ def build_candidate(
         "signalStatus": final_decision.get("signalStatus", ""),
         "vettingStage2Class": final_decision.get("vettingStage2Class", ""),
         "suggestedAction": final_decision.get("suggestedAction", ""),
+        "methodEvidenceFlags": multi_method["flags"],
+        "method_evidence_flags": multi_method["flags"],
+        "multiMethodScore": multi_method["score"],
+        "multi_method_score": multi_method["score"],
+        "multiMethodCleanForExofop": multi_method["cleanForExofop"],
+        "multi_method_clean_for_exofop": multi_method["cleanForExofop"],
+        "transitEvidenceStatus": multi_method["transitEvidenceStatus"],
+        "transit_evidence_status": multi_method["transitEvidenceStatus"],
+        "ttvStatus": multi_method["ttvStatus"],
+        "ttv_status": multi_method["ttvStatus"],
+        "gaiaAstrometryStatus": multi_method["gaiaAstrometryStatus"],
+        "gaia_astrometry_status": multi_method["gaiaAstrometryStatus"],
+        "variabilityStatus": multi_method["variabilityStatus"],
+        "variability_status": multi_method["variabilityStatus"],
+        "knownObjectStatus": multi_method["knownObjectStatus"],
+        "known_object_status": multi_method["knownObjectStatus"],
+        "blendStatus": multi_method["blendStatus"],
+        "blend_status": multi_method["blendStatus"],
+        "rvPriorityStatus": multi_method["rvPriorityStatus"],
+        "rv_priority_status": multi_method["rvPriorityStatus"],
+        "sciencePriorityStatus": multi_method["sciencePriorityStatus"],
+        "science_priority_status": multi_method["sciencePriorityStatus"],
         "spcArtStage2": spc_art_stage2_export or None,
         "individualTransitStatistics": single_transit_statistics,
         "individual_transit_statistics": single_transit_statistics,

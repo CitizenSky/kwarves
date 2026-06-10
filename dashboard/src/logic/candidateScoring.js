@@ -117,7 +117,19 @@ export function followupRank(candidate) {
 
 export function exofopReadiness(candidate) {
   const text = matrixText(candidate);
-  if (candidate.color === "green" && /SPC|RV_NEEDED|FOLLOWUP/.test(text)) return "READY_FOR_EXOFOP";
+  const cleanForExofop = candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop;
+  const requiredStatusesClean = (
+    ["SUPPORTS", "PARTIAL_SUPPORT"].includes(String(candidate.transitEvidenceStatus || candidate.transit_evidence_status || "").toUpperCase()) &&
+    String(candidate.blendStatus || candidate.blend_status || "").toUpperCase() === "NO_LOCAL_BLEND_FLAG" &&
+    String(candidate.knownObjectStatus || candidate.known_object_status || "").toUpperCase() === "NO_KNOWN_MATCH" &&
+    String(candidate.variabilityStatus || candidate.variability_status || "").toUpperCase() === "CLEAN"
+  );
+  if (
+    candidate.color === "green" &&
+    /SPC|RV_NEEDED|FOLLOWUP/.test(text) &&
+    cleanForExofop === true &&
+    requiredStatusesClean
+  ) return "READY_FOR_EXOFOP";
   return "NOT_READY";
 }
 

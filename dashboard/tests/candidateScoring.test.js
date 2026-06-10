@@ -17,7 +17,7 @@ vi.mock('../src/logic/colorFor.js', () => {
 });
 vi.mock('../src/logic/candidateLabel.js', () => ({ candidateLabel: (c) => c.matrixClass || 'UNKNOWN' }));
 
-const { matrixStatusBucket, hzPriority, followupRank, countWhere, expectedTransits, visibleMatrixTransits, coveragePercent, numericBucket } = await import('../src/logic/candidateScoring.js');
+const { matrixStatusBucket, hzPriority, followupRank, countWhere, expectedTransits, visibleMatrixTransits, coveragePercent, numericBucket, exofopReadiness } = await import('../src/logic/candidateScoring.js');
 
 function makeCandidate(overrides = {}) {
   return { tic: 123456789, color: 'yellow', evidenceScore: 75, distance: 100, period: 10, snr: 12, isViolet: false, hz: 'KONSERVATIVE_HZ', matrixClass: '', matrixStatus: '', status: '', matrixTransits: 5, transits: 5, matrixVisibleTransits: 3, visibleTransits: 3, followupStrength: '', ...overrides };
@@ -92,5 +92,31 @@ describe('coveragePercent', () => {
   });
   it('returns 0 when no expected transits', () => {
     expect(coveragePercent(makeCandidate({ matrixTransits: 0 }))).toBe(0);
+  });
+});
+
+describe('exofopReadiness', () => {
+  it('requires clean multi-method core checks', () => {
+    expect(exofopReadiness(makeCandidate({
+      color: 'green',
+      matrixClass: 'SPC_FOLLOWUP_READY',
+      multiMethodCleanForExofop: true,
+      transitEvidenceStatus: 'SUPPORTS',
+      blendStatus: 'NO_LOCAL_BLEND_FLAG',
+      knownObjectStatus: 'NO_KNOWN_MATCH',
+      variabilityStatus: 'CLEAN'
+    }))).toBe('READY_FOR_EXOFOP');
+  });
+
+  it('blocks ExoFOP readiness when a core multi-method check is not clean', () => {
+    expect(exofopReadiness(makeCandidate({
+      color: 'green',
+      matrixClass: 'SPC_FOLLOWUP_READY',
+      multiMethodCleanForExofop: false,
+      transitEvidenceStatus: 'SUPPORTS',
+      blendStatus: 'POSSIBLE_BLEND',
+      knownObjectStatus: 'NO_KNOWN_MATCH',
+      variabilityStatus: 'CLEAN'
+    }))).toBe('NOT_READY');
   });
 });
