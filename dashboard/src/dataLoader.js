@@ -4,34 +4,117 @@ import { isSpcPrepCandidate, matrixText, localizedBaseColorLabel } from './logic
 
 export const DASHBOARD_UI_VERSION = "2026-06-02-r";
 
-const raw = window.ASTRO_DASHBOARD_DATA;
-if (!raw || !raw.candidates || !raw.candidates.length) {
-  console.error("[kwarves] window.ASTRO_DASHBOARD_DATA not found or empty at import time.");
-  console.error("[kwarves] typeof window.ASTRO_DASHBOARD_DATA:", typeof window.ASTRO_DASHBOARD_DATA);
-  console.error("[kwarves] Value:", raw);
-}
-export const data = raw || { summary: {}, tree: [], candidates: [], lightcurveCandidates: [], priorityCandidates: [] };
+export const data = { summary: {}, tree: [], candidates: [], lightcurveCandidates: [], priorityCandidates: [] };
 export const notifications = window.ASTRO_DASHBOARD_NOTIFICATIONS || { generatedAt: "", total: 0, counts: {}, items: [] };
 
-console.log("[kwarves] Data loaded:", data.candidates?.length || 0, "candidates");
-console.log("[kwarves] Summary:", JSON.stringify(data.summary));
+const detailCache = new Map();
+let fallbackLoadPromise = null;
+
+function applyDashboardPayload(payload, source = "unknown") {
+  if (!payload || !Array.isArray(payload.candidates)) return false;
+  data.generatedAt = payload.generatedAt || "";
+  data.summary = payload.summary || {};
+  data.tess = payload.tess || {};
+  data.tree = payload.tree || [];
+  data.candidates = payload.candidates || [];
+  data.lightcurveCandidates = payload.lightcurveCandidates || data.candidates.filter((candidate) => candidate.lightcurveImg);
+  data.priorityCandidates = payload.priorityCandidates || data.lightcurveCandidates;
+  data.splitDataVersion = payload.splitDataVersion || null;
+  data.detailsPattern = payload.detailsPattern || "";
+  window.ASTRO_DASHBOARD_DATA = data;
+  console.log("[kwarves] Data loaded from", source + ":", data.candidates.length, "candidates");
+  console.log("[kwarves] Summary:", JSON.stringify(data.summary));
+  return data.candidates.length > 0;
+}
+
+async function fetchJson(path) {
+  const response = await fetch(path, { cache: "no-cache" });
+  if (!response.ok) throw new Error(`${path} failed with ${response.status}`);
+  return response.json();
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function loadDashboardDataFallback() {
+  if (!fallbackLoadPromise) {
+    fallbackLoadPromise = (async () => {
+      await loadScript("dashboard-data.js");
+      if (!window.ASTRO_DASHBOARD_DATA) throw new Error("dashboard-data.js loaded without ASTRO_DASHBOARD_DATA");
+      applyDashboardPayload(window.ASTRO_DASHBOARD_DATA, "dashboard-data.js fallback");
+      return window.ASTRO_DASHBOARD_DATA;
+    })();
+  }
+  return fallbackLoadPromise;
+}
 
 export function loadData() {
   const statusEl = document.getElementById("dataStatus");
-  const count = data.candidates?.length || 0;
-  if (statusEl) {
-    if (count > 0) {
-      statusEl.textContent = "Daten geladen: " + count + " Kandidaten";
-      statusEl.style.background = "#00b894";
-      statusEl.style.color = "#fff";
-      setTimeout(() => { statusEl.style.opacity = "0"; setTimeout(() => statusEl.remove(), 500); }, 3000);
-    } else {
-      statusEl.textContent = "Datenfehler: 0 Kandidaten geladen";
-      statusEl.style.background = "#ff4444";
-      statusEl.style.color = "#fff";
+  if (statusEl) statusEl.textContent = "Lade Kandidaten-Summary...";
+  return fetchJson("candidates-summary.json")
+    .then((payload) => applyDashboardPayload(payload, "candidates-summary.json"))
+    .catch((error) => {
+      console.warn("[kwarves] candidates-summary.json unavailable, using dashboard-data.js fallback.", error);
+      if (statusEl) statusEl.textContent = "Summary nicht verfügbar, lade Fallback...";
+      return loadDashboardDataFallback().then(() => data.candidates.length > 0);
+    })
+    .then((ok) => {
+      const count = data.candidates?.length || 0;
+      if (statusEl) {
+        if (ok && count > 0) {
+          statusEl.textContent = "Daten geladen: " + count + " Kandidaten";
+          statusEl.style.background = "#00b894";
+          statusEl.style.color = "#fff";
+          setTimeout(() => { statusEl.style.opacity = "0"; setTimeout(() => statusEl.remove(), 500); }, 3000);
+        } else {
+          statusEl.textContent = "Datenfehler: 0 Kandidaten geladen";
+          statusEl.style.background = "#ff4444";
+          statusEl.style.color = "#fff";
+        }
+      }
+      return ok && count > 0;
+    });
+}
+
+export async function loadCandidateDetails(candidateOrTic) {
+  const tic = Number(typeof candidateOrTic === "object" ? candidateOrTic?.tic : candidateOrTic);
+  if (!Number.isFinite(tic)) return null;
+  const existing = data.candidates.find((candidate) => candidate.tic === tic) || null;
+  if (existing?._detailLoaded) return existing;
+  if (detailCache.has(tic)) return detailCache.get(tic);
+
+  const detailPromise = (async () => {
+    try {
+      const detailsPath = existing?.detailsPath || `candidate-details/TIC_${tic}.json`;
+      const detail = await fetchJson(detailsPath);
+      const target = existing || detail;
+      Object.assign(target, detail, { _detailLoaded: true });
+      return target;
+    } catch (error) {
+      console.warn(`[kwarves] detail load failed for TIC ${tic}; using dashboard-data.js fallback.`, error);
+      const fallback = await loadDashboardDataFallback();
+      const detail = fallback.candidates?.find((candidate) => candidate.tic === tic) || existing;
+      if (detail && existing && detail !== existing) Object.assign(existing, detail, { _detailLoaded: true });
+      else if (detail) detail._detailLoaded = true;
+      return existing || detail || null;
     }
-  }
-  return Promise.resolve(count > 0);
+  })();
+  detailCache.set(tic, detailPromise);
+  return detailPromise;
 }
 
 export const els = {

@@ -1,6 +1,6 @@
 import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel, loadSelectedCardCollapsed, SELECTED_CARD_COLLAPSE_KEY } from './state.js';
 import { t, setLanguage, setText, setTitle, setLegendText, buildTessScheduleState, formatNumber, currentLocale, projectFlowStepsI18n, projectLevelsI18n, projectScripts, localizeScriptText, localizeScriptLevel } from './i18n.js';
-import { els, data, loadData, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
+import { els, data, loadData, loadCandidateDetails, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
 import { renderCurveFilterCounts, curveMatchesFilter, curveForCandidate } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
 import { init3dMap, update3dData, update3dSelection, resize3d } from './components/starMap3D.js';
@@ -92,12 +92,19 @@ export function syncMobileOverviewPlacement() {
   mobileMount.hidden = true;
 }
 
-export function selectCandidate(candidate, source = "table", options = {}) {
+export async function selectCandidate(candidate, source = "table", options = {}) {
   if (!candidate) return;
   const { updateUrl = true, replaceUrl = false, scrollToDetail = source === "table" } = options;
   state.selected = candidate;
   state.selectedCandidate = candidate;
   state.activeCandidateId = candidate.tic;
+  const detailedCandidate = await loadCandidateDetails(candidate);
+  if (detailedCandidate) {
+    state.selected = detailedCandidate;
+    state.selectedCandidate = detailedCandidate;
+    state.activeCandidateId = detailedCandidate.tic;
+    candidate = detailedCandidate;
+  }
   renderSelected();
   renderYellowReasonPanel();
   renderTable();
@@ -1440,10 +1447,10 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeNotifications();
 });
 
-window.addEventListener("popstate", () => {
+window.addEventListener("popstate", async () => {
   const candidate = candidateFromUrl();
   if (candidate) {
-    selectCandidate(candidate, "url", { updateUrl: false, scrollToDetail: false });
+    await selectCandidate(candidate, "url", { updateUrl: false, scrollToDetail: false });
     return;
   }
   state.selected = null;
@@ -1496,7 +1503,7 @@ startAnalyticsTracking();
 syncMobileOverviewPlacement();
 mobileOverviewQuery.addEventListener("change", syncMobileOverviewPlacement);
 
-loadData().then((ok) => {
+loadData().then(async (ok) => {
   if (!ok) {
     console.error('[kwarves] Data load failed - showing error');
     const errorDiv = document.createElement('div');
@@ -1507,15 +1514,14 @@ loadData().then((ok) => {
   }
   console.log('[kwarves] Data loaded successfully, starting render');
   const urlCandidate = candidateFromUrl();
-  state.selected = urlCandidate;
-  state.selectedCandidate = urlCandidate;
-  state.activeCandidateId = urlCandidate?.tic || null;
   state.restoreSelectedTablePage = Boolean(urlCandidate);
-  state.selectedCurve = curveForCandidate(urlCandidate);
   setPanelCollapsed("mapPanel", false, true);
   renderAll();
   syncMobileOverviewPlacement();
-  if (urlCandidate) syncCandidateUrl(urlCandidate, true);
+  if (urlCandidate) {
+    await selectCandidate(urlCandidate, "url", { updateUrl: false, scrollToDetail: false });
+    syncCandidateUrl(state.selectedCandidate || urlCandidate, true);
+  }
   state.sortBy = "evidence";
   state.sortOrder = "desc";
   if (state.tessMapMode === "3d") {
