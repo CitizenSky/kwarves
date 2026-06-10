@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatMaybe, formatFloat } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList, candidateLabel } from '../dataLoader.js';
 import { renderFinalDecisionPanel as renderNewFdPanel, initPanelListeners } from './finalDecisionPanel.js';
 import { computeFinalDecision } from '../logic/finalDecision.js';
 
@@ -217,6 +217,123 @@ function renderActionCard(candidate) {
   `;
 }
 
+function compactStatus(candidate) {
+  return candidateLabel(candidate) || candidate.matrixClass || candidate.matrixStatus || candidate.status || "-";
+}
+
+function nextActionText(candidate) {
+  const fd = computeFinalDecision(candidate);
+  return fd?.suggestedAction || candidate.nextStep || candidate.decisionReason || "Review candidate";
+}
+
+function progressStatus(status) {
+  const value = String(status || "").toUpperCase();
+  if (["PASS", "PASSED", "SUPPORTS", "CLEAN", "LOW_RISK", "OK", "NO_KNOWN_MATCH", "NO_LOCAL_BLEND_FLAG", "SHAPE_CLEAR", "STABLE"].includes(value)) return "pass";
+  if (["FAIL", "FAILED", "RED_FP", "FALSE_POSITIVE", "KNOWN_FP_OR_EB", "POSSIBLE_BLEND", "RUWE_ELEVATED", "DUPLICATED_SOURCE", "UNSTABLE"].includes(value)) return "fail";
+  if (["LOCKED", "NO_TESS_DATA", "WAIT_FOR_TESS", "NOT_AVAILABLE", "NOT_CHECKED", "NOT_COMPUTED"].includes(value)) return "locked";
+  return "review";
+}
+
+function renderCandidateSummaryHeader(candidate) {
+  const evidence = candidate.evidenceScore !== null && candidate.evidenceScore !== undefined ? formatFloat(candidate.evidenceScore, 0) : "-";
+  const visible = candidate.matrixVisibleTransits ?? candidate.visibleTransits ?? "-";
+  const total = candidate.matrixTransits ?? candidate.transits ?? "-";
+  const summaryItems = [
+    ["Status", compactStatus(candidate)],
+    ["Distanz", candidate.distance ? `${candidate.distance} ly` : "-"],
+    ["SNR", candidate.snr ? formatFloat(candidate.snr, 1) : "-"],
+    ["Evidence", evidence],
+    ["Visible Transits", `${visible}/${total}`],
+    ["Next Action", nextActionText(candidate)]
+  ];
+  return `
+    <section class="candidate-summary-header">
+      <div class="candidate-summary-main">
+        <span>Kandidat</span>
+        <strong>TIC ${candidate.tic}</strong>
+      </div>
+      <div class="candidate-summary-grid">
+        ${summaryItems.map(([label, value]) => `
+          <div class="candidate-summary-item">
+            <span>${label}</span>
+            <strong>${value}</strong>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function checkFromTree(fd, name) {
+  const item = (fd?.check_tree || []).find((check) => check.name === name);
+  if (!item) return { status: "locked", reason: "not available" };
+  return { status: item.status === "passed" ? "pass" : (item.status === "failed" ? "fail" : "review"), reason: item.reason || "" };
+}
+
+function renderVettingProgressTree(candidate) {
+  const fd = computeFinalDecision(candidate);
+  const mmClean = candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop;
+  const steps = [
+    ["Signal Detection", checkFromTree(fd, "Signal Detection")],
+    ["Data Quality", checkFromTree(fd, "TESS Data")],
+    ["Transit Shape", { status: progressStatus(candidate.transitShape || candidate.transit_shape), reason: candidate.transitShape || candidate.transit_shape || "-" }],
+    ["Single Transit Review", { status: progressStatus(candidate.individualTransitStatus || candidate.individual_transit_status || candidate.singleTransitStatus), reason: candidate.individualTransitStatus || candidate.singleTransitStatus || "pending" }],
+    ["Odd/Even", { status: progressStatus(candidate.oddEvenResult), reason: candidate.oddEvenResult || "-" }],
+    ["SAP vs PDCSAP", { status: progressStatus(candidate.sapPdcsapMatch), reason: candidate.sapPdcsapMatch || "-" }],
+    ["Activity", { status: progressStatus(candidate.variabilityStatus || candidate.variability_status || candidate.rotationRisk), reason: candidate.variabilityStatus || candidate.rotationRisk || "-" }],
+    ["Blend Check", { status: progressStatus(candidate.blendStatus || candidate.blend_status), reason: candidate.blendStatus || candidate.blend_status || "-" }],
+    ["Multi-Method Evidence", { status: (candidate.multiMethodScore ?? candidate.multi_method_score ?? 0) >= 65 ? "pass" : "review", reason: `Score ${candidate.multiMethodScore ?? candidate.multi_method_score ?? "-"}/100` }],
+    ["VVT", { status: "locked", reason: "manual review queue" }],
+    ["EXOFOP Ready", { status: mmClean ? "pass" : "locked", reason: mmClean ? "core checks clean" : "blocked by open checks" }]
+  ];
+  return `
+    <section class="vetting-progress-panel">
+      <div class="section-title-row">
+        <strong>Vetting Progress Tree</strong>
+        <span>PASS / REVIEW / FAIL / LOCKED</span>
+      </div>
+      <div class="vetting-progress-grid">
+        ${steps.map(([label, item]) => `
+          <article class="vetting-step status-${item.status}">
+            <span>${item.status.toUpperCase()}</span>
+            <strong>${label}</strong>
+            <p>${item.reason || "-"}</p>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderBlockingIssuesPanel(candidate) {
+  const fd = computeFinalDecision(candidate);
+  const blockers = [];
+  (fd?.blockers || []).forEach((item) => blockers.push(item));
+  const flagRows = candidate.methodEvidenceFlags || candidate.method_evidence_flags || [];
+  flagRows.forEach((flag) => {
+    if (flag.effect === "weaken" || flag.status === "BLOCKED") blockers.push(flag.reason || flag.status);
+  });
+  [
+    ["Activity unclear", candidate.variabilityStatus || candidate.variability_status],
+    ["Blend check pending", candidate.blendStatus || candidate.blend_status],
+    ["Variability unresolved", candidate.variabilityStatus || candidate.variability_status],
+    ["VVT not completed", "LOCKED"]
+  ].forEach(([label, status]) => {
+    const value = String(status || "").toUpperCase();
+    if (!/CLEAN|SUPPORTS|NO_LOCAL_BLEND_FLAG/.test(value)) blockers.push(label);
+  });
+  const unique = [...new Set(blockers.filter(Boolean))].slice(0, 8);
+  return `
+    <section class="blocking-issues-panel">
+      <div class="section-title-row">
+        <strong>Why is this candidate NOT EXOFOP_READY?</strong>
+        <span>${(candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop) ? "Core checks clean" : "Open review items"}</span>
+      </div>
+      ${unique.length ? `<div class="blocking-list">${unique.map((item) => `<div class="blocking-item">${item}</div>`).join("")}</div>` : `<div class="notice">Keine blockierenden Punkte im aktuellen Dashboard-Datensatz.</div>`}
+    </section>
+  `;
+}
+
 export function renderSelected() {
   const candidate = state.selectedCandidate || state.selected;
   if (!candidate) {
@@ -264,6 +381,9 @@ export function renderSelected() {
   }
 
   els.selectedCard.innerHTML = `
+    ${renderCandidateSummaryHeader(candidate)}
+    ${renderVettingProgressTree(candidate)}
+    ${renderBlockingIssuesPanel(candidate)}
     ${renderNewFdPanel(candidate)}
     ${renderExecutiveSummary(candidate)}
     <div class="chips">${chips}</div>

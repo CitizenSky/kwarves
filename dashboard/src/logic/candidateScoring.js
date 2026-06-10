@@ -182,6 +182,22 @@ export function followupCandidates() {
     ));
 }
 
+export function vvtQueueCandidates() {
+  return [...(data.candidates || [])]
+    .filter((candidate) => {
+      const text = matrixText(candidate);
+      return (
+        candidate.color === "green" ||
+        /SPC_STRONG|SPC_FOLLOWUP_READY|SPC_RV_NEEDED/.test(text)
+      ) && !/FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED|IGNORE/.test(text);
+    })
+    .sort((a, b) => (
+      (Number(b.multiMethodScore ?? b.multi_method_score ?? 0) - Number(a.multiMethodScore ?? a.multi_method_score ?? 0))
+      || (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
+      || (Number(a.distance || 0) - Number(b.distance || 0))
+    ));
+}
+
 export function numericBucket(value, buckets) {
   const number = Number(value || 0);
   return buckets.find((bucket) => number >= bucket.min && number < bucket.max)?.label || buckets[buckets.length - 1].label;

@@ -18,8 +18,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="dashboard-data.js"></script>
     <script src="dashboard-notifications.js?v=20260601a"></script>
-    <script type="module" crossorigin src="./assets/index-DcBCv6Sc.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-D4V3iCNR.css">
+    <script type="module" crossorigin src="./assets/index-KbLYJAw_.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-kx-oE_bg.css">
   </head>
   <body>
     <div id="dataStatus" style="position:fixed;bottom:8px;right:8px;padding:4px 10px;border-radius:4px;font-size:12px;z-index:9999;background:#ffeaa7;color:#2d3436;">Lade Daten…</div>
@@ -699,6 +699,18 @@
                   </div>
                 </div>
                 <div class="followup-list" id="followupCandidateRows"></div>
+              </article>
+              <article class="followup-subpanel vvt-subpanel" aria-label="VVT Review Queue">
+                <div class="followup-subpanel-header">
+                  <div>
+                    <h3>VVT Queue</h3>
+                    <p class="mini">SPC/SPC_STRONG/SPC_FOLLOWUP_READY, sortiert nach Multi-Method Score, Evidence und Distanz.</p>
+                  </div>
+                  <div class="followup-subpanel-actions">
+                    <span class="pill spc-prep" id="vvtCandidateCount">0</span>
+                  </div>
+                </div>
+                <div class="vvt-list" id="vvtCandidateRows"></div>
               </article>
             </div>
           </section>

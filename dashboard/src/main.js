@@ -1251,6 +1251,16 @@ els.followupCandidateRows.addEventListener("click", (event) => {
   }
 });
 
+els.vvtCandidateRows?.addEventListener("click", (event) => {
+  const row = event.target.closest("[data-vvt-tic]");
+  if (!row) return;
+  const candidate = data.candidates.find((item) => item.tic === Number(row.dataset.vvtTic));
+  if (candidate) {
+    selectCandidate(candidate, "vvt");
+    scrollToPanel("selectedCardSection");
+  }
+});
+
 els.topCandidatesRow?.addEventListener("click", (event) => {
   const chip = event.target.closest("[data-tic]");
   if (!chip) return;

@@ -45,6 +45,8 @@ export const els = {
   topCandidatesCount: document.getElementById("topCandidatesCount"),
   followupCandidateRows: document.getElementById("followupCandidateRows"),
   followupCandidateCount: document.getElementById("followupCandidateCount"),
+  vvtCandidateRows: document.getElementById("vvtCandidateRows"),
+  vvtCandidateCount: document.getElementById("vvtCandidateCount"),
   toggleFollowupList: document.getElementById("toggleFollowupList"),
   visitorTimeline: document.getElementById("visitorTimeline"),
   yellowSelectedReason: document.getElementById("yellowSelectedReason"),
@@ -271,7 +273,7 @@ export function publicMatrixCandidates() {
 }
 
 export { matrixText, colorClass, candidateVisualClass, candidateMapColor, candidateGroupLabel, matrixColorClass, localizedBaseColorLabel, colorName, mapSourceLabel, currentMapNoticeText, isSpcArt, isRvNeeded, isSpcStrong, isSpc, isSpcPrepCandidate } from './logic/colorFor.js';
-export { matrixStatusBucket, countWhere, countBuckets, expectedTransits, visibleMatrixTransits, coveragePercent, hzPriority, statusPriority, followupShortLabel, candidateNotes, shortText, followupRank, exofopReadiness, exofopCriteriaFulfilled, exofopUploadCandidates, top20Candidates, followupCandidates, numericBucket, chartRows } from './logic/candidateScoring.js';
+export { matrixStatusBucket, countWhere, countBuckets, expectedTransits, visibleMatrixTransits, coveragePercent, hzPriority, statusPriority, followupShortLabel, candidateNotes, shortText, followupRank, exofopReadiness, exofopCriteriaFulfilled, exofopUploadCandidates, top20Candidates, followupCandidates, vvtQueueCandidates, numericBucket, chartRows } from './logic/candidateScoring.js';
 export { reasonTagList, nextCheckList, candidateChip } from './logic/yellowReasonTags.js';
 export { candidateLabel, recheckChip } from './logic/candidateLabel.js';
 export { renderStatRows, notificationSeverityClass, formatNotificationValue } from './logic/renderHelpers.js';

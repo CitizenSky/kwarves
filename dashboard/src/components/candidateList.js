@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatFloat, formatMaybe, formatDate, formatSectorList, currentLocale } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates, vvtQueueCandidates } from '../dataLoader.js';
 
 export function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -154,6 +154,7 @@ export function renderTopCandidates() {
     els.topCandidatesCount.textContent = formatNumber(rows.length);
   }
   renderFollowupCandidates();
+  renderVvtQueue();
 }
 
 export function renderFollowupCandidates() {
@@ -168,6 +169,29 @@ export function renderFollowupCandidates() {
       </span>
     </button>
   `).join("") : `<span class="muted">${t("followup_candidates_empty")}</span>`;
+}
+
+export function renderVvtQueue() {
+  if (!els.vvtCandidateRows) return;
+  const rows = vvtQueueCandidates().slice(0, 30);
+  if (els.vvtCandidateCount) els.vvtCandidateCount.textContent = formatNumber(rows.length);
+  els.vvtCandidateRows.innerHTML = rows.length ? rows.map((candidate) => {
+    const mmScore = candidate.multiMethodScore ?? candidate.multi_method_score ?? "-";
+    const blockers = [
+      candidate.variabilityStatus || candidate.variability_status,
+      candidate.blendStatus || candidate.blend_status,
+      candidate.knownObjectStatus || candidate.known_object_status,
+      candidate.transitEvidenceStatus || candidate.transit_evidence_status
+    ].filter((value) => value && !/CLEAN|SUPPORTS|NO_KNOWN_MATCH|NO_LOCAL_BLEND_FLAG/.test(String(value).toUpperCase()));
+    return `
+      <button class="vvt-item" type="button" data-vvt-tic="${candidate.tic}">
+        <strong>TIC ${candidate.tic}</strong>
+        <span class="vvt-score">MM ${formatMaybe(mmScore, 0)} · E ${formatMaybe(candidate.evidenceScore, 0)}</span>
+        <span class="vvt-meta">${formatFloat(candidate.distance, 1)} ly · ${candidateLabel(candidate)}</span>
+        ${blockers.length ? `<span class="vvt-blockers">${shortText(blockers.join(" · "), 58)}</span>` : `<span class="vvt-ready">Review focus</span>`}
+      </button>
+    `;
+  }).join("") : `<span class="muted">Keine VVT-Kandidaten.</span>`;
 }
 
 const DEFAULT_PAGE_SIZE = 20;

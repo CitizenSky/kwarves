@@ -30,6 +30,7 @@ VETTING_REPORTS_DIR = PROJECT_ROOT / "vetting_reports"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
 LEVEL5_SINGLE_TRANSIT_ROOT = PROJECT_ROOT / "level5_detailvalidierung" / "level5_02_einzeltransit_plots"
 OUT_PATH = DASHBOARD_DIR / "dashboard-data.js"
+CANDIDATE_SUMMARY_PATH = DASHBOARD_DIR / "candidates-summary.json"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
 GAIA_FETCH_BATCH_SIZE = int(os.environ.get("GAIA_FETCH_BATCH_SIZE", "350"))
 GAIA_FETCH_ENABLED = os.environ.get("GAIA_FETCH_ENABLED", "1").strip() not in {"0", "false", "False"}
@@ -2501,6 +2502,39 @@ def apply_candidate_ranking(candidates: list[dict[str, Any]], previous_by_tic: d
         candidate["update_status"] = candidate["updateStatus"]
 
 
+def candidate_summary_record(candidate: dict[str, Any]) -> dict[str, Any]:
+    fields = [
+        "tic", "status", "color", "colorLabel", "baseColorLabel", "isViolet", "hz",
+        "distance", "period", "snr", "evidenceScore", "multiMethodScore",
+        "matrixStatus", "matrixColor", "matrixClass", "matrixScoreBand",
+        "displayLabels", "followupStrength", "decisionReason", "nextStep",
+        "visibleTransits", "transits", "matrixVisibleTransits", "matrixTransits",
+        "transitEvidenceStatus", "ttvStatus", "gaiaAstrometryStatus",
+        "variabilityStatus", "knownObjectStatus", "blendStatus",
+        "rvPriorityStatus", "sciencePriorityStatus", "multiMethodCleanForExofop",
+        "lightcurveImg", "map", "rank",
+    ]
+    record = {field: candidate.get(field) for field in fields if field in candidate}
+    record["detailsPath"] = f"candidate-details/TIC_{candidate.get('tic')}.json"
+    return record
+
+
+def write_candidate_summary_data(data: dict[str, Any]) -> None:
+    summary_payload = {
+        "generatedAt": data.get("generatedAt"),
+        "summary": data.get("summary"),
+        "tess": data.get("tess"),
+        "tree": data.get("tree"),
+        "candidates": [candidate_summary_record(candidate) for candidate in data.get("candidates", [])],
+        "splitDataVersion": 1,
+        "detailsPattern": "candidate-details/TIC_{tic}.json",
+    }
+    CANDIDATE_SUMMARY_PATH.write_text(
+        json.dumps(summary_payload, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     args = parse_args()
     build_started = time.monotonic()
@@ -2684,7 +2718,9 @@ def main() -> int:
         + ";\n",
         encoding="utf-8",
     )
+    write_candidate_summary_data(data)
     print(f"wrote {OUT_PATH}")
+    print(f"wrote {CANDIDATE_SUMMARY_PATH}")
     print(json.dumps(summary, ensure_ascii=False))
     elapsed = time.monotonic() - build_started
     print(
