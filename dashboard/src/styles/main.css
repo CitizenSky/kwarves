@@ -7094,3 +7094,408 @@
           justify-self: start;
         }
       }
+
+      /* Responsive dashboard workbench: final layout overrides */
+      .content,
+      .page,
+      .panel,
+      .selected-card-section,
+      .curve-detail-card,
+      .quad-grid,
+      .quad-cell,
+      .panel-body,
+      .table-wrap,
+      .selected-card,
+      .curve-img-wrap,
+      .map-layout,
+      .map-main,
+      .map-side,
+      .fd-panel,
+      .fd-content {
+        min-width: 0;
+      }
+
+      img,
+      canvas {
+        max-width: 100%;
+      }
+
+      .quad-cell {
+        display: grid;
+        min-height: 0;
+      }
+
+      .quad-cell > .panel,
+      .quad-cell > .selected-card-section,
+      .quad-cell > .curve-detail-card {
+        min-height: 0;
+      }
+
+      #tablePanel,
+      #selectedCardSection,
+      .curve-detail-card,
+      #mapPanel {
+        overflow: hidden;
+      }
+
+      #tablePanel .table-wrap,
+      #selectedCardSection .selected-card,
+      .curve-detail-card .curve-img-wrap,
+      #mapPanel .panel-body {
+        min-height: 0;
+      }
+
+      .fd-content,
+      .fd-section,
+      .fd-reason,
+      .fd-next,
+      .fd-blockers,
+      .fd-kv,
+      .mme-flag,
+      .blocking-item,
+      .action-card,
+      .notice {
+        overflow-wrap: anywhere;
+      }
+
+      @media (min-width: 1201px) {
+        .quad-grid {
+          display: grid !important;
+          grid-template-areas:
+            "candidates details"
+            "lightcurve starmap" !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          grid-template-rows: minmax(440px, calc((100vh - 178px) / 2)) minmax(440px, calc((100vh - 178px) / 2)) !important;
+          align-items: stretch !important;
+          gap: 16px !important;
+          min-height: 0 !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) { grid-area: candidates !important; }
+        .quad-grid > .quad-cell:nth-child(2) { grid-area: details !important; }
+        .quad-grid > .quad-cell:nth-child(3) { grid-area: lightcurve !important; }
+        .quad-grid > .quad-cell:nth-child(4) { grid-area: starmap !important; }
+
+        .quad-grid > .quad-cell,
+        .quad-grid > .quad-cell:nth-child(1),
+        .quad-grid > .quad-cell:nth-child(2),
+        .quad-grid > .quad-cell:nth-child(3),
+        .quad-grid > .quad-cell:nth-child(4) {
+          height: 100% !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: hidden !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) #tablePanel,
+        .quad-grid > .quad-cell:nth-child(2) #selectedCardSection,
+        .quad-grid > .quad-cell:nth-child(3) .curve-detail-card,
+        .quad-grid > .quad-cell:nth-child(4) #mapPanel {
+          display: flex !important;
+          flex-direction: column !important;
+          height: 100% !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: hidden !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) {
+          display: grid !important;
+          grid-template-rows: auto minmax(0, 1fr) !important;
+          gap: 12px !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .kpis {
+          grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+          gap: 8px !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .card {
+          min-height: 72px !important;
+          padding: 10px !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .big-number {
+          font-size: 20px !important;
+        }
+
+        #tablePanel .table-wrap,
+        #selectedCardSection .selected-card,
+        .curve-detail-card .curve-img-wrap,
+        #mapPanel .panel-body {
+          flex: 1 1 auto !important;
+          overflow: auto !important;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        #tablePanel .table-wrap {
+          max-height: none !important;
+          overflow-x: hidden !important;
+        }
+
+        #tablePanel table {
+          width: 100% !important;
+          min-width: 0 !important;
+          table-layout: fixed !important;
+        }
+
+        .curve-detail-card .curve-img-wrap {
+          display: grid;
+          place-items: start center;
+        }
+
+        .curve-detail-card .curve-img-wrap img {
+          width: 100%;
+          height: auto;
+        }
+
+        #mapPanel .map-layout {
+          grid-template-columns: minmax(0, 1fr) minmax(190px, 240px) !important;
+          height: 100%;
+        }
+
+        #mapPanel .map-main,
+        #mapPanel .map-side {
+          min-height: 0;
+        }
+
+        #mapPanel .map-frame,
+        .quad-cell .map-frame {
+          height: min(100%, 520px) !important;
+          min-height: 300px !important;
+        }
+      }
+
+      @media (min-width: 769px) and (max-width: 1200px) {
+        .app {
+          grid-template-columns: 86px minmax(0, 1fr) !important;
+        }
+
+        .quad-grid {
+          display: grid !important;
+          grid-template-areas:
+            "candidates details"
+            "lightcurve starmap" !important;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+          grid-template-rows: auto auto !important;
+          gap: 14px !important;
+          height: auto !important;
+          min-height: 0 !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) { grid-area: candidates !important; }
+        .quad-grid > .quad-cell:nth-child(2) { grid-area: details !important; }
+        .quad-grid > .quad-cell:nth-child(3) { grid-area: lightcurve !important; }
+        .quad-grid > .quad-cell:nth-child(4) { grid-area: starmap !important; }
+
+        .quad-grid > .quad-cell,
+        .quad-grid > .quad-cell:nth-child(1),
+        .quad-grid > .quad-cell:nth-child(2),
+        .quad-grid > .quad-cell:nth-child(3),
+        .quad-grid > .quad-cell:nth-child(4) {
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: hidden !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) #tablePanel,
+        .quad-grid > .quad-cell:nth-child(2) #selectedCardSection,
+        .quad-grid > .quad-cell:nth-child(3) .curve-detail-card,
+        .quad-grid > .quad-cell:nth-child(4) #mapPanel {
+          height: auto !important;
+          min-height: 420px !important;
+          max-height: min(720px, calc(100vh - 160px)) !important;
+          overflow: hidden !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) {
+          display: grid !important;
+          grid-template-rows: auto minmax(0, 1fr) !important;
+          gap: 10px !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .kpis {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          gap: 8px !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(2) .card {
+          min-height: 72px !important;
+          padding: 10px !important;
+        }
+
+        #tablePanel .table-wrap,
+        #selectedCardSection .selected-card,
+        .curve-detail-card .curve-img-wrap,
+        #mapPanel .panel-body {
+          overflow: auto !important;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        #tablePanel .table-wrap {
+          max-height: none !important;
+        }
+
+        #mapPanel .map-layout {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        #mapPanel .map-side {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        #mapPanel .notice,
+        #mapPanel #mapCoverageStatus {
+          grid-column: 1 / -1;
+        }
+
+        #mapPanel .map-frame,
+        .quad-cell .map-frame {
+          height: clamp(300px, 38vw, 420px) !important;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .topbar {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .quad-grid {
+          display: grid !important;
+          grid-template-areas:
+            "candidates"
+            "details"
+            "lightcurve"
+            "starmap" !important;
+          grid-template-columns: minmax(0, 1fr) !important;
+          gap: 12px !important;
+          height: auto !important;
+          min-height: 0 !important;
+        }
+
+        .quad-grid > .quad-cell:nth-child(1) { grid-area: candidates !important; }
+        .quad-grid > .quad-cell:nth-child(2) { grid-area: details !important; }
+        .quad-grid > .quad-cell:nth-child(3) { grid-area: lightcurve !important; }
+        .quad-grid > .quad-cell:nth-child(4) { grid-area: starmap !important; }
+
+        .quad-grid > .quad-cell,
+        .quad-grid > .quad-cell:nth-child(1),
+        .quad-grid > .quad-cell:nth-child(2),
+        .quad-grid > .quad-cell:nth-child(3),
+        .quad-grid > .quad-cell:nth-child(4),
+        .quad-grid > .quad-cell:nth-child(1) #tablePanel,
+        .quad-grid > .quad-cell:nth-child(2) #selectedCardSection,
+        .quad-grid > .quad-cell:nth-child(3) .curve-detail-card,
+        .quad-grid > .quad-cell:nth-child(4) #mapPanel {
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+
+        #tablePanel .table-wrap,
+        #selectedCardSection .selected-card,
+        .curve-detail-card .curve-img-wrap,
+        #mapPanel .panel-body {
+          overflow: visible !important;
+          max-height: none !important;
+        }
+
+        #tablePanel tr {
+          min-width: 0 !important;
+        }
+
+        #tablePanel td:nth-child(5) {
+          align-self: stretch !important;
+        }
+
+        #tablePanel .candidate-select-button {
+          width: 100% !important;
+        }
+
+        .selected-card-head {
+          position: sticky;
+          top: 0;
+          z-index: 7;
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(12px);
+        }
+
+        .selected-card-head-info {
+          min-width: 0 !important;
+        }
+
+        .selected-card-head-actions {
+          width: auto !important;
+          flex: 0 0 auto;
+        }
+
+        .fd-toggle,
+        .fd-matrix-row,
+        .fd-kv,
+        .candidate-summary-main,
+        .section-title-row {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .fd-matrix-row {
+          display: grid !important;
+        }
+
+        .fd-axis {
+          width: auto !important;
+        }
+
+        .fd-quadrant {
+          min-width: 0;
+        }
+
+        .details-grid,
+        .details-grid.compact,
+        .candidate-summary-grid,
+        .vetting-progress-grid,
+        .mme-grid,
+        .multi-method-evidence .mme-grid,
+        .heatmap-grid {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .map-note {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        #mapPanel .map-side {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        #mapPanel .map-frame,
+        .quad-cell .map-frame {
+          height: clamp(260px, 78vw, 380px) !important;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .kpis,
+        .quad-grid > .quad-cell:nth-child(2) .kpis,
+        .mobile-overview-mount .kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        #tablePanel tr {
+          grid-template-columns: minmax(0, 1fr) minmax(82px, auto) !important;
+        }
+
+        .panel-header,
+        .selected-card-head,
+        .detail-card-header {
+          gap: 8px !important;
+        }
+
+        .fd-badge {
+          justify-self: start;
+        }
+      }

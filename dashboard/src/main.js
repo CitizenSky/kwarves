@@ -63,12 +63,32 @@ export function syncCandidateUrl(candidate, replace = false) {
   window.history[method]({}, "", url);
 }
 
+export function setSelectedCardCollapsed(collapsed, persist = false) {
+  if (!els.selectedCardSection) return;
+  els.selectedCardSection.classList.toggle("is-collapsed", Boolean(collapsed));
+  if (els.toggleSelectedCard) {
+    els.toggleSelectedCard.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  }
+  if (persist) {
+    try {
+      localStorage.setItem(SELECTED_CARD_COLLAPSE_KEY, collapsed ? "1" : "0");
+    } catch (_) {}
+  }
+}
+
+export function ensureMobileSelectionVisible() {
+  if (!window.matchMedia("(max-width: 900px)").matches) return;
+  setSelectedCardCollapsed(false, false);
+}
+
 export function scrollSelectedCandidateIntoView() {
   if (!window.matchMedia("(max-width: 900px)").matches) return;
-  document.getElementById("selectedCardSection")?.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
+  const section = document.getElementById("selectedCardSection");
+  if (!section) return;
+  const topbar = document.querySelector(".topbar");
+  const offset = (topbar?.getBoundingClientRect().height || 0) + 10;
+  const top = section.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
 }
 
 export function syncMobileOverviewPlacement() {
@@ -95,6 +115,7 @@ export function syncMobileOverviewPlacement() {
 export async function selectCandidate(candidate, source = "table", options = {}) {
   if (!candidate) return;
   const { updateUrl = true, replaceUrl = false, scrollToDetail = source === "table" } = options;
+  ensureMobileSelectionVisible();
   state.selected = candidate;
   state.selectedCandidate = candidate;
   state.activeCandidateId = candidate.tic;
@@ -1153,11 +1174,7 @@ if (els.toggleSelectedCard && els.selectedCardSection) {
   els.toggleSelectedCard.addEventListener("click", () => {
     const section = els.selectedCardSection;
     const collapsed = !section.classList.contains("is-collapsed");
-    section.classList.toggle("is-collapsed", collapsed);
-    els.toggleSelectedCard.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    try {
-      localStorage.setItem(SELECTED_CARD_COLLAPSE_KEY, collapsed ? "1" : "0");
-    } catch (_) {}
+    setSelectedCardCollapsed(collapsed, true);
   });
 }
 
@@ -1488,12 +1505,7 @@ setPanelCollapsed("tablePanel", false, true);
 setTessCompareCollapsed(loadTessCompareCollapsed(), false);
 (function initSelectedCardCollapse() {
   const collapsed = loadSelectedCardCollapsed();
-  if (els.selectedCardSection) {
-    els.selectedCardSection.classList.toggle("is-collapsed", collapsed);
-  }
-  if (els.toggleSelectedCard) {
-    els.toggleSelectedCard.setAttribute("aria-expanded", collapsed ? "false" : "true");
-  }
+  setSelectedCardCollapsed(collapsed, false);
 })();
 analytics.selfFilterEnabled = loadSelfFilterPreference();
 applyLanguageToUi();
