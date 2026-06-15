@@ -13,6 +13,7 @@ import { renderAdmin } from './components/followupPanel.js';
 import { showToast, openNotifications, closeNotifications, initPanelCollapseControls, renderNotifications, renderNotificationBadge, setPanelCollapsed } from './ui.js';
 import { renderStatRows } from './logic/renderHelpers.js';
 import { currentMapNoticeText } from './logic/colorFor.js';
+import { applyCandidateSelectionSnapshot, createCandidateSelectionSnapshot, synchronizeCandidateSelectionPanels } from './logic/candidateSelection.js';
 import { startAnalyticsTracking, finalizeAnalyticsSession, setSelfFilterEnabled } from './analytics.js';
 
 let visitorCharts = [];
@@ -116,37 +117,36 @@ export async function selectCandidate(candidate, source = "table", options = {})
   if (!candidate) return;
   const { updateUrl = true, replaceUrl = false, scrollToDetail = source === "table" } = options;
   ensureMobileSelectionVisible();
-  state.selected = candidate;
-  state.selectedCandidate = candidate;
-  state.activeCandidateId = candidate.tic;
   const detailedCandidate = await loadCandidateDetails(candidate);
-  if (detailedCandidate) {
-    state.selected = detailedCandidate;
-    state.selectedCandidate = detailedCandidate;
-    state.activeCandidateId = detailedCandidate.tic;
-    candidate = detailedCandidate;
+  const snapshot = createCandidateSelectionSnapshot(candidate, {
+    detailedCandidate,
+    source,
+    currentCurveFilter: state.curveFilter,
+    curveForCandidate,
+    curveMatchesFilter
+  });
+  applyCandidateSelectionSnapshot(state, snapshot);
+  if (snapshot?.resetCurveFilter) {
+    document.querySelectorAll("[data-curve-filter]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.curveFilter === state.curveFilter);
+    });
   }
-  renderSelected();
-  renderYellowReasonPanel();
-  renderTable();
-  draw2dMap();
-  update3dSelection();
-  renderTess();
-  if (updateUrl) syncCandidateUrl(candidate, replaceUrl);
-  const curve = curveForCandidate(candidate);
-  if (curve && source !== "curve") {
-    state.selectedCurve = curve;
-    if (!curveMatchesFilter(curve, state.curveFilter)) {
-      state.curveFilter = "all";
-      document.querySelectorAll("[data-curve-filter]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.curveFilter === state.curveFilter);
-      });
-    }
-    renderCurves(false, true);
-  }
+  synchronizeCandidateSelectionPanels({
+    renderSelected,
+    renderYellowReasonPanel,
+    renderTable,
+    draw2dMap,
+    update3dSelection,
+    renderTess,
+    renderCurves
+  }, {
+    syncCurveScroll: Boolean(snapshot?.selectedCurve)
+  });
+  if (updateUrl) syncCandidateUrl(snapshot?.selectedCandidate || candidate, replaceUrl);
   if (scrollToDetail) {
     window.requestAnimationFrame(() => scrollSelectedCandidateIntoView());
   }
+  return snapshot;
 }
 
 export function renderAll() {
@@ -1304,9 +1304,7 @@ els.curveList?.addEventListener("click", (event) => {
   if (!item) return;
   const candidate = data.lightcurveCandidates.find((entry) => entry.tic === Number(item.dataset.curveTic));
   if (!candidate) return;
-  state.selectedCurve = candidate;
   selectCandidate(candidate, "curve");
-  renderCurves(false, true);
 });
 
 els.matrixStats.addEventListener("click", (event) => {
