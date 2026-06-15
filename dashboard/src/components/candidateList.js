@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatFloat, formatMaybe, formatDate, formatSectorList, currentLocale } from '../i18n.js';
 import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates, vvtQueueCandidates, isHabitableZoneCandidate, evaluateVvt } from '../dataLoader.js';
+import { candidateMatchesColorFilter } from '../logic/candidateFilters.js';
 
 export function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -31,15 +32,7 @@ export function publicMatrixCandidates() {
 export function filteredCandidates() {
   const term = els.globalSearch.value.trim().toLowerCase();
   return publicVisibleCandidates().filter((candidate) => {
-    const matchesColor =
-      state.colorFilter === "all" ||
-      (state.colorFilter === "violet"
-        ? isHabitableZoneCandidate(candidate)
-        : state.colorFilter === "spc-prep"
-          ? isSpcPrepCandidate(candidate)
-          : state.colorFilter === "yellow"
-            ? candidate.color === "yellow" && !isSpcPrepCandidate(candidate)
-            : candidate.color === state.colorFilter);
+    const matchesColor = candidateMatchesColorFilter(candidate, state.colorFilter);
     return matchesColor && matchesCandidate(candidate, term);
   });
 }

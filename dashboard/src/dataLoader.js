@@ -2,6 +2,7 @@ import { state, tessYear8SectorSet } from './state.js';
 import { t, normalizeSectorList, formatDateRange, daysDiff, formatDate, formatNumber, formatSectorList } from './i18n.js';
 import { isSpcPrepCandidate, matrixText, localizedBaseColorLabel } from './logic/colorFor.js';
 import { isHabitableZoneCandidate } from './logic/habitableZone.js';
+import { candidateMatchesColorFilter } from './logic/candidateFilters.js';
 
 export const DASHBOARD_UI_VERSION = "2026-06-02-r";
 
@@ -328,15 +329,7 @@ export function publicVisibleCandidates() {
 export function filteredCandidates() {
   const term = els.globalSearch.value.trim().toLowerCase();
   return publicVisibleCandidates().filter((candidate) => {
-    const matchesColor =
-      state.colorFilter === "all" ||
-      (state.colorFilter === "violet"
-        ? isHabitableZoneCandidate(candidate)
-        : state.colorFilter === "spc-prep"
-          ? isSpcPrepCandidate(candidate)
-          : state.colorFilter === "yellow"
-            ? candidate.color === "yellow" && !isSpcPrepCandidate(candidate)
-            : candidate.color === state.colorFilter);
+    const matchesColor = candidateMatchesColorFilter(candidate, state.colorFilter);
     return matchesColor && matchesCandidate(candidate, term);
   });
 }
