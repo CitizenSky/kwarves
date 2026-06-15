@@ -361,6 +361,7 @@ export function publicMatrixCandidates() {
 
 export { matrixText, colorClass, candidateVisualClass, candidateMapColor, candidateGroupLabel, matrixColorClass, localizedBaseColorLabel, colorName, mapSourceLabel, currentMapNoticeText, isSpcArt, isRvNeeded, isSpcStrong, isSpc, isSpcPrepCandidate } from './logic/colorFor.js';
 export { isHabitableZoneCandidate, isHabitableZoneClass, normalizeHabitableZone } from './logic/habitableZone.js';
+export { evaluateVvt } from './logic/vvtScoring.js';
 export { matrixStatusBucket, countWhere, countBuckets, expectedTransits, visibleMatrixTransits, coveragePercent, hzPriority, statusPriority, followupShortLabel, candidateNotes, shortText, followupRank, exofopReadiness, exofopCriteriaFulfilled, exofopUploadCandidates, top20Candidates, followupCandidates, vvtQueueCandidates, numericBucket, chartRows } from './logic/candidateScoring.js';
 export { reasonTagList, nextCheckList, candidateChip } from './logic/yellowReasonTags.js';
 export { candidateLabel, recheckChip } from './logic/candidateLabel.js';

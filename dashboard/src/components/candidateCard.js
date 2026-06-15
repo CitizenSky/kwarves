@@ -3,6 +3,7 @@ import { t, formatMaybe, formatFloat } from '../i18n.js';
 import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList, candidateLabel, isHabitableZoneCandidate } from '../dataLoader.js';
 import { renderFinalDecisionPanel as renderNewFdPanel, initPanelListeners } from './finalDecisionPanel.js';
 import { computeFinalDecision } from '../logic/finalDecision.js';
+import { evaluateVvt } from '../logic/vvtScoring.js';
 
 export function candidateChip(candidate) {
   return `<button class="chip" type="button" data-stat-tic="${candidate.tic}">TIC ${candidate.tic} · ${formatMaybe(candidate.evidenceScore, 0)}</button>`;
@@ -273,6 +274,10 @@ function checkFromTree(fd, name) {
 function renderVettingProgressTree(candidate) {
   const fd = computeFinalDecision(candidate);
   const mmClean = candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop;
+  const vvt = candidate.vvtStatus ? candidate : evaluateVvt(candidate);
+  const vvtProgress = vvt.vvtStatus === "EXOFOP_READY"
+    ? "pass"
+    : (vvt.vvtStatus === "BLOCKED" ? "fail" : "review");
   const steps = [
     ["Signal Detection", checkFromTree(fd, "Signal Detection")],
     ["Data Quality", checkFromTree(fd, "TESS Data")],
@@ -283,8 +288,8 @@ function renderVettingProgressTree(candidate) {
     ["Activity", { status: progressStatus(candidate.variabilityStatus || candidate.variability_status || candidate.rotationRisk), reason: candidate.variabilityStatus || candidate.rotationRisk || "-" }],
     ["Blend Check", { status: progressStatus(candidate.blendStatus || candidate.blend_status), reason: candidate.blendStatus || candidate.blend_status || "-" }],
     ["Multi-Method Evidence", { status: (candidate.multiMethodScore ?? candidate.multi_method_score ?? 0) >= 65 ? "pass" : "review", reason: `Score ${candidate.multiMethodScore ?? candidate.multi_method_score ?? "-"}/100` }],
-    ["VVT", { status: "locked", reason: "manual review queue" }],
-    ["EXOFOP Ready", { status: mmClean ? "pass" : "locked", reason: mmClean ? "core checks clean" : "blocked by open checks" }]
+    ["VVT", { status: vvtProgress, reason: `${vvt.vvtStatus || "NEEDS_REVIEW"} · Score ${vvt.vvtScore ?? "-"}/100` }],
+    ["EXOFOP Ready", { status: vvt.vvtStatus === "EXOFOP_READY" ? "pass" : "locked", reason: vvt.vvtStatus === "EXOFOP_READY" ? "VVT cleared" : (vvt.vvtBlockingIssues || []).join(" · ") || (mmClean ? "core checks clean" : "blocked by open checks") }]
   ];
   return `
     <section class="vetting-progress-panel">

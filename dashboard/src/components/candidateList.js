@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatFloat, formatMaybe, formatDate, formatSectorList, currentLocale } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates, vvtQueueCandidates, isHabitableZoneCandidate } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates, vvtQueueCandidates, isHabitableZoneCandidate, evaluateVvt } from '../dataLoader.js';
 
 export function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -176,19 +176,17 @@ export function renderVvtQueue() {
   const rows = vvtQueueCandidates().slice(0, 30);
   if (els.vvtCandidateCount) els.vvtCandidateCount.textContent = formatNumber(rows.length);
   els.vvtCandidateRows.innerHTML = rows.length ? rows.map((candidate) => {
-    const mmScore = candidate.multiMethodScore ?? candidate.multi_method_score ?? "-";
-    const blockers = [
-      candidate.variabilityStatus || candidate.variability_status,
-      candidate.blendStatus || candidate.blend_status,
-      candidate.knownObjectStatus || candidate.known_object_status,
-      candidate.transitEvidenceStatus || candidate.transit_evidence_status
-    ].filter((value) => value && !/CLEAN|SUPPORTS|NO_KNOWN_MATCH|NO_LOCAL_BLEND_FLAG/.test(String(value).toUpperCase()));
+    const vvt = candidate.vvtStatus ? candidate : evaluateVvt(candidate);
+    const vvtScore = candidate.vvtScore ?? vvt.vvtScore ?? "-";
+    const vvtStatus = candidate.vvtStatus || vvt.vvtStatus || "NEEDS_REVIEW";
+    const blockers = candidate.vvtBlockingIssues || vvt.vvtBlockingIssues || [];
+    const notes = candidate.vvtReviewNotes || vvt.vvtReviewNotes || [];
     return `
       <button class="vvt-item" type="button" data-vvt-tic="${candidate.tic}">
         <strong>TIC ${candidate.tic}</strong>
-        <span class="vvt-score">MM ${formatMaybe(mmScore, 0)} · E ${formatMaybe(candidate.evidenceScore, 0)}</span>
-        <span class="vvt-meta">${formatFloat(candidate.distance, 1)} ly · ${candidateLabel(candidate)}</span>
-        ${blockers.length ? `<span class="vvt-blockers">${shortText(blockers.join(" · "), 58)}</span>` : `<span class="vvt-ready">Review focus</span>`}
+        <span class="vvt-score">VVT ${formatMaybe(vvtScore, 0)} · E ${formatMaybe(candidate.evidenceScore, 0)}</span>
+        <span class="vvt-meta">${formatFloat(candidate.distance, 1)} ly · ${candidateLabel(candidate)} · ${vvtStatus}</span>
+        ${blockers.length ? `<span class="vvt-blockers">${shortText(blockers.join(" · "), 72)}</span>` : `<span class="vvt-ready">${shortText(notes[0] || "Review focus", 72)}</span>`}
       </button>
     `;
   }).join("") : `<span class="muted">Keine VVT-Kandidaten.</span>`;

@@ -1,4 +1,5 @@
 import { computeFinalDecision } from '../logic/finalDecision.js';
+import { evaluateVvt } from '../logic/vvtScoring.js';
 
 const STATUS_LABELS = {
   "EXOFOP_CANDIDATE": "ExoFOP bereit",
@@ -152,7 +153,11 @@ function renderMultiMethodEvidence(candidate) {
   if (!flags.length) return "";
   var score = candidate.multiMethodScore ?? candidate.multi_method_score ?? "-";
   var cleanForExofop = candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop;
+  var vvt = candidate.vvtStatus ? candidate : evaluateVvt(candidate);
   var statusRows = [
+    ["VVT Status", vvt.vvtStatus],
+    ["VVT Blocker", (vvt.vvtBlockingIssues || []).join(" | ") || "-"],
+    ["VVT Notes", (vvt.vvtReviewNotes || []).join(" | ") || "-"],
     ["Transit", candidate.transitEvidenceStatus || candidate.transit_evidence_status],
     ["TTV", candidate.ttvStatus || candidate.ttv_status],
     ["Gaia Astrometry", candidate.gaiaAstrometryStatus || candidate.gaia_astrometry_status],
@@ -176,6 +181,7 @@ function renderMultiMethodEvidence(candidate) {
     '<div class="fd-section multi-method-evidence">' +
       '<div class="fd-section-title">Multi-Method Evidence</div>' +
       '<div class="fd-kv"><span>Multi-Method Score</span><strong>' + score + '/100</strong></div>' +
+      '<div class="fd-kv"><span>VVT Score</span><strong>' + (vvt.vvtScore ?? "-") + '/100</strong></div>' +
       '<div class="fd-kv"><span>EXOFOP Gate</span><strong>' + (cleanForExofop ? "Clean" : "Blocked") + '</strong></div>' +
       statusHtml +
       '<div class="mme-grid">' + flagsHtml + '</div>' +

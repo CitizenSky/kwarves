@@ -1999,6 +1999,80 @@ def build_multi_method_evidence(
     }
 
 
+def build_vvt_assessment(
+    *,
+    candidate_text: str,
+    color: str,
+    observed_sector_count: int,
+    visible_transits: int,
+    evidence_score: float | None,
+    multi_method: dict[str, Any],
+    monitor_result: dict[str, Any],
+) -> dict[str, Any]:
+    blocking_issues: list[str] = []
+    review_notes: list[str] = []
+    transit_status = clean_text(multi_method.get("transitEvidenceStatus")).upper()
+    ttv_status = clean_text(multi_method.get("ttvStatus")).upper()
+    blend_status = clean_text(multi_method.get("blendStatus")).upper()
+    known_object_status = clean_text(multi_method.get("knownObjectStatus")).upper()
+    variability_status = clean_text(multi_method.get("variabilityStatus")).upper()
+    clean_for_exofop = bool(multi_method.get("cleanForExofop"))
+    score = round(((evidence_score or 0.0) * 0.45) + (safe_float(multi_method.get("score")) or 0.0) * 0.55)
+    text = candidate_text.upper()
+
+    if monitor_result.get("dataStatus") == "NO_TESS_DATA" or observed_sector_count <= 0:
+        blocking_issues.append("No TESS/lightcurve data available")
+    elif observed_sector_count < 2 or visible_transits < 2:
+        blocking_issues.append("WAIT_FOR_DATA: insufficient sector or visible-transit coverage")
+
+    if transit_status not in {"SUPPORTS", "PARTIAL_SUPPORT"}:
+        blocking_issues.append("Transit evidence is not strong enough for VVT release")
+    if blend_status and blend_status != "NO_LOCAL_BLEND_FLAG":
+        blocking_issues.append("Blend/contamination risk needs resolution")
+    if known_object_status == "KNOWN_FP_OR_EB" or re.search(r"FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED", text):
+        blocking_issues.append("Known false-positive or eclipsing-binary risk")
+    elif known_object_status and known_object_status != "NO_KNOWN_MATCH":
+        review_notes.append("Known-object catalog match needs manual review")
+    if variability_status == "ACTIVITY_OR_VARIABLE_RISK":
+        blocking_issues.append("Activity/variability risk needs resolution")
+    elif variability_status == "NOT_CHECKED":
+        review_notes.append("Variability check is not complete")
+
+    if ttv_status in {"TIMING_OR_DEPTH_SCATTER_RISK", "STRONG_TTV", "IRREGULAR_TTV", "TTV_REVIEW", "POSSIBLE_TTV"}:
+        score += 5
+        review_notes.append(f"{ttv_status}: manual timing review; not a hard blocker by itself")
+    elif ttv_status == "NOT_ENOUGH_TRANSITS":
+        review_notes.append("TTV check waits for more measured individual transits")
+    elif ttv_status == "NO_STRONG_TTV_FLAG":
+        review_notes.append("No strong TTV flag")
+
+    if clean_for_exofop:
+        score += 8
+    if visible_transits >= 3:
+        score += 4
+    if color == "green":
+        score += 4
+    score = max(0, min(100, round(score)))
+
+    blocking_issues = list(dict.fromkeys(item for item in blocking_issues if item))
+    review_notes = list(dict.fromkeys(item for item in review_notes if item))
+    if any(item.startswith("WAIT_FOR_DATA") or "No TESS" in item for item in blocking_issues):
+        status = "WAIT_FOR_DATA"
+    elif blocking_issues:
+        status = "BLOCKED"
+    elif score >= 85 and clean_for_exofop:
+        status = "EXOFOP_READY"
+    else:
+        status = "NEEDS_REVIEW"
+
+    return {
+        "vvtScore": score,
+        "vvtStatus": status,
+        "vvtBlockingIssues": blocking_issues,
+        "vvtReviewNotes": review_notes,
+    }
+
+
 
 
 def build_candidate(
@@ -2215,6 +2289,22 @@ def build_candidate(
         "vShapeScore": safe_float(matrix.get("v_shape_score")),
         "shapeBlockingIssues": shape_blocking_issues,
     }
+    vvt_assessment = build_vvt_assessment(
+        candidate_text=" ".join([
+            clean_text(merged.get("status")),
+            matrix_status,
+            matrix_class,
+            decision_reason,
+            next_step,
+            " ".join(display_labels),
+        ]),
+        color=color,
+        observed_sector_count=safe_int_or_none(sector.get("sector_count")) or len(observed_sectors),
+        visible_transits=matrix_visible_transits or 0,
+        evidence_score=evidence_score,
+        multi_method=multi_method,
+        monitor_result=monitor_result,
+    )
     return {
         "tic": tic,
         "status": "WAIT_FOR_TESS" if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS" else clean_text(merged.get("status")),
@@ -2332,6 +2422,10 @@ def build_candidate(
         "rv_priority_status": multi_method["rvPriorityStatus"],
         "sciencePriorityStatus": multi_method["sciencePriorityStatus"],
         "science_priority_status": multi_method["sciencePriorityStatus"],
+        "vvtScore": vvt_assessment["vvtScore"],
+        "vvtStatus": vvt_assessment["vvtStatus"],
+        "vvtBlockingIssues": vvt_assessment["vvtBlockingIssues"],
+        "vvtReviewNotes": vvt_assessment["vvtReviewNotes"],
         "spcArtStage2": spc_art_stage2_export or None,
         "individualTransitStatistics": single_transit_statistics,
         "individual_transit_statistics": single_transit_statistics,
@@ -2438,13 +2532,15 @@ def candidate_rank_key(candidate: dict[str, Any]) -> tuple[Any, ...]:
         candidate.get("status"),
         *(candidate.get("displayLabels") or []),
     ))
-    is_readyish = final_class in {"GREEN_SPC", "YELLOW_RECHECK"} or "SPC_FOLLOWUP_READY" in matrix_class
+    vvt_status = clean_text(candidate.get("vvtStatus")).upper()
+    is_readyish = vvt_status == "EXOFOP_READY" or final_class in {"GREEN_SPC", "YELLOW_RECHECK"} or "SPC_FOLLOWUP_READY" in matrix_class
     is_fp = final_class == "RED_FP" or "FALSE_POSITIVE" in matrix_class or candidate.get("color") == "red"
     # TODO(EXOFOP_READY): when the EXOFOP_READY workflow is implemented, add its readiness signal
     # ahead of generic GREEN_SPC/YELLOW_RECHECK in this key instead of treating it as readyish.
     return (
         1 if is_fp else 0,
         0 if followup == "STRONG" else (1 if followup == "MEDIUM" else 2),
+        0 if vvt_status == "EXOFOP_READY" else (1 if vvt_status == "NEEDS_REVIEW" else 2),
         0 if is_readyish else 1,
         0 if candidate.get("isViolet") else 1,
         0 if candidate.get("color") == "green" else (1 if candidate.get("color") == "yellow" else 2),
@@ -2518,6 +2614,7 @@ def candidate_summary_record(candidate: dict[str, Any]) -> dict[str, Any]:
     fields = [
         "tic", "status", "color", "colorLabel", "baseColorLabel", "isViolet", "hz",
         "distance", "period", "snr", "evidenceScore", "multiMethodScore",
+        "vvtScore", "vvtStatus", "vvtBlockingIssues", "vvtReviewNotes",
         "matrixStatus", "matrixColor", "matrixClass", "matrixScoreBand",
         "displayLabels", "followupStrength", "decisionReason", "nextStep",
         "visibleTransits", "transits", "matrixVisibleTransits", "matrixTransits",

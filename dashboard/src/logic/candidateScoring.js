@@ -4,6 +4,7 @@ import { data } from '../dataLoader.js';
 import { matrixText, localizedBaseColorLabel, isSpcStrong, isSpcPrepCandidate, isSpcArt, isSpc, isRvNeeded } from '../logic/colorFor.js';
 import { candidateLabel } from '../logic/candidateLabel.js';
 import { isHabitableZoneCandidate } from '../logic/habitableZone.js';
+import { evaluateVvt } from '../logic/vvtScoring.js';
 
 function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -118,6 +119,8 @@ export function followupRank(candidate) {
 }
 
 export function exofopReadiness(candidate) {
+  if (candidate.vvtStatus === "EXOFOP_READY") return "READY_FOR_EXOFOP";
+  if (["BLOCKED", "WAIT_FOR_DATA"].includes(candidate.vvtStatus)) return "NOT_READY";
   const text = matrixText(candidate);
   const cleanForExofop = candidate.multiMethodCleanForExofop ?? candidate.multi_method_clean_for_exofop;
   const requiredStatusesClean = (
@@ -187,14 +190,17 @@ export function followupCandidates() {
 export function vvtQueueCandidates() {
   return [...(data.candidates || [])]
     .filter((candidate) => {
+      const vvt = evaluateVvt(candidate);
       const text = matrixText(candidate);
       return (
+        ["EXOFOP_READY", "NEEDS_REVIEW"].includes(candidate.vvtStatus || vvt.vvtStatus) ||
         candidate.color === "green" ||
         /SPC_STRONG|SPC_FOLLOWUP_READY|SPC_RV_NEEDED/.test(text)
       ) && !/FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED|IGNORE/.test(text);
     })
     .sort((a, b) => (
-      (Number(b.multiMethodScore ?? b.multi_method_score ?? 0) - Number(a.multiMethodScore ?? a.multi_method_score ?? 0))
+      (Number((b.vvtScore ?? evaluateVvt(b).vvtScore) || 0) - Number((a.vvtScore ?? evaluateVvt(a).vvtScore) || 0))
+      || (Number(b.multiMethodScore ?? b.multi_method_score ?? 0) - Number(a.multiMethodScore ?? a.multi_method_score ?? 0))
       || (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
       || (Number(a.distance || 0) - Number(b.distance || 0))
     ));
