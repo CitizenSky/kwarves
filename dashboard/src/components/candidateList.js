@@ -224,7 +224,7 @@ function candidateTablePageSize(total) {
 }
 
 export function renderTable() {
-  let rows = publicMatrixCandidates();
+  let rows = filteredCandidates();
   const sortBy = state.sortBy || "evidence";
   const sortOrder = state.sortOrder || "desc";
   rows = [...rows].sort((a, b) => {

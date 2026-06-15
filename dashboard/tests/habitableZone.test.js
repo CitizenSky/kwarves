@@ -43,4 +43,11 @@ describe('habitable zone decision helper', () => {
     expect(new Set(hzCandidates.map((candidate) => candidate.hz))).toEqual(new Set(['KONSERVATIVE_HZ', 'OPT_HZ_INNEN']));
     expect(candidates.filter((candidate) => candidate.hz === 'ZU_HEISS' && isHabitableZoneCandidate(candidate))).toHaveLength(0);
   });
+
+  it('renders the matrix from the active filtered candidate set', () => {
+    const source = fs.readFileSync(path.join(dashboardRoot, 'src/components/candidateList.js'), 'utf8');
+
+    expect(source).toContain('let rows = filteredCandidates();');
+    expect(source).not.toContain('let rows = publicMatrixCandidates();');
+  });
 });
