@@ -54,4 +54,11 @@ describe('candidate color filters', () => {
     expect(filter('violet').every(isHabitableZoneCandidate)).toBe(true);
     expect(filter('violet').some((candidate) => candidate.hz === 'ZU_HEISS')).toBe(false);
   });
+
+  it('keeps one canonical dashboard color filter control per filter value', () => {
+    const template = fs.readFileSync(path.join(dashboardRoot, 'index.src.html'), 'utf8');
+    const matches = [...template.matchAll(/data-color-filter="([^"]+)"/g)].map((match) => match[1]);
+
+    expect(matches).toEqual(['all', 'green', 'yellow', 'spc-prep', 'red', 'violet']);
+  });
 });
