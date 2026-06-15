@@ -1,6 +1,6 @@
 import { analytics, globalAnalytics, isAdminLoggedIn, loadAnalyticsStore } from '../state.js';
 import { t, formatNumber, formatDuration, formatDateTime } from '../i18n.js';
-import { els, data, exofopReadiness, isSpcPrepCandidate, isRvNeeded, isSpcStrong, matrixText, followupRank } from '../dataLoader.js';
+import { els, data, exofopReadiness, isSpcPrepCandidate, isRvNeeded, isSpcStrong, matrixText, followupRank, hzPriority } from '../dataLoader.js';
 import { matchesCandidate } from './candidateList.js';
 
 export function exofopUploadCandidates(term = "") {
@@ -38,10 +38,6 @@ export function followupCandidates() {
       || (hzPriority(a) - hzPriority(b))
       || (Number(a.distance || 0) - Number(b.distance || 0))
     ));
-}
-
-function hzPriority(candidate) {
-  return candidate.isViolet ? 0 : (candidate.hz && candidate.hz !== "ZU_HEISS" ? 1 : 2);
 }
 
 export function renderAdmin() {

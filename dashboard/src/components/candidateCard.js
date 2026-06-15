@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatMaybe, formatFloat } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList, candidateLabel } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, colorName, localizedBaseColorLabel, candidateVisualClass, colorClass, publicCandidatePool, publicVisibleCandidates, top20Candidates, reasonTagList, nextCheckList, formatNumber, formatDate, formatSectorList, candidateLabel, isHabitableZoneCandidate } from '../dataLoader.js';
 import { renderFinalDecisionPanel as renderNewFdPanel, initPanelListeners } from './finalDecisionPanel.js';
 import { computeFinalDecision } from '../logic/finalDecision.js';
 
@@ -131,11 +131,11 @@ function renderExecutiveSummary(candidate) {
   const items = [];
   const fd = computeFinalDecision(candidate);
 
-  if (candidate.hz) items.push({ type: "good", text: `HZ Kandidat (${candidate.hz})` });
+  if (isHabitableZoneCandidate(candidate)) items.push({ type: "good", text: `HZ Kandidat (${candidate.hz})` });
   if (candidate.distance) items.push({ type: "good", text: `${candidate.distance} Lichtjahre` });
   if (candidate.snr) items.push({ type: "good", text: `SNR ${formatFloat(candidate.snr, 1)}` });
   if (candidate.visibleTransits) items.push({ type: "good", text: `${candidate.visibleTransits} sichtbare Transits` });
-  if (candidate.isViolet) items.push({ type: "good", text: "HZ-Fokus Kandidat" });
+  if (isHabitableZoneCandidate(candidate)) items.push({ type: "good", text: "HZ-Fokus Kandidat" });
   if (candidate.evidenceScore >= 80) items.push({ type: "good", text: `Evidence ${formatFloat(candidate.evidenceScore, 0)} — hohe Priorität` });
 
   if (fd && fd.check_tree) {
@@ -169,7 +169,7 @@ function renderActionCard(candidate) {
 
   let priorityLevel = "low";
   let priorityLabel = "Niedrig";
-  if (evidence >= 80 || (candidate.color === "green" && candidate.hz)) {
+  if (evidence >= 80 || (candidate.color === "green" && isHabitableZoneCandidate(candidate))) {
     priorityLevel = "high";
     priorityLabel = "Hoch";
   } else if (evidence >= 50 || candidate.color === "green") {
@@ -363,8 +363,8 @@ export function renderSelected() {
   const displayLabels = candidate.displayLabels || [];
   const chips = [
     `<span class="chip ${candidate.color}">${localizedBaseColor}</span>`,
-    candidate.isViolet ? `<span class="chip violet">${t("chip_violet_hz")}</span>` : "",
-    candidate.hz ? `<span class="chip">${candidate.hz}</span>` : "",
+    isHabitableZoneCandidate(candidate) ? `<span class="chip violet">${t("chip_violet_hz")}</span>` : "",
+    isHabitableZoneCandidate(candidate) ? `<span class="chip">${candidate.hz}</span>` : "",
     ...displayLabels.map((label) => `<span class="chip ${candidateVisualClass(candidate)}">${label}</span>`),
     candidate.matrixStatus && !displayLabels.includes(candidate.matrixStatus) ? `<span class="chip ${candidateVisualClass(candidate)}">${t("chip_matrix_prefix", { value: candidate.matrixStatus })}</span>` : "",
     candidate.lightcurveImg ? `<span class="chip">${t("chip_curve_available")}</span>` : ""
@@ -376,7 +376,7 @@ export function renderSelected() {
   if (els.selectedCardTic) {
     const meta = [];
     meta.push(`E ${evidence}`);
-    if (hzLabel !== "-") meta.push(hzLabel);
+    if (isHabitableZoneCandidate(candidate)) meta.push(hzLabel);
     meta.push(distLabel);
     els.selectedCardTic.textContent = meta.join(" · ");
   }
@@ -398,7 +398,7 @@ export function renderSelected() {
     <div class="selected-quick-metrics">
       <span class="pill ${colorClass(candidate)}">${candidateGroupLabel(candidate)}</span>
       <span class="pill">E ${evidence}</span>
-      ${candidate.hz ? `<span class="pill hz-pill">${candidate.hz}</span>` : ""}
+      ${isHabitableZoneCandidate(candidate) ? `<span class="pill hz-pill">${candidate.hz}</span>` : ""}
       <span class="pill">${distLabel}</span>
       <span class="pill">SNR ${snrLabel}</span>
     </div>

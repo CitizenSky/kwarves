@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatMaybe, formatFloat, formatSectorList, formatDate, formatMonthYear, labelLegend, labelLegendLocalized } from '../i18n.js';
-import { els, data, countWhere, expectedTransits, countBuckets, matrixText, isSpcArt, isSpcPrepCandidate, isSpc, isSpcStrong, isRvNeeded, matrixStatusBucket, visibleMatrixTransits, coveragePercent } from '../dataLoader.js';
+import { els, data, countWhere, expectedTransits, countBuckets, matrixText, isSpcArt, isSpcPrepCandidate, isSpc, isSpcStrong, isRvNeeded, matrixStatusBucket, visibleMatrixTransits, coveragePercent, isHabitableZoneCandidate } from '../dataLoader.js';
 import { publicCandidatePool, publicVisibleCandidates } from './candidateList.js';
 import { candidateChip } from './candidateCard.js';
 
@@ -195,7 +195,7 @@ export function renderMatrixStats() {
   const followups = [
     ["SPC_RV_NEEDED", candidates.filter(isRvNeeded).slice(0, 12)],
     ["SPC_FOLLOWUP_READY", candidates.filter((c) => matrixText(c).includes("FOLLOWUP_READY")).slice(0, 12)],
-    ["HZ_RECHECK", candidates.filter((c) => c.isViolet && /RECHECK|REVISIT|TESS/.test(matrixText(c))).slice(0, 12)],
+    ["HZ_RECHECK", candidates.filter((c) => isHabitableZoneCandidate(c) && /RECHECK|REVISIT|TESS/.test(matrixText(c))).slice(0, 12)],
     ["NEEDS_MORE_DATA", candidates.filter((c) => matrixStatusBucket(c) === "NEEDS_MORE_DATA").slice(0, 12)],
     [copy.spcArtHigh, candidates.filter((c) => isSpcArt(c) && Number(c.evidenceScore || 0) >= 65).slice(0, 12)]
   ];
@@ -205,7 +205,7 @@ export function renderMatrixStats() {
     ["total_spc", countWhere(candidates, isSpc)],
     ["total_spc_strong", countWhere(candidates, isSpcStrong)],
     ["total_spc_prep_yellow", countWhere(candidates, isSpcPrepCandidate)],
-    ["total_hz", countWhere(candidates, (c) => c.isViolet)],
+    ["total_hz", countWhere(candidates, isHabitableZoneCandidate)],
     ["total_rv_needed", countWhere(candidates, isRvNeeded)],
     ["total_rejected", countWhere(candidates, (c) => matrixStatusBucket(c) === "REJECTED" || c.color === "red")],
     ["total_needs_more_data", countWhere(candidates, (c) => matrixStatusBucket(c) === "NEEDS_MORE_DATA")]

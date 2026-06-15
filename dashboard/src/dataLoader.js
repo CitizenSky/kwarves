@@ -1,6 +1,7 @@
 import { state, tessYear8SectorSet } from './state.js';
 import { t, normalizeSectorList, formatDateRange, daysDiff, formatDate, formatNumber, formatSectorList } from './i18n.js';
 import { isSpcPrepCandidate, matrixText, localizedBaseColorLabel } from './logic/colorFor.js';
+import { isHabitableZoneCandidate } from './logic/habitableZone.js';
 
 export const DASHBOARD_UI_VERSION = "2026-06-02-r";
 
@@ -330,7 +331,7 @@ export function filteredCandidates() {
     const matchesColor =
       state.colorFilter === "all" ||
       (state.colorFilter === "violet"
-        ? candidate.isViolet
+        ? isHabitableZoneCandidate(candidate)
         : state.colorFilter === "spc-prep"
           ? isSpcPrepCandidate(candidate)
           : state.colorFilter === "yellow"
@@ -359,6 +360,7 @@ export function publicMatrixCandidates() {
 }
 
 export { matrixText, colorClass, candidateVisualClass, candidateMapColor, candidateGroupLabel, matrixColorClass, localizedBaseColorLabel, colorName, mapSourceLabel, currentMapNoticeText, isSpcArt, isRvNeeded, isSpcStrong, isSpc, isSpcPrepCandidate } from './logic/colorFor.js';
+export { isHabitableZoneCandidate, isHabitableZoneClass, normalizeHabitableZone } from './logic/habitableZone.js';
 export { matrixStatusBucket, countWhere, countBuckets, expectedTransits, visibleMatrixTransits, coveragePercent, hzPriority, statusPriority, followupShortLabel, candidateNotes, shortText, followupRank, exofopReadiness, exofopCriteriaFulfilled, exofopUploadCandidates, top20Candidates, followupCandidates, vvtQueueCandidates, numericBucket, chartRows } from './logic/candidateScoring.js';
 export { reasonTagList, nextCheckList, candidateChip } from './logic/yellowReasonTags.js';
 export { candidateLabel, recheckChip } from './logic/candidateLabel.js';

@@ -1,11 +1,11 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatMaybe } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, colorName, countWhere, DASHBOARD_UI_VERSION } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, colorName, countWhere, DASHBOARD_UI_VERSION, isHabitableZoneCandidate } from '../dataLoader.js';
 import { matchesCandidate } from './candidateList.js';
 
 export function curveMatchesFilter(candidate, filter = state.curveFilter) {
   if (filter === "all") return true;
-  if (filter === "violet") return candidate.isViolet;
+  if (filter === "violet") return isHabitableZoneCandidate(candidate);
   if (filter === "spc-prep") return isSpcPrepCandidate(candidate);
   if (filter === "orange") return candidate.color === "yellow" && !isSpcPrepCandidate(candidate);
   return candidate.color === filter;

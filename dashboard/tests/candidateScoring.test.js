@@ -39,14 +39,21 @@ describe('matrixStatusBucket', () => {
 });
 
 describe('hzPriority', () => {
-  it('returns 0 for violet candidates', () => {
-    expect(hzPriority(makeCandidate({ isViolet: true }))).toBe(0);
+  it('returns 0 for violet candidates with a valid HZ class', () => {
+    expect(hzPriority(makeCandidate({ isViolet: true, hz: 'KONSERVATIVE_HZ' }))).toBe(0);
   });
   it('returns 1 for non-violet candidates with HZ', () => {
     expect(hzPriority(makeCandidate({ isViolet: false, hz: 'KONSERVATIVE_HZ' }))).toBe(1);
   });
   it('returns 2 for ZU_HEISS', () => {
     expect(hzPriority(makeCandidate({ isViolet: false, hz: 'ZU_HEISS' }))).toBe(2);
+  });
+  it('does not treat violet alone as HZ when the HZ class is invalid or missing', () => {
+    expect(hzPriority(makeCandidate({ isViolet: true, hz: 'ZU_HEISS' }))).toBe(2);
+    expect(hzPriority(makeCandidate({ isViolet: true, hz: 'unknown' }))).toBe(2);
+    expect(hzPriority(makeCandidate({ isViolet: true, hz: '' }))).toBe(2);
+    expect(hzPriority(makeCandidate({ isViolet: true, hz: null }))).toBe(2);
+    expect(hzPriority(makeCandidate({ isViolet: true, hz: undefined }))).toBe(2);
   });
 });
 

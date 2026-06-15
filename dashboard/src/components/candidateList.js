@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { t, formatNumber, formatFloat, formatMaybe, formatDate, formatSectorList, currentLocale } from '../i18n.js';
-import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates, vvtQueueCandidates } from '../dataLoader.js';
+import { els, data, isSpcPrepCandidate, matrixText, countWhere, expectedTransits, localizedBaseColorLabel, colorClass, colorName, candidateVisualClass, candidateLabel, shortText, candidateNotes, followupShortLabel, top20Candidates, followupCandidates, vvtQueueCandidates, isHabitableZoneCandidate } from '../dataLoader.js';
 
 export function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -34,7 +34,7 @@ export function filteredCandidates() {
     const matchesColor =
       state.colorFilter === "all" ||
       (state.colorFilter === "violet"
-        ? candidate.isViolet
+        ? isHabitableZoneCandidate(candidate)
         : state.colorFilter === "spc-prep"
           ? isSpcPrepCandidate(candidate)
           : state.colorFilter === "yellow"
@@ -66,7 +66,7 @@ export function renderKpis() {
   document.getElementById("kpiYellow").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "yellow" && !isSpcPrepCandidate(candidate)));
   document.getElementById("kpiSpcPrep").textContent = formatNumber(countWhere(publicRows, isSpcPrepCandidate));
   document.getElementById("kpiRed").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.color === "red"));
-  document.getElementById("kpiViolet").textContent = formatNumber(countWhere(publicRows, (candidate) => candidate.isViolet));
+  document.getElementById("kpiViolet").textContent = formatNumber(countWhere(publicRows, isHabitableZoneCandidate));
   document.getElementById("lcCount").textContent = formatNumber(data.lightcurveCandidates?.length || 0);
   document.getElementById("generatedAt").textContent = new Date(data.generatedAt).toLocaleTimeString(currentLocale(), {
     hour: "2-digit",
@@ -85,7 +85,7 @@ export function renderVisitorKpis() {
       ["Sterne mit TESS-Daten", tess, "Sektor- oder Transitdaten"],
       ["Kandidaten gesamt", candidates.length, "Matrix-Eintraege"],
       ["SPC / starke Planetenkandidaten", spcStrong, "streng priorisiert"],
-      ["HZ-Kandidaten", data.summary?.violet || countWhere(candidates, (c) => c.isViolet), "violett/HZ-Kontext"],
+      ["HZ-Kandidaten", countWhere(candidates, isHabitableZoneCandidate), "violett/HZ-Kontext"],
       ["Recheck / Artefaktverdacht", recheck, "gelb/unsicher"]
     ],
     en: [
@@ -93,7 +93,7 @@ export function renderVisitorKpis() {
       ["Stars with TESS data", tess, "sector or transit data"],
       ["Candidates total", candidates.length, "matrix entries"],
       ["SPC / strong planet candidates", spcStrong, "strictly prioritized"],
-      ["HZ candidates", data.summary?.violet || countWhere(candidates, (c) => c.isViolet), "violet/HZ context"],
+      ["HZ candidates", countWhere(candidates, isHabitableZoneCandidate), "violet/HZ context"],
       ["Recheck / artifact concern", recheck, "yellow/uncertain"]
     ],
     fr: [
@@ -101,7 +101,7 @@ export function renderVisitorKpis() {
       ["Etoiles avec donnees TESS", tess, "donnees secteur ou transit"],
       ["Candidats au total", candidates.length, "entrees matrice"],
       ["SPC / candidats planetaires forts", spcStrong, "priorisation stricte"],
-      ["Candidats HZ", data.summary?.violet || countWhere(candidates, (c) => c.isViolet), "contexte violet/HZ"],
+      ["Candidats HZ", countWhere(candidates, isHabitableZoneCandidate), "contexte violet/HZ"],
       ["Recheck / suspicion artefact", recheck, "jaune/incertain"]
     ]
   };
@@ -275,13 +275,13 @@ export function renderTable() {
   }
   els.rows.innerHTML = pageRows.map((candidate) => {
     const rowClass = candidateVisualClass(candidate);
-    const hzBadge = candidate.hz ? `<span class="table-hz-badge">${candidate.hz}</span>` : "";
+    const hzBadge = isHabitableZoneCandidate(candidate) ? `<span class="table-hz-badge">${candidate.hz}</span>` : "";
     const isActive = (state.selectedCandidate || state.selected)?.tic === candidate.tic;
     const selectedBadge = isActive ? `<span class="selected-candidate-badge">Ausgewaehlt</span>` : "";
     let prio = "—";
     let prioClass = "";
     const evidence = candidate.evidenceScore || 0;
-    if (evidence >= 80 || (candidate.color === "green" && candidate.hz)) { prio = "Hoch"; prioClass = "prio-high"; }
+    if (evidence >= 80 || (candidate.color === "green" && isHabitableZoneCandidate(candidate))) { prio = "Hoch"; prioClass = "prio-high"; }
     else if (evidence >= 50 || candidate.color === "green") { prio = "Mittel"; prioClass = "prio-mid"; }
     else { prio = "Niedrig"; prioClass = "prio-low"; }
     return `

@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { data } from '../dataLoader.js';
 import { matrixText, localizedBaseColorLabel, isSpcStrong, isSpcPrepCandidate, isSpcArt, isSpc, isRvNeeded } from '../logic/colorFor.js';
 import { candidateLabel } from '../logic/candidateLabel.js';
+import { isHabitableZoneCandidate } from '../logic/habitableZone.js';
 
 function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -75,7 +76,8 @@ export function coveragePercent(candidate) {
 }
 
 export function hzPriority(candidate) {
-  return candidate.isViolet ? 0 : (candidate.hz && candidate.hz !== "ZU_HEISS" ? 1 : 2);
+  if (candidate.isViolet && isHabitableZoneCandidate(candidate)) return 0;
+  return isHabitableZoneCandidate(candidate) ? 1 : 2;
 }
 
 export function statusPriority(candidate) {
