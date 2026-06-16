@@ -156,6 +156,9 @@ describe('pipeline end-to-end consistency', () => {
       displayLabels: expect.any(Array),
       vvtScore: expect.any(Number),
       vvtStatus: expect.any(String),
+      hasRealLightcurve: true,
+      hasRealVettingData: true,
+      realVettingDataSource: 'LEVEL5_SINGLE_TRANSITS',
     }));
 
     const heavyFields = [

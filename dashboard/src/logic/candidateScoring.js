@@ -5,6 +5,7 @@ import { matrixText, localizedBaseColorLabel, isSpcStrong, isSpcPrepCandidate, i
 import { candidateLabel } from '../logic/candidateLabel.js';
 import { isHabitableZoneCandidate } from '../logic/habitableZone.js';
 import { evaluateVvt } from '../logic/vvtScoring.js';
+import { isVvtBroadReviewCandidate } from '../logic/candidateFilters.js';
 
 function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -189,15 +190,7 @@ export function followupCandidates() {
 
 export function vvtQueueCandidates() {
   return [...(data.candidates || [])]
-    .filter((candidate) => {
-      const vvt = evaluateVvt(candidate);
-      const text = matrixText(candidate);
-      return (
-        ["EXOFOP_READY", "NEEDS_REVIEW"].includes(candidate.vvtStatus || vvt.vvtStatus) ||
-        candidate.color === "green" ||
-        /SPC_STRONG|SPC_FOLLOWUP_READY|SPC_RV_NEEDED/.test(text)
-      ) && !/FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED|IGNORE/.test(text);
-    })
+    .filter(isVvtBroadReviewCandidate)
     .sort((a, b) => (
       (Number((b.vvtScore ?? evaluateVvt(b).vvtScore) || 0) - Number((a.vvtScore ?? evaluateVvt(a).vvtScore) || 0))
       || (Number(b.multiMethodScore ?? b.multi_method_score ?? 0) - Number(a.multiMethodScore ?? a.multi_method_score ?? 0))

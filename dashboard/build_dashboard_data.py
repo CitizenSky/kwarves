@@ -2073,6 +2073,36 @@ def build_vvt_assessment(
     }
 
 
+def real_vetting_data_source(
+    single_transit_statistics: dict[str, Any],
+    spc_art_stage2_export: dict[str, Any],
+) -> str:
+    single_source = clean_text(single_transit_statistics.get("source")).upper()
+    single_count = safe_int_or_none(
+        single_transit_statistics.get("individualTransitCount")
+        or single_transit_statistics.get("individual_transit_count")
+    ) or 0
+    if (
+        single_source == "LEVEL5_SINGLE_TRANSITS"
+        and single_transit_statistics.get("csvAvailable") is not False
+        and single_count > 0
+    ):
+        return "LEVEL5_SINGLE_TRANSITS"
+
+    stage2_source = clean_text(spc_art_stage2_export.get("source")).upper()
+    stage2_status = clean_text(spc_art_stage2_export.get("computationStatus")).upper()
+    if (
+        stage2_source
+        and not re.search(r"MISSING|SYNTHETIC|FALLBACK|RUNTIME_FALLBACK|LIMITED_EXPORT", stage2_source)
+        and not bool(spc_art_stage2_export.get("fallbackUsed"))
+        and spc_art_stage2_export.get("stage2Completed") is not False
+        and stage2_status != "NOT_COMPUTED"
+    ):
+        return stage2_source
+
+    return ""
+
+
 
 
 def build_candidate(
@@ -2261,6 +2291,7 @@ def build_candidate(
         display_notes = clean_text(merged.get("notes"))
         display_folder = candidate_folder
     spc_art_stage2_export = final_decision.get("spcArtStage2") or {}
+    real_vetting_source = real_vetting_data_source(single_transit_statistics, spc_art_stage2_export)
     raw_transit_shape = clean_text(matrix.get("transit_shape"))
     raw_depth_stability = clean_text(matrix.get("depth_stability"))
     exported_transit_shape = spc_art_stage2_export.get("transitShape") or raw_transit_shape
@@ -2423,6 +2454,9 @@ def build_candidate(
         "vvtStatus": vvt_assessment["vvtStatus"],
         "vvtBlockingIssues": vvt_assessment["vvtBlockingIssues"],
         "vvtReviewNotes": vvt_assessment["vvtReviewNotes"],
+        "hasRealLightcurve": bool(lightcurve_img),
+        "hasRealVettingData": bool(real_vetting_source),
+        "realVettingDataSource": real_vetting_source,
         "spcArtStage2": spc_art_stage2_export or None,
         "individualTransitStatistics": single_transit_statistics,
         "individual_transit_statistics": single_transit_statistics,
@@ -2612,6 +2646,7 @@ def candidate_summary_record(candidate: dict[str, Any]) -> dict[str, Any]:
         "tic", "status", "color", "colorLabel", "baseColorLabel", "isViolet", "hz",
         "distance", "period", "snr", "evidenceScore", "multiMethodScore",
         "vvtScore", "vvtStatus", "vvtBlockingIssues", "vvtReviewNotes",
+        "hasRealLightcurve", "hasRealVettingData", "realVettingDataSource",
         "matrixStatus", "matrixColor", "matrixClass", "matrixScoreBand",
         "displayLabels", "followupStrength", "decisionReason", "nextStep",
         "visibleTransits", "transits", "matrixVisibleTransits", "matrixTransits",
