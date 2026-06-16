@@ -1348,6 +1348,9 @@ document.getElementById("showSelectedCurve")?.addEventListener("click", () => {
   if (curve) {
     state.selectedCurve = curve;
     renderCurves(false, true);
+    window.requestAnimationFrame(() => {
+      document.getElementById("curveImageWrap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   } else {
     showToast(t("toast_no_curve_for_candidate"));
   }
