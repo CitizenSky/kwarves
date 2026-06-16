@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 const dashboardRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -45,6 +46,10 @@ function readCandidateMatrixRow(tic) {
 
 function resolveDashboardRelativePath(relativePath) {
   return path.resolve(dashboardRoot, relativePath);
+}
+
+function sha256(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
 describe('pipeline end-to-end consistency', () => {
@@ -166,6 +171,35 @@ describe('pipeline end-to-end consistency', () => {
       expect(summaryCandidate).not.toHaveProperty(field);
       expect(detail).toHaveProperty(field);
     }
+  });
+
+  it('keeps dashboard light curves matched to their candidate TICs', () => {
+    const summary = readJson('candidates-summary.json');
+    const referencedDeployFiles = new Set();
+
+    for (const candidate of summary.candidates) {
+      const detail = readJson(`candidate-details/TIC_${candidate.tic}.json`);
+      const deployPath = detail.lightcurveImgDeploy || detail.lightcurveImg;
+      const localPath = detail.lightcurveImgLocal;
+
+      expect(candidate.lightcurveImg).toBe(`lightcurves/TIC_${candidate.tic}.png`);
+      expect(detail.lightcurveImg).toBe(`lightcurves/TIC_${candidate.tic}.png`);
+      expect(deployPath).toBe(`lightcurves/TIC_${candidate.tic}.png`);
+      expect(localPath).toContain(`TIC_${candidate.tic}/`);
+
+      const deployFullPath = resolveDashboardRelativePath(deployPath);
+      const localFullPath = resolveDashboardRelativePath(localPath);
+      expect(fs.existsSync(deployFullPath)).toBe(true);
+      expect(fs.existsSync(localFullPath)).toBe(true);
+      expect(sha256(deployFullPath)).toBe(sha256(localFullPath));
+
+      expect(referencedDeployFiles.has(path.basename(deployPath))).toBe(false);
+      referencedDeployFiles.add(path.basename(deployPath));
+    }
+
+    const deployedLightcurves = fs.readdirSync(path.join(dashboardRoot, 'lightcurves'))
+      .filter((fileName) => /^TIC_\d+\.png$/.test(fileName));
+    expect(deployedLightcurves.sort()).toEqual([...referencedDeployFiles].sort());
   });
 
   it('serves a root deployment that points to an existing current bundle', () => {

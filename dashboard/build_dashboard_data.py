@@ -806,7 +806,7 @@ def load_db_rows() -> tuple[
                        data_gap_risk, sector_edge_risk, secondary_eclipse, period_alias_risk,
                        rotation_risk, status, status_color, extended_class, evidence_score,
                        score_interpretation, decision_reason, next_step, visible_transits,
-                       clean_sector_count
+                       clean_sector_count, level0_candidate_folder, reference_plot
                   FROM candidate_matrix
                 """
             ).fetchall()
@@ -2108,7 +2108,7 @@ def build_candidate(
     coord_from_cache = gaia_cache.get(gaia_source_id) if gaia_source_id else None
     gaia_coord = coord_from_cache or gaia_row or {}
     map_coord, map_source = build_map_coordinates(tic, distance, snr, max_distance, gaia_coord)
-    candidate_folder = clean_text(merged.get("candidate_folder"))
+    candidate_folder = clean_text(merged.get("candidate_folder") or matrix.get("level0_candidate_folder"))
     lightcurve_img = ""
     lightcurve_img_local = ""
     lightcurve_img_deploy = ""
@@ -2253,10 +2253,7 @@ def build_candidate(
         display_markierung = ""
         display_markierungs_klasse = "WAIT_FOR_TESS"
         display_notes = ""
-        display_folder = ""
-        lightcurve_img = ""
-        lightcurve_img_local = ""
-        lightcurve_img_deploy = ""
+        display_folder = candidate_folder
     else:
         display_reason = reason_for(merged, color, is_violet)
         display_markierung = clean_text(merged.get("markierung"))
