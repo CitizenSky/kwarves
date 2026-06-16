@@ -29,12 +29,15 @@ describe('candidate color filters', () => {
     const red = makeCandidate({ tic: 4, color: 'red' });
     const hz = makeCandidate({ tic: 5, color: 'yellow', hz: 'KONSERVATIVE_HZ' });
     const hotVioletMarker = makeCandidate({ tic: 6, color: 'yellow', hz: 'ZU_HEISS', isViolet: true });
-    const candidates = [green, yellow, spcPrep, red, hz, hotVioletMarker];
+    const vvtReview = makeCandidate({ tic: 7, color: 'gray', vvtStatus: 'NEEDS_REVIEW' });
+    const vvtBlocked = makeCandidate({ tic: 8, color: 'yellow', vvtStatus: 'BLOCKED', matrixClass: 'SPC_ART' });
+    const candidates = [green, yellow, spcPrep, red, hz, hotVioletMarker, vvtReview, vvtBlocked];
 
-    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'all')).map((c) => c.tic)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'all')).map((c) => c.tic)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'green')).map((c) => c.tic)).toEqual([1]);
-    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'yellow')).map((c) => c.tic)).toEqual([2, 5, 6]);
+    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'yellow')).map((c) => c.tic)).toEqual([2, 5, 6, 8]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'spc-prep')).map((c) => c.tic)).toEqual([3]);
+    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'vvt')).map((c) => c.tic)).toEqual([1, 3, 7]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'red')).map((c) => c.tic)).toEqual([4]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'violet')).map((c) => c.tic)).toEqual([5]);
     expect(candidateMatchesColorFilter(hotVioletMarker, 'violet')).toBe(false);
@@ -50,6 +53,15 @@ describe('candidate color filters', () => {
     expect(filter('red').every((candidate) => candidate.color === 'red')).toBe(true);
     expect(filter('spc-prep').every(isSpcPrepCandidate)).toBe(true);
     expect(filter('yellow').every((candidate) => candidate.color === 'yellow' && !isSpcPrepCandidate(candidate))).toBe(true);
+    expect(filter('vvt')).toHaveLength(402);
+    expect(filter('vvt').every((candidate) => !/FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED|IGNORE/.test([
+      candidate.status,
+      candidate.matrixStatus,
+      candidate.matrixClass,
+      candidate.matrixScoreBand,
+      candidate.decisionReason,
+      candidate.nextStep,
+    ].filter(Boolean).join(' ').toUpperCase()))).toBe(true);
     expect(filter('violet')).toHaveLength(78);
     expect(filter('violet').every(isHabitableZoneCandidate)).toBe(true);
     expect(filter('violet').some((candidate) => candidate.hz === 'ZU_HEISS')).toBe(false);
@@ -59,6 +71,6 @@ describe('candidate color filters', () => {
     const template = fs.readFileSync(path.join(dashboardRoot, 'index.src.html'), 'utf8');
     const matches = [...template.matchAll(/data-color-filter="([^"]+)"/g)].map((match) => match[1]);
 
-    expect(matches).toEqual(['all', 'green', 'yellow', 'spc-prep', 'red', 'violet']);
+    expect(matches).toEqual(['all', 'green', 'yellow', 'spc-prep', 'vvt', 'red', 'violet']);
   });
 });

@@ -900,6 +900,7 @@ export function applyLanguageToUi() {
   setText('[data-color-filter="green"]', t("filter_green"));
   setText('[data-color-filter="yellow"]', t("filter_yellow"));
   setText('[data-color-filter="spc-prep"]', t("filter_spc_prep"));
+  setText('[data-color-filter="vvt"]', t("filter_vvt"));
   setText('[data-color-filter="red"]', t("filter_red"));
   setText('[data-color-filter="violet"]', t("filter_violet"));
   setLegendText("#mapPanel .map-note .legend-item:nth-child(1)", t("map_legend_green"));
