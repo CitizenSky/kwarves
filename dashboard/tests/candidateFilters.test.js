@@ -71,6 +71,6 @@ describe('candidate color filters', () => {
     const template = fs.readFileSync(path.join(dashboardRoot, 'index.src.html'), 'utf8');
     const matches = [...template.matchAll(/data-color-filter="([^"]+)"/g)].map((match) => match[1]);
 
-    expect(matches).toEqual(['all', 'green', 'yellow', 'spc-prep', 'vvt', 'red', 'violet']);
+    expect(matches).toEqual(['all', 'vvt', 'green', 'yellow', 'spc-prep', 'red', 'violet']);
   });
 });
