@@ -214,8 +214,9 @@ describe('pipeline end-to-end consistency', () => {
     expect(stylesheetMatch?.[1]).toBeTruthy();
     expect(fs.existsSync(path.join(dashboardRoot, scriptMatch[1]))).toBe(true);
     expect(fs.existsSync(path.join(dashboardRoot, stylesheetMatch[1]))).toBe(true);
-    expect(indexHtml.match(/data-color-filter="/g)).toHaveLength(7);
+    expect(indexHtml.match(/data-color-filter="/g)).toHaveLength(8);
     expect(indexHtml).toContain('data-color-filter="spc-prep"');
     expect(indexHtml).toContain('data-color-filter="vvt"');
+    expect(indexHtml).toContain('data-color-filter="ttv"');
   });
 });

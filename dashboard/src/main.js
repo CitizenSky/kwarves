@@ -901,6 +901,7 @@ export function applyLanguageToUi() {
   setText('[data-color-filter="yellow"]', t("filter_yellow"));
   setText('[data-color-filter="spc-prep"]', t("filter_spc_prep"));
   setText('[data-color-filter="vvt"]', t("filter_vvt"));
+  setText('[data-color-filter="ttv"]', t("filter_ttv"));
   setText('[data-color-filter="red"]', t("filter_red"));
   setText('[data-color-filter="violet"]', t("filter_violet"));
   setText("#vvtQueueTitle", t("vvt_queue_title"));

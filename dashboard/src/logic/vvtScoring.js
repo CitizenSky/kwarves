@@ -99,7 +99,7 @@ export function evaluateVvt(candidate) {
     status = "WAIT_FOR_DATA";
   } else if (uniqueBlockers.length) {
     status = "BLOCKED";
-  } else if (score >= 85 && cleanForExofop === true) {
+  } else if (score >= 85 && cleanForExofop === true && !["STRONG_TTV", "IRREGULAR_TTV"].includes(ttvStatus)) {
     status = "EXOFOP_READY";
   }
 
@@ -110,4 +110,3 @@ export function evaluateVvt(candidate) {
     vvtReviewNotes: uniqueNotes
   };
 }
-

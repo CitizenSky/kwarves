@@ -60,5 +60,17 @@ describe('evaluateVvt', () => {
     expect(result.vvtBlockingIssues).toEqual([]);
     expect(result.vvtReviewNotes.join(' ')).toContain('not a hard blocker');
   });
-});
 
+  it('keeps strong TTV candidates in NEEDS_REVIEW instead of auto EXOFOP_READY', () => {
+    const result = evaluateVvt(makeCandidate({
+      ttvStatus: 'STRONG_TTV',
+      multiMethodCleanForExofop: true,
+      multiMethodScore: 95,
+      evidenceScore: 95
+    }));
+
+    expect(result.vvtStatus).toBe('NEEDS_REVIEW');
+    expect(result.vvtBlockingIssues).toEqual([]);
+    expect(result.vvtReviewNotes.join(' ')).toContain('not a hard blocker');
+  });
+});

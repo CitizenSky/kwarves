@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   candidateMatchesColorFilter,
   hasRealVettingData,
+  isTtvMultiPlanetReviewCandidate,
   isVvtBroadReviewCandidate,
   isVvtShortlistCandidate,
 } from '../src/logic/candidateFilters.js';
@@ -38,13 +39,15 @@ describe('candidate color filters', () => {
     const hotVioletMarker = makeCandidate({ tic: 6, color: 'yellow', hz: 'ZU_HEISS', isViolet: true });
     const vvtReview = makeCandidate({ tic: 7, color: 'gray', vvtStatus: 'NEEDS_REVIEW', vvtScore: 72 });
     const vvtBlocked = makeCandidate({ tic: 8, color: 'yellow', vvtStatus: 'BLOCKED', matrixClass: 'SPC_ART' });
-    const candidates = [green, yellow, spcPrep, red, hz, hotVioletMarker, vvtReview, vvtBlocked];
+    const ttvReview = makeCandidate({ tic: 9, color: 'yellow', ttvStatus: 'POSSIBLE_TTV' });
+    const candidates = [green, yellow, spcPrep, red, hz, hotVioletMarker, vvtReview, vvtBlocked, ttvReview];
 
-    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'all')).map((c) => c.tic)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'all')).map((c) => c.tic)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'green')).map((c) => c.tic)).toEqual([1]);
-    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'yellow')).map((c) => c.tic)).toEqual([2, 5, 6, 8]);
+    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'yellow')).map((c) => c.tic)).toEqual([2, 5, 6, 8, 9]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'spc-prep')).map((c) => c.tic)).toEqual([3]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'vvt')).map((c) => c.tic)).toEqual([7]);
+    expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'ttv')).map((c) => c.tic)).toEqual([9]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'red')).map((c) => c.tic)).toEqual([4]);
     expect(candidates.filter((candidate) => candidateMatchesColorFilter(candidate, 'violet')).map((c) => c.tic)).toEqual([5]);
     expect(candidateMatchesColorFilter(hotVioletMarker, 'violet')).toBe(false);
@@ -77,6 +80,17 @@ describe('candidate color filters', () => {
     expect(isVvtShortlistCandidate(ttvReviewOnly)).toBe(true);
   });
 
+  it('uses TTV / multi-planet review as a science-interest filter, not an FP filter', () => {
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ ttvStatus: 'POSSIBLE_TTV' }))).toBe(true);
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ ttvStatus: 'STRONG_TTV' }))).toBe(true);
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ ttvStatus: 'IRREGULAR_TTV' }))).toBe(true);
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ candidateFlags: ['MULTI_SIGNAL_CANDIDATE'] }))).toBe(true);
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ displayLabels: ['MULTI_PLANET_CANDIDATE'] }))).toBe(true);
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ ttvStatus: 'NO_STRONG_TTV_FLAG' }))).toBe(false);
+    expect(isTtvMultiPlanetReviewCandidate(makeCandidate({ ttvStatus: 'TIMING_OR_DEPTH_SCATTER_RISK' }))).toBe(false);
+    expect(candidateMatchesColorFilter(makeCandidate({ ttvStatus: 'STRONG_TTV', matrixClass: 'FALSE_POSITIVE' }), 'ttv')).toBe(true);
+  });
+
   it('matches the real summary data buckets without leaking hot stars into HZ', () => {
     const payload = JSON.parse(fs.readFileSync(path.join(dashboardRoot, 'candidates-summary.json'), 'utf8'));
     const candidates = payload.candidates;
@@ -100,6 +114,7 @@ describe('candidate color filters', () => {
     ].filter(Boolean).join(' ').toUpperCase()))).toBe(true);
     expect(filter('vvt').every((candidate) => candidate.hasRealLightcurve === true && hasRealVettingData(candidate))).toBe(true);
     expect(filter('vvt').every((candidate) => (candidate.vvtBlockingIssues || []).join(' ').match(/TTV|TIMING|SCATTER/i) || (candidate.vvtBlockingIssues || []).length === 0)).toBe(true);
+    expect(filter('ttv').every(isTtvMultiPlanetReviewCandidate)).toBe(true);
     expect(filter('violet')).toHaveLength(78);
     expect(filter('violet').every(isHabitableZoneCandidate)).toBe(true);
     expect(filter('violet').some((candidate) => candidate.hz === 'ZU_HEISS')).toBe(false);
@@ -135,6 +150,6 @@ describe('candidate color filters', () => {
     const template = fs.readFileSync(path.join(dashboardRoot, 'index.src.html'), 'utf8');
     const matches = [...template.matchAll(/data-color-filter="([^"]+)"/g)].map((match) => match[1]);
 
-    expect(matches).toEqual(['all', 'vvt', 'green', 'yellow', 'spc-prep', 'red', 'violet']);
+    expect(matches).toEqual(['all', 'vvt', 'ttv', 'green', 'yellow', 'spc-prep', 'red', 'violet']);
   });
 });

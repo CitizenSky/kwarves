@@ -19,6 +19,26 @@ function hasRejectedLabel(candidate) {
   return /FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED|IGNORE/.test(matrixText(candidate));
 }
 
+function candidateFlagText(candidate) {
+  return listText([
+    candidate?.ttvStatus,
+    candidate?.ttv_status,
+    candidate?.sciencePriorityStatus,
+    candidate?.science_priority_status,
+    candidate?.reason,
+    candidate?.decisionReason,
+    candidate?.nextStep,
+    ...(candidate?.candidateFlags || candidate?.candidate_flags || []),
+    ...(candidate?.displayLabels || []),
+    ...((candidate?.methodEvidenceFlags || candidate?.method_evidence_flags || []).map((flag) => [
+      flag?.method,
+      flag?.status,
+      flag?.effect,
+      flag?.reason,
+    ].filter(Boolean).join(" "))),
+  ]);
+}
+
 export function hasRealLightcurve(candidate) {
   return Boolean(candidate?.lightcurveImg || candidate?.lightcurveImgDeploy || candidate?.lightcurveImgLocal);
 }
@@ -101,6 +121,18 @@ export function isVvtShortlistCandidate(candidate) {
 
 export const isVvtCandidate = isVvtShortlistCandidate;
 
+const TTV_REVIEW_STATUSES = new Set(["POSSIBLE_TTV", "STRONG_TTV", "IRREGULAR_TTV"]);
+
+export function isTtvMultiPlanetReviewCandidate(candidate) {
+  const ttvStatus = normalize(candidate?.ttvStatus || candidate?.ttv_status);
+  const text = candidateFlagText({
+    ...candidate,
+    ttvStatus: "",
+    ttv_status: "",
+  });
+  return TTV_REVIEW_STATUSES.has(ttvStatus) || /MULTI_SIGNAL_CANDIDATE|MULTI_PLANET_CANDIDATE/.test(text);
+}
+
 export function candidateMatchesColorFilter(candidate, colorFilter = 'all') {
   switch (colorFilter) {
     case 'all':
@@ -111,6 +143,8 @@ export function candidateMatchesColorFilter(candidate, colorFilter = 'all') {
       return isSpcPrepCandidate(candidate);
     case 'vvt':
       return isVvtShortlistCandidate(candidate);
+    case 'ttv':
+      return isTtvMultiPlanetReviewCandidate(candidate);
     case 'yellow':
       return candidate?.color === 'yellow' && !isSpcPrepCandidate(candidate);
     case 'green':

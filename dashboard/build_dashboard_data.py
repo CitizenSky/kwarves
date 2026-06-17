@@ -1872,6 +1872,7 @@ def build_multi_method_evidence(
     else:
         ttv_status = "NO_STRONG_TTV_FLAG"
         flags.append(_method_flag("ttv", ttv_status, "support", "Individual transit set has no strong TTV scatter flag.", 70))
+    ttv_science_interest = ttv_status in {"POSSIBLE_TTV", "STRONG_TTV", "IRREGULAR_TTV"}
 
     gaia_ruwe = safe_float(monitor_result.get("gaiaRuwe"))
     gaia_duplicated = bool(monitor_result.get("gaiaDuplicatedSource"))
@@ -1966,9 +1967,15 @@ def build_multi_method_evidence(
     if 3500 <= teff <= 5400:
         science_score += 12
     science_score += min(18, max(0, visible_transits) * 4)
+    if ttv_science_interest:
+        science_score += 15
     science_score = max(0, min(100, science_score))
     science_priority_status = "HIGH_PRIORITY" if science_score >= 70 else ("MEDIUM_PRIORITY" if science_score >= 45 else "LOW_PRIORITY")
-    flags.append(_method_flag("science_priority", science_priority_status, "support" if science_score >= 45 else "neutral", f"Science value score {science_score}/100 from HZ, distance, stellar type, radius and observed transits.", science_score))
+    science_reason = "Science value score {}/100 from HZ, distance, stellar type, radius, observed transits{}.".format(
+        science_score,
+        " and TTV/multi-planet interest" if ttv_science_interest else "",
+    )
+    flags.append(_method_flag("science_priority", science_priority_status, "support" if science_score >= 45 else "neutral", science_reason, science_score))
 
     weighted_score = round(sum(flag["score"] for flag in flags) / max(1, len(flags)))
     clean_for_exofop = (
@@ -2060,7 +2067,7 @@ def build_vvt_assessment(
         status = "WAIT_FOR_DATA"
     elif blocking_issues:
         status = "BLOCKED"
-    elif score >= 85 and clean_for_exofop:
+    elif score >= 85 and clean_for_exofop and ttv_status not in {"STRONG_TTV", "IRREGULAR_TTV"}:
         status = "EXOFOP_READY"
     else:
         status = "NEEDS_REVIEW"
@@ -2333,6 +2340,14 @@ def build_candidate(
         multi_method=multi_method,
         monitor_result=monitor_result,
     )
+    candidate_flags = list(dict.fromkeys(
+        clean_text(flag)
+        for flag in [
+            *display_labels,
+            *(full_vetting.get("flags") or []),
+        ]
+        if clean_text(flag)
+    ))
     return {
         "tic": tic,
         "status": "WAIT_FOR_TESS" if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS" else clean_text(merged.get("status")),
@@ -2364,6 +2379,8 @@ def build_candidate(
         "matrixClass": matrix_class,
         "matrixScoreBand": matrix_score_band,
         "displayLabels": list(dict.fromkeys(display_labels)),
+        "candidateFlags": candidate_flags,
+        "candidate_flags": candidate_flags,
         "evidenceScore": evidence_score,
         "reasonTags": reason_tags,
         "nextChecks": next_checks,
@@ -2648,7 +2665,7 @@ def candidate_summary_record(candidate: dict[str, Any]) -> dict[str, Any]:
         "vvtScore", "vvtStatus", "vvtBlockingIssues", "vvtReviewNotes",
         "hasRealLightcurve", "hasRealVettingData", "realVettingDataSource",
         "matrixStatus", "matrixColor", "matrixClass", "matrixScoreBand",
-        "displayLabels", "followupStrength", "decisionReason", "nextStep",
+        "displayLabels", "candidateFlags", "followupStrength", "decisionReason", "nextStep",
         "visibleTransits", "transits", "matrixVisibleTransits", "matrixTransits",
         "observedSectors", "plannedSectors", "observedSectorCount", "recheckStatus",
         "estimatedDataAvailable", "currentSector", "nextPlannedSector", "latestPlannedSector",
