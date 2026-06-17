@@ -29,6 +29,7 @@ DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
 VETTING_REPORTS_DIR = PROJECT_ROOT / "vetting_reports"
 MANIFEST_PATH = PROJECT_ROOT / "level0_lichtjahre_10ly_bis_500" / "manifest_all_candidates_by_distance.csv"
 LEVEL5_SINGLE_TRANSIT_ROOT = PROJECT_ROOT / "level5_detailvalidierung" / "level5_02_einzeltransit_plots"
+TTV_OC_ROOT = PROJECT_ROOT / "level4_TTV_analyse" / "level4_04_oc_ergebnisse"
 CANDIDATE_SUMMARY_PATH = DASHBOARD_DIR / "candidates-summary.json"
 CANDIDATE_DETAILS_DIR = DASHBOARD_DIR / "candidate-details"
 GAIA_CACHE_PATH = DASHBOARD_DIR / "gaia_coordinates_cache.csv"
@@ -773,6 +774,84 @@ def missing_level5_single_transit_data() -> dict[str, Any]:
         "individual_transit_plot_path": "",
     }
     return {"statistics": stats, "events": [], "plotPath": "", "plotStatus": "PLOT_NOT_AVAILABLE"}
+
+
+def classify_ttv_from_oc_metrics(metrics: dict[str, Any]) -> str:
+    ok_count = safe_int(metrics.get("okMeasurementCount"))
+    if ok_count < 3:
+        return "NOT_ENOUGH_TRANSITS"
+    peak_to_peak = safe_float(metrics.get("ocPeakToPeakMinutes"))
+    scatter = safe_float(metrics.get("ocScatterMinutes"))
+    max_abs = safe_float(metrics.get("maxAbsOcMinutes"))
+    warn_count = safe_int(metrics.get("warnMeasurementCount"))
+    if (
+        (peak_to_peak is not None and peak_to_peak >= 180)
+        or (max_abs is not None and max_abs >= 120)
+    ):
+        return "STRONG_TTV"
+    if (
+        (peak_to_peak is not None and peak_to_peak >= 90)
+        or (scatter is not None and scatter >= 45)
+    ):
+        return "POSSIBLE_TTV"
+    if warn_count >= max(3, ok_count):
+        return "IRREGULAR_TTV"
+    return "NO_STRONG_TTV_FLAG"
+
+
+def load_ttv_oc_metrics(root: Path = TTV_OC_ROOT) -> dict[int, dict[str, Any]]:
+    data: dict[int, dict[str, Any]] = {}
+    if not root.exists():
+        return data
+    for csv_path in sorted(root.glob("**/TIC_*_oc_measurements.csv")):
+        match = re.search(r"TIC_(\d+)_oc_measurements\.csv$", csv_path.name)
+        if not match:
+            continue
+        tic = safe_int(match.group(1))
+        if not tic:
+            continue
+        measurements: list[dict[str, Any]] = []
+        try:
+            with csv_path.open(newline="", encoding="utf-8") as handle:
+                for row in csv.DictReader(handle):
+                    measurements.append({
+                        "epoch": safe_int_or_none(row.get("epoch")),
+                        "expectedTimeBtjd": safe_float(row.get("expected_time_btjd")),
+                        "observedTimeBtjd": safe_float(row.get("observed_time_btjd")),
+                        "ocMinutes": safe_float(row.get("oc_minutes")),
+                        "timingUncertaintyMinutes": safe_float(row.get("timing_uncertainty_minutes")),
+                        "depthPpt": safe_float(row.get("depth_ppt")),
+                        "localScatterPpt": safe_float(row.get("local_scatter_ppt")),
+                        "nPoints": safe_int_or_none(row.get("n_points")),
+                        "nInTransit": safe_int_or_none(row.get("n_in_transit")),
+                        "quality": clean_text(row.get("quality")),
+                    })
+        except Exception:
+            continue
+        ok_measurements = [row for row in measurements if clean_text(row.get("quality")).upper() == "OK"]
+        warn_measurements = [row for row in measurements if clean_text(row.get("quality")).upper().startswith("WARN")]
+        ok_oc = [row["ocMinutes"] for row in ok_measurements if row.get("ocMinutes") is not None]
+        scatter = robust_scatter(ok_oc)
+        peak_to_peak = (max(ok_oc) - min(ok_oc)) if len(ok_oc) >= 2 else None
+        median_oc = robust_median(ok_oc)
+        max_abs = max((abs(value) for value in ok_oc), default=None)
+        plot_path = csv_path.with_name(f"TIC_{tic}_oc_plot.png")
+        metrics = {
+            "source": "LEVEL4_OC_TTV",
+            "csvPath": rel_from_dashboard(csv_path),
+            "plotPath": rel_from_dashboard(plot_path) if plot_path.exists() else "",
+            "plotAvailable": plot_path.exists(),
+            "measurementCount": len(measurements),
+            "okMeasurementCount": len(ok_measurements),
+            "warnMeasurementCount": len(warn_measurements),
+            "medianOcMinutes": round(median_oc, 5) if median_oc is not None else None,
+            "ocScatterMinutes": round(scatter, 5) if scatter is not None else None,
+            "ocPeakToPeakMinutes": round(peak_to_peak, 5) if peak_to_peak is not None else None,
+            "maxAbsOcMinutes": round(max_abs, 5) if max_abs is not None else None,
+        }
+        metrics["ttvStatus"] = classify_ttv_from_oc_metrics(metrics)
+        data[tic] = {"metrics": metrics, "measurements": measurements}
+    return data
 
 
 def load_db_rows() -> tuple[
@@ -1816,6 +1895,7 @@ def build_multi_method_evidence(
     monitor_result: dict[str, Any],
     full_vetting: dict[str, Any],
     single_transit_statistics: dict[str, Any],
+    ttv_oc_metrics: dict[str, Any] | None,
     observed_sectors: list[int],
     distance: float,
     period: float,
@@ -1863,7 +1943,13 @@ def build_multi_method_evidence(
     individual_count = safe_int_or_none(single_transit_statistics.get("individualTransitCount") or single_transit_statistics.get("individual_transit_count")) or 0
     visible_count = safe_int_or_none(single_transit_statistics.get("visibleTransitCount") or single_transit_statistics.get("visible_transit_count")) or 0
     depth_cv = safe_float(single_transit_statistics.get("depthCv") or single_transit_statistics.get("depth_cv"))
-    if individual_count < 2 or visible_count < 2:
+    ttv_oc_metrics = ttv_oc_metrics or {}
+    oc_status = clean_text(ttv_oc_metrics.get("ttvStatus")).upper()
+    if oc_status in {"POSSIBLE_TTV", "STRONG_TTV", "IRREGULAR_TTV"}:
+        ttv_status = oc_status
+        score = 45 if oc_status == "POSSIBLE_TTV" else 35
+        flags.append(_method_flag("ttv", ttv_status, "review", "O-C timing metrics show TTV/multi-planet science interest.", score))
+    elif individual_count < 2 or visible_count < 2:
         ttv_status = "NOT_ENOUGH_TRANSITS"
         flags.append(_method_flag("ttv", ttv_status, "neutral", "Too few measured individual transits for a TTV check.", 45))
     elif depth_cv is not None and depth_cv > 0.75:
@@ -2123,6 +2209,7 @@ def build_candidate(
     tess_state: dict[str, Any],
     full_vetting: dict[str, Any] | None = None,
     single_transit_data: dict[str, Any] | None = None,
+    ttv_oc_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     merged = {**row, **(db_row or {})}
     matrix = matrix_row or {}
@@ -2131,6 +2218,9 @@ def build_candidate(
     single_transit_data = single_transit_data or missing_level5_single_transit_data()
     single_transit_statistics = dict(single_transit_data.get("statistics") or {})
     single_transit_events = list(single_transit_data.get("events") or [])
+    ttv_oc_data = ttv_oc_data or {"metrics": {}, "measurements": []}
+    ttv_oc_metrics = dict(ttv_oc_data.get("metrics") or {})
+    ttv_oc_measurements = list(ttv_oc_data.get("measurements") or [])
     single_transit_plot_path = clean_text(
         single_transit_statistics.get("individualTransitPlotPath")
         or single_transit_statistics.get("individual_transit_plot_path")
@@ -2250,6 +2340,7 @@ def build_candidate(
         monitor_result=monitor_result,
         full_vetting=full_vetting,
         single_transit_statistics=single_transit_statistics,
+        ttv_oc_metrics=ttv_oc_metrics,
         observed_sectors=observed_sectors,
         distance=distance,
         period=period,
@@ -2348,6 +2439,10 @@ def build_candidate(
         ]
         if clean_text(flag)
     ))
+    if multi_method.get("ttvStatus") in {"POSSIBLE_TTV", "STRONG_TTV", "IRREGULAR_TTV"}:
+        candidate_flags.append("MULTI_SIGNAL_CANDIDATE")
+        candidate_flags.append("MULTI_PLANET_CANDIDATE")
+        candidate_flags = list(dict.fromkeys(candidate_flags))
     return {
         "tic": tic,
         "status": "WAIT_FOR_TESS" if final_decision.get("vettingStage2Class") == "WAIT_FOR_TESS" else clean_text(merged.get("status")),
@@ -2455,6 +2550,10 @@ def build_candidate(
         "transit_evidence_status": multi_method["transitEvidenceStatus"],
         "ttvStatus": multi_method["ttvStatus"],
         "ttv_status": multi_method["ttvStatus"],
+        "ttvOcMetrics": ttv_oc_metrics,
+        "ttv_oc_metrics": ttv_oc_metrics,
+        "ttvOcMeasurements": ttv_oc_measurements,
+        "ttv_oc_measurements": ttv_oc_measurements,
         "gaiaAstrometryStatus": multi_method["gaiaAstrometryStatus"],
         "gaia_astrometry_status": multi_method["gaiaAstrometryStatus"],
         "variabilityStatus": multi_method["variabilityStatus"],
@@ -2669,7 +2768,7 @@ def candidate_summary_record(candidate: dict[str, Any]) -> dict[str, Any]:
         "visibleTransits", "transits", "matrixVisibleTransits", "matrixTransits",
         "observedSectors", "plannedSectors", "observedSectorCount", "recheckStatus",
         "estimatedDataAvailable", "currentSector", "nextPlannedSector", "latestPlannedSector",
-        "transitEvidenceStatus", "ttvStatus", "gaiaAstrometryStatus",
+        "transitEvidenceStatus", "ttvStatus", "ttvOcMetrics", "gaiaAstrometryStatus",
         "variabilityStatus", "knownObjectStatus", "blendStatus",
         "rvPriorityStatus", "sciencePriorityStatus", "multiMethodCleanForExofop",
         "lightcurveImg", "map", "mapSource", "rank",
@@ -2770,6 +2869,7 @@ def main() -> int:
 
     full_vetting_reports = load_full_vetting_reports()
     level5_single_transits = load_level5_single_transit_data()
+    ttv_oc_by_tic = load_ttv_oc_metrics()
     tess_state = build_tess_state()
     max_distance = max(safe_float(row.get("distance_ly")) or 0.0 for row in manifest_rows)
     candidates: list[dict[str, Any]] = []
@@ -2792,6 +2892,7 @@ def main() -> int:
                 tess_state,
                 full_vetting_reports.get(tic),
                 level5_single_transits.get(tic),
+                ttv_oc_by_tic.get(tic),
             )
             candidates.append(candidate)
             summary_counts["processed"] += 1

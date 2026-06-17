@@ -102,7 +102,7 @@ describe('candidate color filters', () => {
     expect(filter('spc-prep').every(isSpcPrepCandidate)).toBe(true);
     expect(filter('yellow').every((candidate) => candidate.color === 'yellow' && !isSpcPrepCandidate(candidate))).toBe(true);
     expect(candidates.filter(isVvtBroadReviewCandidate)).toHaveLength(402);
-    expect(filter('vvt')).toHaveLength(13);
+    expect(filter('vvt')).toHaveLength(22);
     expect(filter('vvt').length).toBeLessThan(candidates.filter(isVvtBroadReviewCandidate).length);
     expect(filter('vvt').every((candidate) => !/FALSE_POSITIVE|RED_FP|EB_RISK|REJECTED|IGNORE/.test([
       candidate.status,
@@ -124,7 +124,7 @@ describe('candidate color filters', () => {
     const payload = JSON.parse(fs.readFileSync(path.join(dashboardRoot, 'candidates-summary.json'), 'utf8'));
     const shortlist = payload.candidates.filter(isVvtShortlistCandidate);
 
-    expect(shortlist).toHaveLength(13);
+    expect(shortlist).toHaveLength(22);
     for (const summaryCandidate of shortlist) {
       const detail = JSON.parse(fs.readFileSync(path.join(dashboardRoot, `candidate-details/TIC_${summaryCandidate.tic}.json`), 'utf8'));
       const stats = detail.individualTransitStatistics || {};
