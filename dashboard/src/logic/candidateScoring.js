@@ -5,7 +5,7 @@ import { matrixText, localizedBaseColorLabel, isSpcStrong, isSpcPrepCandidate, i
 import { candidateLabel } from '../logic/candidateLabel.js';
 import { isHabitableZoneCandidate } from '../logic/habitableZone.js';
 import { evaluateVvt } from '../logic/vvtScoring.js';
-import { isVvtBroadReviewCandidate } from '../logic/candidateFilters.js';
+import { isVvtBroadReviewCandidate, isVvtShortlistCandidate } from '../logic/candidateFilters.js';
 
 function matchesCandidate(candidate, term) {
   if (!term) return true;
@@ -190,13 +190,17 @@ export function followupCandidates() {
 
 export function vvtQueueCandidates() {
   return [...(data.candidates || [])]
-    .filter(isVvtBroadReviewCandidate)
+    .filter(isVvtShortlistCandidate)
     .sort((a, b) => (
       (Number((b.vvtScore ?? evaluateVvt(b).vvtScore) || 0) - Number((a.vvtScore ?? evaluateVvt(a).vvtScore) || 0))
       || (Number(b.multiMethodScore ?? b.multi_method_score ?? 0) - Number(a.multiMethodScore ?? a.multi_method_score ?? 0))
       || (Number(b.evidenceScore || 0) - Number(a.evidenceScore || 0))
       || (Number(a.distance || 0) - Number(b.distance || 0))
     ));
+}
+
+export function vvtBroadReviewCandidates() {
+  return [...(data.candidates || [])].filter(isVvtBroadReviewCandidate);
 }
 
 export function numericBucket(value, buckets) {

@@ -903,6 +903,8 @@ export function applyLanguageToUi() {
   setText('[data-color-filter="vvt"]', t("filter_vvt"));
   setText('[data-color-filter="red"]', t("filter_red"));
   setText('[data-color-filter="violet"]', t("filter_violet"));
+  setText("#vvtQueueTitle", t("vvt_queue_title"));
+  setText("#vvtQueueSub", t("vvt_queue_sub"));
   setLegendText("#mapPanel .map-note .legend-item:nth-child(1)", t("map_legend_green"));
   setLegendText("#mapPanel .map-note .legend-item:nth-child(2)", t("map_legend_yellow"));
   setLegendText("#mapPanel .map-note .legend-item:nth-child(3)", t("map_legend_spc_prep"));
@@ -1078,6 +1080,8 @@ document.querySelectorAll("#langSwitch [data-lang]").forEach((button) => {
     const lang = button.dataset.lang;
     if (!lang || lang === state.lang) return;
     setLanguage(lang, true);
+    applyLanguageToUi();
+    renderAll();
   });
 });
 

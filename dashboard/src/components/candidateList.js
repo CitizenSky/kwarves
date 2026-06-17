@@ -182,7 +182,7 @@ export function renderVvtQueue() {
         ${blockers.length ? `<span class="vvt-blockers">${shortText(blockers.join(" · "), 72)}</span>` : `<span class="vvt-ready">${shortText(notes[0] || "Review focus", 72)}</span>`}
       </button>
     `;
-  }).join("") : `<span class="muted">Keine VVT-Kandidaten.</span>`;
+  }).join("") : `<span class="muted">${t("vvt_candidates_empty")}</span>`;
 }
 
 const DEFAULT_PAGE_SIZE = 20;
