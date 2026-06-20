@@ -1,5 +1,6 @@
 import { state, mapZoom, analytics, tessMission, ADMIN_USER, ADMIN_PASSWORD, emptyAnalyticsStore, ensureCountryBucket, saveAnalyticsStore, loadSelfFilterPreference, applyMapZoom, setAdminLoggedIn, setupGlobalAnalytics, loadTessCompareCollapsed, collapseButtonState, updateMapZoomLabel, loadSelectedCardCollapsed, SELECTED_CARD_COLLAPSE_KEY } from './state.js';
 import { t, setLanguage, setText, setTitle, setLegendText, buildTessScheduleState, formatNumber, currentLocale, projectFlowStepsI18n, projectLevelsI18n, projectScripts, localizeScriptText, localizeScriptLevel } from './i18n.js';
+import { projectOverviewI18n } from './projectOverview.js';
 import { els, data, loadData, loadCandidateDetails, points2d, DASHBOARD_UI_VERSION, numericBucket, chartRows, matrixStatusBucket, expectedTransits } from './dataLoader.js';
 import { renderCurveFilterCounts, curveMatchesFilter, curveForCandidate } from './components/lightcurveView.js';
 import { draw2dMap } from './components/starMap2D.js';
@@ -255,9 +256,39 @@ export function renderTree() {
 export function renderDocs() {
   const flowSteps = projectFlowStepsI18n[state.lang] || projectFlowStepsI18n.de;
   const levels = projectLevelsI18n[state.lang] || projectLevelsI18n.de;
+  const overview = projectOverviewI18n[state.lang] || projectOverviewI18n.de;
+
+  document.getElementById("docsOverviewTitle").textContent = overview.title;
+  document.getElementById("docsOverviewSub").textContent = overview.subtitle;
+  document.getElementById("docsLevelTitle").textContent = overview.levelTitle;
 
   els.docsFlow.innerHTML = flowSteps
     .map((step) => `<span class="docs-step">${step}</span>`)
+    .join("");
+
+  els.docsFunctionOverview.innerHTML = overview.areas
+    .map((area, index) => `
+      <details class="docs-function" ${index < 2 ? "open" : ""}>
+        <summary>
+          <span class="docs-function-icon"><i data-lucide="${area.icon}"></i></span>
+          <span class="docs-function-copy">
+            <strong>${area.title}</strong>
+            <span>${area.summary}</span>
+          </span>
+          <i class="docs-function-chevron" data-lucide="chevron-down"></i>
+        </summary>
+        <div class="docs-function-body">
+          <div>
+            <h4>${overview.checksLabel}</h4>
+            <ul>${area.checks.map((item) => `<li>${item}</li>`).join("")}</ul>
+          </div>
+          <div>
+            <h4>${overview.outputsLabel}</h4>
+            <div class="docs-output-list">${area.outputs.map((item) => `<code>${item}</code>`).join("")}</div>
+          </div>
+        </div>
+      </details>
+    `)
     .join("");
 
   els.docsLevels.innerHTML = levels
@@ -280,6 +311,8 @@ export function renderDocs() {
       </tr>
     `)
     .join("");
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 export function applyLanguageToUi() {

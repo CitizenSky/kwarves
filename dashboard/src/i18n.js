@@ -824,6 +824,7 @@ export const projectLevels = [
 ];
 
 export const projectScripts = [
+  { script: "main/run_batch_vetting_pipeline.py", does: "Verarbeitet Vetting, Level-5 und O-C/TTV sicher fuer alle Kandidaten in fortsetzbaren Batches.", why: "Skaliert die vollstaendige Analyse mit Resume, Offline-Cache und persistenten Zwischenstaenden.", level: "Pipeline / Batch / alle Kandidaten" },
   { script: "dashboard/build_dashboard_data.py", does: "Baut das Datenbundle fuer die Live-UI (Kandidaten, Matrix-Felder, Kurvenpfade, Kennzahlen).", why: "Zentrale Quelle fuer Dashboard-Transparenz und konsistente Filter.", level: "Dashboard / alle Level" },
   { script: "build_dashboard_data.py", does: "Aelterer Builder im Repo-Root fuer statische Dashboard-Daten.", why: "Rueckwaertskompatibel fuer fruehere Ablaufe.", level: "Dashboard (legacy)" },
   { script: "main/masterscript_v2.py", does: "Orchestriert groessere Pipeline-Laeufe ueber mehrere Verarbeitungsschritte.", why: "Weniger manuelle Einzelstarts, reproduzierbare Runs.", level: "Pipeline-Steuerung" },

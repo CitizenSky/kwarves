@@ -146,6 +146,7 @@ export const els = {
   toggleSelectedCard: document.getElementById("toggleSelectedCard"),
   rows: document.getElementById("candidateRows"),
   docsFlow: document.getElementById("docsFlow"),
+  docsFunctionOverview: document.getElementById("docsFunctionOverview"),
   docsLevels: document.getElementById("docsLevels"),
   docsScriptRows: document.getElementById("docsScriptRows"),
   curveList: document.getElementById("curveList"),
