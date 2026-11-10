@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 const dashboardRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const projectRoot = path.resolve(dashboardRoot, '../..');
 const matrixCsvPath = path.join(projectRoot, 'candidate_matrix/candidate_matrix.csv');
+const hasLocalPipeline = fs.existsSync(matrixCsvPath);
 
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(dashboardRoot, relativePath), 'utf8'));
@@ -53,7 +54,7 @@ function sha256(filePath) {
 }
 
 describe('pipeline end-to-end consistency', () => {
-  it('keeps Candidate Matrix source fields required by dashboard vetting', () => {
+  it.skipIf(!hasLocalPipeline)('keeps Candidate Matrix source fields required by dashboard vetting', () => {
     const header = parseCsvLine(fs.readFileSync(matrixCsvPath, 'utf8').split(/\r?\n/, 1)[0]);
     const requiredHeaders = [
       'tic_id',
@@ -112,7 +113,9 @@ describe('pipeline end-to-end consistency', () => {
       expect(Number(stats.depthScatterPpt)).toBeGreaterThanOrEqual(0);
       expect(Number(stats.medianSingleTransitSnr)).toBeGreaterThan(0);
       expect(stats.individualTransitPlotPath).toContain(`TIC_${tic}_single_transits.png`);
-      expect(fs.existsSync(resolveDashboardRelativePath(stats.individualTransitPlotPath))).toBe(true);
+      if (hasLocalPipeline) {
+        expect(fs.existsSync(resolveDashboardRelativePath(stats.individualTransitPlotPath))).toBe(true);
+      }
 
       expect(detail.individualTransitEvents).toHaveLength(events);
       expect(detail.individualTransitEvents.filter((event) => event.visible)).toHaveLength(visible);
@@ -191,10 +194,12 @@ describe('pipeline end-to-end consistency', () => {
       expect(localPath).toContain(`TIC_${candidate.tic}/`);
 
       const deployFullPath = resolveDashboardRelativePath(deployPath);
-      const localFullPath = resolveDashboardRelativePath(localPath);
       expect(fs.existsSync(deployFullPath)).toBe(true);
-      expect(fs.existsSync(localFullPath)).toBe(true);
-      expect(sha256(deployFullPath)).toBe(sha256(localFullPath));
+      if (hasLocalPipeline) {
+        const localFullPath = resolveDashboardRelativePath(localPath);
+        expect(fs.existsSync(localFullPath)).toBe(true);
+        expect(sha256(deployFullPath)).toBe(sha256(localFullPath));
+      }
 
       expect(referencedDeployFiles.has(path.basename(deployPath))).toBe(false);
       referencedDeployFiles.add(path.basename(deployPath));

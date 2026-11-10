@@ -78,6 +78,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None, help="Limit dashboard candidates built from the manifest.")
     parser.add_argument("--tic", type=int, default=None, help="Build only one dashboard candidate.")
     parser.add_argument("--no-auto-update", action="store_true", help="Skip automatic TESS sector refresh and matrix rebuild.")
+    parser.add_argument("--require-complete", action="store_true", help="Abort before writing if any manifest candidate fails.")
     parser.add_argument("--skip-mast", action="store_true", help="Alias for --no-auto-update; avoids MAST calls during this dashboard build.")
     parser.add_argument("--offline-cache", action="store_true", help="Use local DB/cache only; skips MAST auto-update and Gaia network fetches.")
     parser.add_argument("--force-auto-update", action="store_true", help="Run TESS refresh even when inventory is still fresh.")
@@ -2908,6 +2909,14 @@ def main() -> int:
             flush=True,
         )
         return 1
+    if args.require_complete:
+        if failed_candidates:
+            print(f"[build] ERROR refusing to publish with {len(failed_candidates)} failed TICs", flush=True)
+            return 1
+        missing_tics = previous_by_tic.keys() - {candidate["tic"] for candidate in candidates}
+        if missing_tics:
+            print(f"[build] ERROR refusing to drop {len(missing_tics)} published TICs", flush=True)
+            return 1
     # Override color based on final decision status
     for candidate in candidates:
         fd = candidate.get("finalDecision", {})

@@ -28,4 +28,9 @@ TESS, Gaia DR3, TIC, exoplanet candidates, habitable zone, K-dwarfs, citizen sci
 
 ## Deployment
 
-This repository is deployed with GitHub Pages from the `main` branch root. The root `index.html` redirects to `dashboard/index.html`.
+The [Astro Dashboard workflow](.github/workflows/deploy.yml) checks the public
+MAST and Gaia archives hourly and deploys the dashboard to GitHub Pages. It
+publishes newly available TESS sectors for monitored targets and reports new
+Gaia source catalogues in the run log. Transit analysis, full matrix builds,
+and Gaia source cross-matching use the local science pipeline. The root
+`index.html` redirects to `dashboard/index.html`.

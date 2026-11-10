@@ -38,6 +38,23 @@ MAST-schonende Blockabfrage:
     KWARVES_MAST_BATCH_SIZE, KWARVES_MAST_BATCH_SLEEP,
     KWARVES_MAST_RETRIES, KWARVES_MAST_RETRY_SLEEP.
 
-Verbesserungsbedarf:
-  - Spaeter optional als automatischer Schritt in eine Wochenroutine einbauen.
-  - Optional MAST-Abfrage parallelisieren, aber nur mit strengem Rate-Limit.
+### Automatische Archivprüfung
+
+Der GitHub-Actions-Workflow `Astro Dashboard` prüft stündlich die öffentlichen
+Archive und veröffentlicht zusätzliche TESS-Sektoren für die überwachten
+Kandidaten. Seine Grundlage sind die versionierten Dashboard-JSONs. Neue
+Gaia-Quellenkataloge erscheinen im Actions-Protokoll.
+
+Der lokale Watcher `main/watch_astro_data.py` steht als Alternative bereit und
+fragt öffentliche SPOC-Lichtkurven bei
+MAST ab. Bei neuen Sektoren aktualisiert es das lokale Inventar, markiert die
+betroffenen Kandidaten für einen erneuten Scan und veröffentlicht den neu
+gebauten Dashboard-Datensatz auf `origin/main`. Der eigentliche Transit-Scan
+läuft weiterhin über `masterscript_v2.py`. Bei einem neuen Gaia-Quellenkatalog
+protokolliert der Watcher das Release und speichert es zur Prüfung. Für den
+Import braucht es einen katalogübergreifenden Abgleich der Quellen-IDs.
+
+`python3 main/watch_astro_data.py --check-only` prüft beide Archive lesend.
+Die macOS-Konfiguration liegt in `main/launchd/com.koni.astro-data-watcher.plist`.
+Sie läuft jeweils zur Minute 15, solange der Mac eingeschaltet und der Nutzer
+angemeldet ist. Zustand und Protokolle stehen im Projektordner `logs/`.

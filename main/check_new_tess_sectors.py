@@ -18,10 +18,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from lightkurve import search_lightcurve
-
-
-PROJECT_ROOT = Path("/Users/koni/astro_projects")
+PROJECT_ROOT = Path(os.environ.get("ASTRO_PROJECT_ROOT", Path(__file__).resolve().parents[2]))
 DB_PATH = PROJECT_ROOT / "database" / "planet_hunter.db"
 TABLE_RAW = "rohdaten"
 TABLE_ACTIVE = "kstars_active"
@@ -35,6 +32,8 @@ DEFAULT_SOURCE_STATUSES = (
     "SPC-A",
     "SPC-B",
     "SPC-C",
+    "SPC_ART",
+    "NEEDS_MORE_TESS_DATA",
     "RECHECK",
     "RECHECK_NEW_SECTOR",
 )
@@ -132,6 +131,8 @@ def run_with_timeout(label: str, timeout_seconds: float, func, *args, **kwargs):
 
 
 def fetch_available_sectors(tic: int, timeout_seconds: float = DEFAULT_TIMEOUT) -> set[int]:
+    from lightkurve import search_lightcurve
+
     result = run_with_timeout(
         f"MAST TIC {tic}",
         timeout_seconds,
@@ -208,7 +209,7 @@ def save_inventory(
     ).fetchone()
     previous = {int(s) for s in old[0].split(",") if s.strip().isdigit()} if old else set()
     new_sectors = current - previous
-    changed = bool(previous and new_sectors)
+    changed = old is not None and bool(new_sectors)
     new_sectors_text = sector_text(new_sectors) if changed else ""
 
     conn.execute(
@@ -291,7 +292,7 @@ def main() -> None:
                         ).fetchone()
                         previous = {int(s) for s in old[0].split(",") if s.strip().isdigit()} if old else set()
                         new_sectors = sectors - previous
-                        is_changed = bool(previous and new_sectors)
+                        is_changed = old is not None and bool(new_sectors)
                         new_text = sector_text(new_sectors)
                     else:
                         is_changed, new_text = save_inventory(

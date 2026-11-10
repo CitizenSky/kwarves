@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -40,6 +42,7 @@ WATCHED_FIELDS = [
     "lastUpdated",
     "lastSectorAdded",
 ]
+WATCHER_COMMIT_PREFIX = "Refresh dashboard after TESS release "
 
 
 def run(command: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -236,9 +239,39 @@ def write_notifications(payload: dict) -> None:
     NOTIFICATION_PATH.write_text(text, encoding="utf-8")
 
 
+def git_output(*args: str) -> str:
+    return subprocess.check_output(["git", *args], cwd=SCRIPT_ROOT, text=True).strip()
+
+
+def prepare_watcher_publish() -> None:
+    if current_branch() != "main":
+        raise RuntimeError("Scheduled publishing requires the main branch")
+    if changed_tracked_outputs():
+        raise RuntimeError("Dashboard data has local changes; review them before scheduled publishing")
+    head = git_output("rev-parse", "HEAD")
+    remote_ref = git_output("ls-remote", "--exit-code", "origin", "refs/heads/main")
+    remote_head = remote_ref.split()[0]
+    if head == remote_head:
+        return
+    if (git_output("log", "-1", "--format=%s").startswith(WATCHER_COMMIT_PREFIX)
+            and git_output("rev-parse", "HEAD^") == remote_head
+            and git_output("diff", "--name-only", "HEAD^", "HEAD")
+            == git_output("diff", "--name-only", "HEAD^", "HEAD", "--", *TRACKED_OUTPUTS)):
+        run(["git", "push", "origin", f"{head}:refs/heads/main"])
+        return
+    raise RuntimeError("Local main differs from origin/main; scheduled publishing paused")
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--from-watcher", action="store_true", help="Publish a complete build from the refreshed local TESS inventory.")
+    args = parser.parse_args()
+    build_command = [sys.executable, "dashboard/build_dashboard_data.py"]
+    if args.from_watcher:
+        prepare_watcher_publish()
+        build_command.extend(["--no-auto-update", "--require-complete"])
     before = load_dashboard_candidates()
-    run(["python3", "dashboard/build_dashboard_data.py"])
+    run(build_command)
     after = load_dashboard_candidates()
     write_notifications(build_notifications(before, after))
 
@@ -247,10 +280,15 @@ def main() -> int:
         print("No dashboard data changes to publish.")
         return 0
 
-    run(["git", "add", *changed])
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    run(["git", "commit", "-m", f"Auto-update dashboard data {stamp}"])
-    run(["git", "push", "origin", current_branch()])
+    if args.from_watcher:
+        run(["git", "add", "-A", "--", *TRACKED_OUTPUTS])
+        run(["git", "commit", "--only", "-m", WATCHER_COMMIT_PREFIX + stamp, "--", *TRACKED_OUTPUTS])
+        run(["git", "push", "origin", f"{git_output('rev-parse', 'HEAD')}:refs/heads/main"])
+    else:
+        run(["git", "add", *changed])
+        run(["git", "commit", "-m", f"Auto-update dashboard data {stamp}"])
+        run(["git", "push", "origin", current_branch()])
     print("Dashboard data updated and pushed.")
     return 0
 

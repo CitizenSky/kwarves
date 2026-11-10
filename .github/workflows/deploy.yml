@@ -1,30 +1,130 @@
-name: Build and Verify Dashboard
+name: Astro Dashboard
 
 on:
   push:
     branches: [main]
     paths:
       - 'dashboard/**'
+      - 'main/watch_astro_data.py'
+      - 'main/check_new_tess_sectors.py'
       - '.github/workflows/deploy.yml'
+      - 'index.html'
+      - 'favicon.svg'
+      - 'robots.txt'
+      - 'sitemap.xml'
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: astro-dashboard-pages
+  cancel-in-progress: false
 
 jobs:
-  build:
+  watch:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'push'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: dashboard
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      commit: ${{ steps.archive.outputs.commit }}
+      deploy: ${{ steps.archive.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
         with:
-          node-version: 20
+          ref: main
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /main/
+            /dashboard/auto_update_and_publish.py
+            /dashboard/update_archive_data.py
+            /dashboard/candidates-summary.json
+            /dashboard/candidate-details/
+            /dashboard/dashboard-notifications.js
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Check MAST and Gaia
+        id: archive
+        run: |
+          python dashboard/update_archive_data.py
+          git add -- dashboard/candidates-summary.json dashboard/candidate-details dashboard/dashboard-notifications.js
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m 'Refresh public TESS and Gaia archive metadata'
+            git push origin HEAD:refs/heads/main
+          fi
+          commit=$(git rev-parse HEAD)
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          published=$(curl --fail --silent --location --max-time 15 \
+            "https://citizensky.github.io/kwarves/dashboard/deployment-revision.txt?run=$GITHUB_RUN_ID" || true)
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch || "$published" != "$commit" ]]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: watch
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || needs.watch.outputs.deploy == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.watch.outputs.commit || 'main' }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
           cache: npm
           cache-dependency-path: dashboard/package-lock.json
+      - uses: actions/configure-pages@v5
+      - name: Test and build dashboard
+        working-directory: dashboard
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Assemble GitHub Pages site
+        run: |
+          mkdir -p _site/dashboard
+          cp index.html favicon.svg robots.txt sitemap.xml .nojekyll _site/
+          cp -r dashboard/dist/. _site/dashboard/
+          cp -r dashboard/lightcurves _site/dashboard/
+          git rev-parse HEAD > _site/dashboard/deployment-revision.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          dashboard = Path('_site/dashboard')
+          candidates = json.loads((dashboard / 'candidates-summary.json').read_text())['candidates']
+          for candidate in candidates:
+              for field in ('detailsPath', 'lightcurveImg'):
+                  path = candidate.get(field)
+                  if path and not (dashboard / path).is_file():
+                      raise SystemExit(f'Pages artifact is missing {path}')
+          PY
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
 
-      - run: npm ci
-
-      - name: Restore source index.html
-        run: cp index.src.html index.html && rm -rf assets/ schema/ 2>/dev/null || true
-
-      - run: npm run build
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: publish
