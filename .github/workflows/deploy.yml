@@ -63,7 +63,7 @@ jobs:
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           published=$(curl --fail --silent --location --max-time 15 \
             "https://citizensky.github.io/kwarves/dashboard/deployment-revision.txt?run=$GITHUB_RUN_ID" || true)
-          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch || "$published" != "$commit" ]]; then
+          if [[ "$published" != "$commit" ]]; then
             echo 'deploy=true' >> "$GITHUB_OUTPUT"
           fi
 
@@ -120,12 +120,20 @@ jobs:
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       pages: write
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.publish.outputs.page_url }}
+      url: ${{ steps.publish.outputs.page_url || steps.retry.outputs.page_url }}
     steps:
       - uses: actions/deploy-pages@v4
         id: publish
+        continue-on-error: true
+      - name: Wait for Pages to finish any prior deployment
+        if: steps.publish.outcome == 'failure'
+        run: sleep 45
+      - uses: actions/deploy-pages@v4
+        id: retry
+        if: steps.publish.outcome == 'failure'

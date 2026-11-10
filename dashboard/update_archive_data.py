@@ -92,13 +92,14 @@ def refresh_gaia(summary: dict) -> bool:
     except (OSError, RuntimeError) as exc:
         raise ArchiveUnavailable(str(exc)) from exc
     state = summary.get("archiveWatch", {})
-    previous = state.get("latestGaiaRelease", PROJECT_GAIA_RELEASE)
+    previous = state.get("latestGaiaRelease")
     print(f"Gaia: newest public source catalogue is DR{release}", flush=True)
-    if release <= previous:
+    if previous is not None and release <= previous:
         return False
     state["latestGaiaRelease"] = release
     summary["archiveWatch"] = state
-    print(f"::warning::Gaia DR{release} is available. Import requires a cross-match of source IDs.", flush=True)
+    if release > PROJECT_GAIA_RELEASE:
+        print(f"::warning::Gaia DR{release} is available. Import requires a cross-match of source IDs.", flush=True)
     return True
 
 

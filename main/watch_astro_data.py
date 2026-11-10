@@ -29,6 +29,7 @@ GAIA_URLS = (
     "https://gea.esac.esa.int/tap-server/tap/sync",
     "https://gaia.aip.de/tap/sync",
 )
+GAIA_BULK_URL = "https://gaia.eu-1.cdn77-storage.com/?prefix=Gaia%2F&delimiter=%2F"
 PROJECT_GAIA_RELEASE = 3
 
 
@@ -91,11 +92,28 @@ def fetch_gaia_release() -> int:
                 match = re.fullmatch(r"gaiadr(\d+)", schema.lower())
                 if match and table.lower() in {"gaia_source", f"{schema.lower()}.gaia_source"}:
                     releases.append(int(match.group(1)))
-            if not releases:
+            if not releases or max(releases) < PROJECT_GAIA_RELEASE:
                 raise RuntimeError("no numbered Gaia source catalogues in TAP metadata")
             return max(releases)
         except (OSError, ValueError, ElementTree.ParseError, RuntimeError) as exc:
             log(f"Gaia {url}: {exc}")
+    # The public ESA download directory remains usable when TAP jobs are unavailable.
+    try:
+        with urlopen(GAIA_BULK_URL, timeout=15) as response:
+            root = ElementTree.parse(response).getroot()
+        if root.findtext("{*}IsTruncated") != "false":
+            raise RuntimeError("incomplete Gaia bulk catalogue listing")
+        releases = []
+        for prefix in root.findall("{*}CommonPrefixes/{*}Prefix"):
+            match = re.fullmatch(r"Gaia/gdr(\d+)/", prefix.text or "")
+            if match:
+                releases.append(int(match.group(1)))
+        if not releases or max(releases) < PROJECT_GAIA_RELEASE:
+            raise RuntimeError("no numbered Gaia releases in the bulk directory")
+        log("Gaia: read release metadata from the ESA bulk directory")
+        return max(releases)
+    except (OSError, ElementTree.ParseError, RuntimeError) as exc:
+        log(f"Gaia bulk directory: {exc}")
     raise RuntimeError("No Gaia catalogue endpoint could be read")
 
 
