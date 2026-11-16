@@ -62,9 +62,10 @@ def refresh_catalog(summary: dict, details_dir, stamp: str) -> int:
         detail = json.loads(path.read_text(encoding="utf-8"))
         match = tic in toi or tic in planets
         old = detail.get("astroMonitor") or {}
-        monitor = {**old, "exoFopMatch": match,
-                   "exoFopCheckedAt": stamp,
-                   "exoFopCatalogSource": "NASA Exoplanet Archive TOI + PS"}
+        monitor = {**old}
+        if old.get("exoFopMatch") != match or not old.get("exoFopCatalogSource"):
+            monitor.update({"exoFopMatch": match, "exoFopCheckedAt": stamp,
+                            "exoFopCatalogSource": "NASA Exoplanet Archive TOI + PS"})
         # Keep scientific classification separate: a TIC-level match does not
         # prove that the detected transit belongs to the cataloged planet.
         if monitor != old:
