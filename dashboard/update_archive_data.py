@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from auto_update_and_publish import build_notifications, write_notifications
+from refresh_exofop_catalog import refresh_catalog
 
 
 DASHBOARD = Path(__file__).resolve().parent
@@ -109,16 +110,16 @@ def main() -> int:
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     changed = False
     failures = 0
-    for source, refresh in (("Gaia", lambda: refresh_gaia(summary)), ("TESS", lambda: refresh_tess(summary, stamp))):
+    for source, refresh in (("Gaia", lambda: refresh_gaia(summary)), ("TESS", lambda: refresh_tess(summary, stamp)), ("ExoFOP", lambda: refresh_catalog(summary, DASHBOARD / "candidate-details", stamp))):
         try:
             changed = bool(refresh()) or changed
-        except ArchiveUnavailable as exc:
+        except (ArchiveUnavailable, OSError, RuntimeError, ValueError) as exc:
             print(f"::warning::{source} archive unavailable: {exc}", flush=True)
             failures += 1
     if changed:
         summary["generatedAt"] = stamp
         write_json(path, summary)
-    return int(failures == 2)
+    return int(failures == 3)
 
 
 if __name__ == "__main__":
