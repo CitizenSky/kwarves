@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'dashboard/**'
+      - 'dashboard/refresh_exofop_catalog.py'
       - 'main/watch_astro_data.py'
       - 'main/check_new_tess_sectors.py'
       - '.github/workflows/deploy.yml'
@@ -42,13 +43,14 @@ jobs:
             /main/
             /dashboard/auto_update_and_publish.py
             /dashboard/update_archive_data.py
+            /dashboard/refresh_exofop_catalog.py
             /dashboard/candidates-summary.json
             /dashboard/candidate-details/
             /dashboard/dashboard-notifications.js
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Check MAST and Gaia
+      - name: Check MAST, Gaia and ExoFOP
         id: archive
         run: |
           python dashboard/update_archive_data.py
